@@ -52,7 +52,7 @@
 	void setGSize(INT32U width, INT32U height);								//设置窗口尺寸  
 ```
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/LIGU.png) 
- 
+
 ## Reference
 * [1].Computer Graphics with OpenGL. Donald Hearn, M. Pauline Baker, Warren R. Carithers
 * [2].正点原子-STM32
