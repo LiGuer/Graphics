@@ -3,7 +3,7 @@
 * 基础算法均已实现  
 * 可用于教学演示  
 * API:  
-=========  
+```
     /*---------------- 基础参数 ----------------*/  
 	INT32U gSize[2] = { 2048,2048 };										//窗口尺寸  
 	RGB* Map = NULL;														//图(底层)  
@@ -50,5 +50,5 @@
 	/*---------------- SET ----------------*/  
 	bool judgeOutRange(INT32U x0, INT32U y0);								//判断坐标是否过界  
 	void setGSize(INT32U width, INT32U height);								//设置窗口尺寸  
-=========  
+```
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/LIGU.png) 
