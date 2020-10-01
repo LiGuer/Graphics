@@ -26,8 +26,8 @@ void Plot::plotPoint(const double x, const double y) {
 }
 
 void Plot::plotWave(const double x[], const double y[], const int n) {
-	INT32U* gx = (INT32U*)malloc(sizeof(INT32U) * n);
-	INT32U* gy = (INT32U*)malloc(sizeof(INT32U) * n);
+	INT32S* gx = (INT32S*)malloc(sizeof(INT32S) * n);
+	INT32S* gy = (INT32S*)malloc(sizeof(INT32S) * n);
 	setXYRange(x, y, n);
 	for (int i = 0; i < n; i++) {
 		*(gx + i) = coor2pix(x[i], 0);
@@ -58,7 +58,74 @@ void Plot::plotRectangle(const double sx, const double sy, const double ex, cons
 	int gey = coor2pix(ey, 1);
 	g->drawRectangle(gsx, gsy, gex, gey);
 }
-
+void Plot::contour(const Mat<double> *map, const int N)
+{
+	double max = map->max(), min = map->min();		//get the max & min of the map
+	double delta = (max - min) / N;
+	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
+	double layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {//for N layer between max & min, get the edge of each layer
+		for (int y = 0; y < map->rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map->cols - 1; x++) {
+				int flag = map->getValue(x, y) >= layer ? 1 : 0;
+				for (int k = 0; k < 3; k++) {		//basic unit is 2x2 matrix
+					int xt = x + x_step[k];
+					int yt = y + y_step[k];
+					int flagtemp = map->getValue(xt, yt) >= layer ? 1 : 0;
+					if (flagtemp != flag) { flag = 2; break; }
+				}
+				if (flag == 2) {
+					for (int k = 0; k < 3; k++) {
+						int xt = x + x_step[k];
+						int yt = y + y_step[k];
+						if (map->getValue(xt, yt) >= layer) {
+							g->drawPoint(xt, yt);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+RGB Plot::colorlist(const int N, const int i, const int model)
+{
+	RGB color = 0;
+	double R = 0, G = 0, B = 0;
+	double a = (double)i / N, b = 1 - a;
+	switch (model)
+	{
+	case 1: {
+		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16/3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16/3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+	}break;
+	case 2: {
+		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+	}break;
+	}
+	printf("%.3f - %.3f - %.3f\n", R, G, B);
+	R *= 0xFF, G *= 0xFF, B *= 0xFF;
+	return color = (RGB)R + (RGB)G * 0x100 + (RGB)B * 0x10000;
+}
+void Plot::contourface(const Mat<double>* map, const int N)
+{
+	RGB color;
+	double max = map->max(), min = map->min();		//get the max & min of the map
+	double delta = (max - min) / N;
+	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
+	double layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {//for N layer between max & min, get the edge of each layer
+		color = colorlist(N, i, 2);
+		for (int y = 0; y < map->rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map->cols - 1; x++) {
+				if (map->getValue(x, y) >= layer)
+					g->setPoint(x, y, color);
+			}
+		}
+	}
+}
 int Plot::coor2pix(double coor, int dim) {
 	return (coor - pMin[dim]) * deltaXY[dim];
 }

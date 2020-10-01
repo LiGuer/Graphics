@@ -3,6 +3,7 @@
 #include "Graphics.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "Mat.h"
 class Plot
 {
 public:
@@ -21,9 +22,12 @@ public:
 	void plotCircle(const double x, const double y, const double r);	//画圆
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//画椭圆
 	void plotRectangle(const double sx, const double sy, const double ex, const double ey);//画矩形
+	void contour(const Mat<double> *map, const int N);
+	void contourface(const Mat<double>* map, const int N);
 	void grid();														//显示网格
 	/*---------------- COOR TO PIX ----------------*/
 	int coor2pix(double coor, int dim);									//坐标To像素坐标
 	int value2pix(double value, int dim);								//值To像素值
+	RGB colorlist(const int N, const int i, const int model);
 };
 #endif

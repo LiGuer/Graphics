@@ -26,11 +26,11 @@ int main()
 	g->drawTriangle(100, 900, 300, 1500, 100, 1700);
 	g->PaintColor = 0x00FFCC;
 	g->drawRectangle(1900, 100, 1700, 300);
-	g->fill(1850, 150, 1750, 250);
+	g->fill(1850, 150, 1750, 250, 0x00FFCC);
 
 	g->PaintColor = 0x0000FF;
 	const int N = 100;
-	unsigned int x[N], y[N];
+	int x[N], y[N];
 	for (int i = 0; i < N; i++) {
 		x[i] = i*10 + 500;
 		y[i] = sin(0.02 * x[i])*100+200;
@@ -52,7 +52,7 @@ int main()
 	gt->drawEllipse(100, 100, 20, 50);
 	gt->PaintColor = 0x00FFCC;
 	gt->drawRectangle(190, 10, 160, 40);
-	gt->fill(180, 20, 170, 30);
+	gt->fill(180, 20, 170, 30, 0x00FFCC);
 	gt->rotate(3.14 * 60 / 360, 100, 100);
 	gt->confirmTrans();
 	g->drawCopy(10, 10, gt);

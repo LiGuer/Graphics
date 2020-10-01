@@ -37,6 +37,27 @@ public:
 	T getValue(int i, int j) const {
 		return *(data + i * cols + j);
 	}
+	/* ---------------- max min ---------------- */
+	T max() const
+	{
+		T max = getValue(0, 0);
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
+				max = max >= getValue(i, j) ? max : getValue(i, j);
+			}
+		}
+		return max;
+	}
+	T min() const
+	{
+		T min = getValue(0, 0);
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
+				min = min <= getValue(i, j) ? min : getValue(i, j);
+			}
+		}
+		return min;
+	}
 	/*----------------¸³Öµ [ = ]----------------*/
 	void operator= (const Mat& b) {
 		zero(b.rows, b.cols);

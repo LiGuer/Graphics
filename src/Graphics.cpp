@@ -1,4 +1,4 @@
-﻿#include "Graphics.h"
+#include "Graphics.h"
 /******************************************************************************
 *                    Basic Function
 ******************************************************************************/
@@ -19,23 +19,19 @@ void Graphics::clear(RGB color)
 		memset(Map, color, sizeof(RGB) * gSize[0] * gSize[1]);
 		return;
 	}
-	for (INT32U y = 0; y < gSize[1]; y++) {
-		for (INT32U x = 0; x < gSize[0]; x++) {
+	for (INT32S y = 0; y < gSize[1]; y++) {
+		for (INT32S x = 0; x < gSize[0]; x++) {
 			setPoint(x, y, color);
 		}
 	}
 }
 /* ---------------- SET/READ POINT ---------------- */
-void Graphics::setPoint(INT32U x, INT32U y) {
-	if (judgeOutRange(x, y))return;
-	*(Map + y * gSize[0] + x) = PaintColor;
-}
-void Graphics::setPoint(INT32U x, INT32U y,RGB color) {
+void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
 	if (judgeOutRange(x, y))return;
 	*(Map + y * gSize[0] + x) = color;
 }
 
-RGB Graphics::readPoint(INT32U x, INT32U y) {
+RGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
 	return *(Map + y * gSize[0] + x);
 }
@@ -45,34 +41,54 @@ void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 	fprintf(fp, "P6\n%d %d\n255\n", gSize[0], gSize[1]);// 写图片格式、宽高、最大像素值
 
 	unsigned char color;
-	for (INT32U i = 0; i < gSize[1]; i++) {
-		for (INT32U j = 0; j < gSize[0]; j++) {
-			for (INT32U k = 0; k < 3; k++) {
+	for (INT32S i = 0; i < gSize[1]; i++) {
+		for (INT32S j = 0; j < gSize[0]; j++) {
+			for (INT32S k = 0; k < 3; k++) {
 				color = readPoint(j, i) >> (8 * k);
 				fwrite(&color, sizeof(color), 1, fp);// 写RGB数据
 			}
 		}
 	}fclose(fp);
 }
+/*---------------- CONFIRM Trans ----------------*/
+void Graphics::confirmTrans()
+{
+	Graphics Maptemp;
+	Maptemp.setGSize(gSize[0], gSize[1]);
+	Maptemp.clear(TRANSPARENT);
+	Mat<FP64> p(3, 1);
+	p.setValue(2, 0, 1);
+	for (INT32S y = 0; y < gSize[1]; y++) {
+		for (INT32S x = 0; x < gSize[0]; x++) {
+			p.setValue(0, 0, (FP64)x); p.setValue(1, 0, (FP64)y);
+			p.mult(gM, p, p);
+			RGB t = readPoint(x, y);
+			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0), p.getValue(1, 0), t);
+			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0) + 0.4, p.getValue(1, 0) + 0.4, t);	//#补丁
+		}
+	}
+	gM.E(3);
+	free(Map);
+	Map = Maptemp.Map;	Maptemp.Map = NULL;
+}
 /******************************************************************************
 *                    底层无关
 ******************************************************************************/
-
 /* ---------------- DRAW POINT ---------------- */
-void Graphics::drawPoint(INT32U x0, INT32U y0) {
+void Graphics::drawPoint(INT32S x0, INT32S y0) {
 	if (judgeOutRange(x0, y0))return;
-	setPoint(x0, y0);						//基础点(点粗==0)
+	setPoint(x0, y0, PaintColor);						//基础点(点粗==0)
 	/*------ 点粗>0时 ------*/
-	for (INT32U r = 1; r <= PaintSize; r++) {
+	for (INT32S r = 1; r <= PaintSize; r++) {
 		INT32S x = 0, y = r, p = 3 - (r << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
 		INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
 		/*------ 绘制圆 (x=0始,y=x终) ------*/
 		while (x <= y) {
 			for (int i = 0; i < 4; i++) {
-				setPoint(x0 + x * x_step[i], y0 + y * y_step[i]);
-				setPoint(x0 + y * x_step[i], y0 + x * y_step[i]);
-				setPoint(x0 + x * x_step[i], y0 + (y - 1) * y_step[i]);	//#补丁，需优化
-				setPoint(x0 + (y - 1) * x_step[i], y0 + x * y_step[i]);
+				setPoint(x0 + x * x_step[i], y0 + y * y_step[i], PaintColor);
+				setPoint(x0 + y * x_step[i], y0 + x * y_step[i], PaintColor);
+				setPoint(x0 + x * x_step[i], y0 + (y - 1) * y_step[i], PaintColor);	//#补丁，需优化
+				setPoint(x0 + (y - 1) * x_step[i], y0 + x * y_step[i], PaintColor);
 			}
 			x++;
 			INT32S dp = 4 * x + 6;
@@ -90,10 +106,10 @@ void Graphics::drawPoint(INT32U x0, INT32U y0) {
 		1. 化[浮点运算]为[整数运算]：err
 		2. 各方向均可绘制
 ** ---------------------------------------- */
-void Graphics::drawLine(INT32U x1, INT32U y1, INT32U x2, INT32U y2) {
+void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
 	INT32S err[2] = { 0 }, inc[2] = { 0 };
 	INT32S delta[2] = { x2 - x1, y2 - y1 };						//计算坐标增量
-	INT32U x = x1, y = y1;
+	INT32S x = x1, y = y1;
 	//设置x单步方向	
 	if (delta[0] > 0)inc[0] = 1; 								//向右
 	else if (delta[0] == 0)inc[0] = 0;							//垂直
@@ -103,9 +119,9 @@ void Graphics::drawLine(INT32U x1, INT32U y1, INT32U x2, INT32U y2) {
 	else if (delta[1] == 0)inc[1] = 0;							//水平
 	else { inc[1] = -1; delta[1] = -delta[1]; }					//向下
 
-	INT32U distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
+	INT32S distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
 	//画线
-	for (INT32U i = 0; i <= distance + 1; i++) {				
+	for (INT32S i = 0; i <= distance + 1; i++) {				
 		drawPoint(x, y);										//唯一输出：画点
 		err[0] += delta[0];
 		err[1] += delta[1];
@@ -120,7 +136,7 @@ void Graphics::drawLine(INT32U x1, INT32U y1, INT32U x2, INT32U y2) {
 	}
 }
 /* ---------------- DRAW TRIANGLE ---------------- */
-void Graphics::drawTriangle(INT32U x1, INT32U y1, INT32U x2, INT32U y2, INT32U x3, INT32U y3)
+void Graphics::drawTriangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2, INT32S x3, INT32S y3)
 {
 	drawLine(x1, y1, x2, y2);
 	drawLine(x1, y1, x3, y3);
@@ -129,7 +145,7 @@ void Graphics::drawTriangle(INT32U x1, INT32U y1, INT32U x2, INT32U y2, INT32U x
 /* ---------------- DRAW RACTANGLE ---------------- */
 //画矩形	  
 //(x1,y1),(x2,y2):矩形的对角坐标
-void Graphics::drawRectangle(INT32U x1, INT32U y1, INT32U x2, INT32U y2)
+void Graphics::drawRectangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2)
 {
 	drawLine(x1, y1, x2, y1);
 	drawLine(x1, y1, x1, y2);
@@ -143,7 +159,7 @@ void Graphics::drawRectangle(INT32U x1, INT32U y1, INT32U x2, INT32U y2)
 *	通过设定在每一步取样步骤中寻找最接近圆周像素的决策参数，
 *	可以将Bresenham线法移植为画圆算法。
 ** ---------------------------------------- */
-void Graphics::drawCircle(INT32U x0, INT32U y0, INT32U r)
+void Graphics::drawCircle(INT32S x0, INT32S y0, INT32S r)
 {
 	INT32S x = 0, y = r, p = 3 - (r << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
 	INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
@@ -175,7 +191,7 @@ void Graphics::drawCircle(INT32U x0, INT32U y0, INT32U r)
 *	由[决策参数]确定，下一步是(x+1，y)or(x+1，y-1),
 *	若p < 0, 则中点在界内，(x+1，y)更合适; 否则另一个。
 ** ---------------------------------------- */
-void Graphics::drawEllipse(INT32U x0, INT32U y0, INT32U rx, INT32U ry)
+void Graphics::drawEllipse(INT32S x0, INT32S y0, INT32S rx, INT32S ry)
 {
 	INT64S rx2 = rx * rx, ry2 = ry * ry;
 	INT32S x = 0, y = ry;											//初始点:天顶
@@ -210,7 +226,7 @@ void Graphics::drawEllipse(INT32U x0, INT32U y0, INT32U rx, INT32U ry)
 	}
 }
 /* ---------------- DRAW GRID ---------------- */
-void Graphics::drawGrid(INT32U sx, INT32U sy, INT32U ex, INT32U ey, INT32U dx, INT32U dy)
+void Graphics::drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, INT32S dy)
 {
 	for (int x = sx; x <= ex; x += dx) {
 		if (judgeOutRange(x, 0))continue;
@@ -222,32 +238,32 @@ void Graphics::drawGrid(INT32U sx, INT32U sy, INT32U ex, INT32U ey, INT32U dx, I
 	}
 }
 /* ---------------- DRAW WAVE ---------------- */
-void Graphics::drawWave(INT32U x[], INT32U y[], INT32U n) {
-	INT32U xt, yt;
-	for (INT32U i = 0; i < n; i++) {
+void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
+	INT32S xt, yt;
+	for (INT32S i = 0; i < n; i++) {
 		if (i != 0)drawLine(xt, yt, x[i], y[i]);
 		xt = x[i], yt = y[i];	
 	}
 }
 /* ---------------- DRAW BEZIER CURVE ---------------- */
-void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32U n)
+void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 {
-	INT32U N = gSize[0]+ gSize[1];					//#待优化
+	INT32S N = gSize[0]+ gSize[1];					//#待优化
 	FP64 C[50];
-	for (INT32U i = 0; i < n; i++) {
+	for (INT32S i = 0; i < n; i++) {
 		setPoint(xCtrl[i], yCtrl[i],0xFFFFFF);
 	}
-	for (INT32U i = 0; i < n; i++) {
+	for (INT32S i = 0; i < n; i++) {
 		C[i] = 1;
 		for (INT32S j = n - 1; j >= i + 1; j--)
 			C[i] *= j;
 		for (INT32S j = n - 1 - i; j >= 2; j--)
 			C[i] /= j;
 	}
-	for (INT32U k = 0; k < N; k++) {
+	for (INT32S k = 0; k < N; k++) {
 		FP64 u = (FP64)k / N;
 		INT32S x = 0, y = 0;
-		for (INT32U i = 0; i < n; i++) {
+		for (INT32S i = 0; i < n; i++) {
 			FP64 bezBlendFcn = C[i] * pow(u, i) * pow(1 - u, n - 1 - i);
 			x += xCtrl[i] * bezBlendFcn;
 			y += yCtrl[i] * bezBlendFcn;
@@ -256,10 +272,10 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32U n)
 	}
 }
 /* ---------------- DRAW COPY ---------------- */
-void Graphics::drawCopy(INT32U x0, INT32U y0, Graphics* gt)
+void Graphics::drawCopy(INT32S x0, INT32S y0, Graphics* gt)
 {
-	for (INT32U i = 0; i < gt->gSize[1]; i++) {
-		for (INT32U j = 0; j < gt->gSize[0]; j++) {
+	for (INT32S i = 0; i < gt->gSize[1]; i++) {
+		for (INT32S j = 0; j < gt->gSize[0]; j++) {
 			RGB t = gt->readPoint(j, i); 
 			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
 			setPoint(x0 + j, y0 + i, t);
@@ -267,34 +283,18 @@ void Graphics::drawCopy(INT32U x0, INT32U y0, Graphics* gt)
 	}
 }
 /* ---------------- FILL ---------------- */
-void Graphics::fill(INT32U sx, INT32U sy, INT32U ex, INT32U ey)
+void Graphics::fill(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color)
 {
 	if (sy > ey) {
-		INT32U t = ey;
+		INT32S t = ey;
 		ey = sy, sy = t;
 	}
 	if (sx > ex) {
-		INT32U t = ex;
+		INT32S t = ex;
 		ex = sx, sx = t;
 	}
-	for (INT32U y = sy; y <= ey; y++) {
-		for (INT32U x = sx; x <= ex; x++) {
-			setPoint(x, y);
-		}
-	}
-}
-void Graphics::fill(INT32U sx, INT32U sy, INT32U ex, INT32U ey, RGB color)
-{
-	if (sy > ey) {
-		INT32U t = ey;
-		ey = sy, sy = t;
-	}
-	if (sx > ex) {
-		INT32U t = ex;
-		ex = sx, sx = t;
-	}
-	for (INT32U y = sy; y <= ey; y++) {
-		for (INT32U x = sx; x <= ex; x++) {
+	for (INT32S y = sy; y <= ey; y++) {
+		for (INT32S x = sx; x <= ex; x++) {
 			setPoint(x, y, color);
 		}
 	}
@@ -302,7 +302,7 @@ void Graphics::fill(INT32U sx, INT32U sy, INT32U ex, INT32U ey, RGB color)
 /* ---------------- FLOOD FILL ----------------
 *	广度优先搜索	队列
 ** ----------------------------------------*/
-void Graphics::floodfill(INT32U x0, INT32U y0, RGB color) 
+void Graphics::floodfill(INT32S x0, INT32S y0, RGB color) 
 {
 	RGB color0 = readPoint(x0, y0);
 	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 };
@@ -313,7 +313,7 @@ void Graphics::floodfill(INT32U x0, INT32U y0, RGB color)
 
 	while (!Qx.empty()) {
 		INT32S x = Qx.front(), y = Qy.front();
-		for (INT32U i = 0; i < 8; i++) {
+		for (INT32S i = 0; i < 8; i++) {
 			INT32S xt = x + x_step[i], yt = y + y_step[i];
 			if (readPoint(xt, yt) == color0 && !judgeOutRange(xt, yt)) {
 				setPoint(xt, yt, color);
@@ -326,12 +326,12 @@ void Graphics::floodfill(INT32U x0, INT32U y0, RGB color)
 /* ---------------- DRAW CHARACTER ---------------- 
 *	字库: font.h
 ** ---------------------------------------- */
-void Graphics::drawChar(INT32U x0, INT32U y0, CHAR charac)
+void Graphics::drawChar(INT32S x0, INT32S y0, CHAR charac)
 {
-	INT32U x = x0, y = y0;
-	for (INT32U i = 0; i < FontSize; i++){
+	INT32S x = x0, y = y0;
+	for (INT32S i = 0; i < FontSize; i++){
 		INT8U temp = asc2_1608[charac - 32][i];	//调用2412字体
-		for (INT32U j = 0; j < 8; j++){
+		for (INT32S j = 0; j < 8; j++){
 			if (temp & 0x80)drawPoint(x, y);
 			temp <<= 1;
 			y++;
@@ -343,7 +343,7 @@ void Graphics::drawChar(INT32U x0, INT32U y0, CHAR charac)
 	}
 }
 /* ---------------- DRAW STRING ---------------- */
-void Graphics::drawString(INT32U x0, INT32U y0, const CHAR* str, INT32U n)
+void Graphics::drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n)
 {
 	for (int i = 0; i < n; i++) {
 		drawChar(x0 + FontSize * i, y0, str[i]);
@@ -351,10 +351,10 @@ void Graphics::drawString(INT32U x0, INT32U y0, const CHAR* str, INT32U n)
 }
 /* ---------------- DRAW NUMBER ---------------- */
 #include<iostream>
-void Graphics::drawNum(INT32U x0, INT32U y0, FP64 num)
+void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 {
 	CHAR numstr[100];
-	INT32U cur = 0;
+	INT32S cur = 0;
 	INT32S integer = num;							//整数部分
 	FP64 decimal = num - integer;					//小数部分
 	if (num < 0) {
@@ -395,17 +395,13 @@ void Graphics::translation(INT32S dx, INT32S dy)
 	gM.mult(M, gM, gM);
 }
 /* ---------------- ROMOTE ---------------- */
-void Graphics::rotate(FP64 theta)
+void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
+	translation(-x0, -y0);
 	Mat<FP64> M(3);
 	M.setValue(0, 0, cos(theta));	M.setValue(0, 1, -1 * sin(theta));
 	M.setValue(1, 0, sin(theta));	M.setValue(1, 1, cos(theta));
 	gM.mult(M, gM, gM);
-}
-void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
-{
-	translation(-x0, -y0);
-	rotate(theta);
 	translation(x0, y0);
 }
 /* ---------------- scaling ---------------- */
@@ -422,8 +418,8 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 	Maptemp.clear(TRANSPARENT);
 	Mat<FP64> p0(3, 1), p1(3, 1), p2(3, 1);
 	p0.setValue(2, 0, 1);
-	for (INT32U y = 0; y < gSize[1]; y++) {
-		for (INT32U x = 0; x < gSize[0]; x++) {
+	for (INT32S y = 0; y < gSize[1]; y++) {
+		for (INT32S x = 0; x < gSize[0]; x++) {
 			p0.setValue(0, 0, (FP64)x); p0.setValue(1, 0, (FP64)y);
 			p1.mult(M, p0, p1);
 			RGB t = readPoint(x, y);
@@ -436,40 +432,18 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 	free(Map);
 	Map = Maptemp.Map;	Maptemp.Map = NULL;
 }
-/*---------------- CONFIRM Trans ----------------*/
-void Graphics::confirmTrans()
-{
-	Graphics Maptemp;
-	Maptemp.setGSize(gSize[0], gSize[1]);
-	Maptemp.clear(TRANSPARENT);
-	Mat<FP64> p(3, 1);
-	p.setValue(2, 0, 1);
-	for (INT32U y = 0; y < gSize[1]; y++) {
-		for (INT32U x = 0; x < gSize[0]; x++) {
-			p.setValue(0, 0, (FP64)x); p.setValue(1, 0, (FP64)y);
-			p.mult(gM, p, p);
-			RGB t = readPoint(x, y);
-			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0), p.getValue(1, 0), t);
-			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0) + 0.4, p.getValue(1, 0) + 0.4, t);	//#补丁
-		}
-	}
-	gM.E(3);
-	free(Map);
-	Map = Maptemp.Map;	Maptemp.Map = NULL;
-}
 /******************************************************************************
 *                    SET 设置
 ******************************************************************************/
-
 /* ---------------- setGSize ---------------- */
-void Graphics::setGSize(INT32U width, INT32U height)
+void Graphics::setGSize(INT32S width, INT32S height)
 {
 	gSize[0] = width;
 	gSize[1] = height;
 	init();
 }
 /* ---------------- judgeOutRange ---------------- */
-bool Graphics::judgeOutRange(INT32U x0, INT32U y0)
+bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
 {
 	if (x0<0 || x0>= gSize[0])return true;
 	if (y0<0 || y0>= gSize[1])return true;
