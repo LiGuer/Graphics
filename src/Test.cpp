@@ -57,14 +57,14 @@ int main()
 	gt->fill(180, 20, 170, 30, 0x00FFCC);
 	gt->rotate(3.14 * 60 / 360, 100, 100);
 	gt->confirmTrans();
-	g->drawCopy(10, 10, gt);
+	g->drawCopy(10, 10, gt->Map, gt->gWidth, gt->gHeight);
 
 	gt->PaintSize = 0;
 	gt->PaintColor = 0xFF9900;
 	gt->clear(gt->TRANSPARENT);
 	gt->drawString(0, 0, "Ligu~", 5);
 	gt->scaling(4, 3);
-	g->drawCopy(0, 0, gt);
+	g->drawCopy(0, 0, gt->Map, gt->gWidth, gt->gHeight);
 
 	g->PaintColor = 0xFFEE00;
 	g->PaintSize = 3;
@@ -87,15 +87,15 @@ int main()
 	gt->clear(gt->TRANSPARENT);
 	gt->drawString(0, 0, "I Love U", 8);
 	gt->scaling(2, 2.5);
-	g->drawCopy(1800 - 120, 1000 + 100, gt);
+	g->drawCopy(1800 - 120, 1000 + 100, gt->Map, gt->gWidth, gt->gHeight);
 
 
 	gt->setSize(g->gWidth, g->gHeight);
 	gt->init();
-	gt->drawCopy(0, 0, g);
+	gt->drawCopy(0, 0, g->Map, g->gWidth, g->gHeight);
 	gt->scaling(0.2, 0.2);
 	gt->confirmTrans();
-	g->drawCopy(0, 300, gt);
+	g->drawCopy(0, 300, gt->Map, gt->gWidth, gt->gHeight);
 
 	g->PicWrite("D:/LIGU.ppm");
 }

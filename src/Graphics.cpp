@@ -70,17 +70,7 @@ void Graphics::confirmTrans()
 	free(Map);
 	Map = Maptemp.Map;	Maptemp.Map = NULL;
 }
-/* ---------------- DRAW COPY ---------------- */
-void Graphics::drawCopy(INT32S x0, INT32S y0, Graphics* gt)
-{
-	for (INT32S i = 0; i < gt->gHeight; i++) {
-		for (INT32S j = 0; j < gt->gWidth; j++) {
-			RGB t = gt->readPoint(j, i);
-			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
-			setPoint(x0 + j, y0 + i, t);
-		}
-	}
-}
+
 /******************************************************************************
 *                    底层无关
 ******************************************************************************/
@@ -279,6 +269,17 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 			y += yCtrl[i] * bezBlendFcn;
 		}
 		drawPoint(x, y);
+	}
+}
+/* ---------------- DRAW COPY ---------------- */
+void Graphics::drawCopy(INT32S x0, INT32S y0, RGB* gt, INT32S width, INT32S height)
+{
+	for (INT32S i = 0; i < height; i++) {
+		for (INT32S j = 0; j < width; j++) {
+			RGB t = *(gt + i * width + j);
+			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
+			setPoint(x0 + j, y0 + i, t);
+		}
 	}
 }
 /* ---------------- FILL ---------------- */
