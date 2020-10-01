@@ -1,15 +1,15 @@
 #include "Plot.h"
 Plot::Plot(Graphics* gt) {
 	g = gt;
-	WindowSize[0] = g->gSize[0];
-	WindowSize[1] = g->gSize[1];
+	WindowSize[0] = g->gWidth;
+	WindowSize[1] = g->gHeight;
 	pMax[0] = pMin[0] = pMax[1] = pMin[1] = 0;
 }
-
+/*---------------- clear ----------------*/
 void Plot::clear() {
-	g->clear();
+	g->clear(0);
 }
-
+/*---------------- setXYRange ----------------*/
 void Plot::setXYRange(const double x[], const double y[], const int n) {
 	for (int i = 0; i < n; i++) {
 		pMax[0] = pMax[0] > x[i] ? pMax[0] : x[i];
@@ -20,6 +20,15 @@ void Plot::setXYRange(const double x[], const double y[], const int n) {
 	deltaXY[0] = WindowSize[0] / (pMax[0] - pMin[0]);
 	deltaXY[1] = WindowSize[1] / (pMax[1] - pMin[1]);
 }
+/*---------------- COOR TO PIX ----------------*/
+int Plot::coor2pix(double coor, int dim) {
+	return (coor - pMin[dim]) * deltaXY[dim];
+}
+
+int Plot::value2pix(double value, int dim) {
+	return value * deltaXY[dim];
+}
+
 
 void Plot::plotPoint(const double x, const double y) {
 	g->drawPoint(coor2pix(x, 0), coor2pix(y, 1));
@@ -125,13 +134,6 @@ void Plot::contourface(const Mat<double>* map, const int N)
 			}
 		}
 	}
-}
-int Plot::coor2pix(double coor, int dim) {
-	return (coor - pMin[dim]) * deltaXY[dim];
-}
-
-int Plot::value2pix(double value, int dim) {
-	return value * deltaXY[dim];
 }
 
 void Plot::grid() {

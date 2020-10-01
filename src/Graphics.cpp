@@ -5,22 +5,19 @@
 /* ---------------- INIT ---------------- */
 void Graphics::init() {
 	if (Map != NULL)free(Map);
-	Map = (RGB*)malloc(sizeof(RGB) * gSize[0] * gSize[1]);
-	clear();
+	Map = (RGB*)malloc(sizeof(RGB) * gWidth * gHeight);
+	clear(0);
+	gM.E(3);
 }
 /* ---------------- CLEAR ---------------- */
-void Graphics::clear()
-{
-	memset(Map, 0, sizeof(RGB) * gSize[0] * gSize[1]);
-}
 void Graphics::clear(RGB color)
 {
 	if (color == TRANSPARENT || color == 0) {	//memset按字节处理，故只能处理高低字节相同的值
-		memset(Map, color, sizeof(RGB) * gSize[0] * gSize[1]);
+		memset(Map, color, sizeof(RGB) * gWidth * gHeight);
 		return;
 	}
-	for (INT32S y = 0; y < gSize[1]; y++) {
-		for (INT32S x = 0; x < gSize[0]; x++) {
+	for (INT32S y = 0; y < gHeight; y++) {
+		for (INT32S x = 0; x < gWidth; x++) {
 			setPoint(x, y, color);
 		}
 	}
@@ -28,21 +25,21 @@ void Graphics::clear(RGB color)
 /* ---------------- SET/READ POINT ---------------- */
 void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
 	if (judgeOutRange(x, y))return;
-	*(Map + y * gSize[0] + x) = color;
+	*(Map + y * gWidth + x) = color;
 }
 
 RGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
-	return *(Map + y * gSize[0] + x);
+	return *(Map + y * gWidth + x);
 }
 /* ---------------- PicWrite ---------------- */
 void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 	FILE* fp = fopen(filename, "wb");
-	fprintf(fp, "P6\n%d %d\n255\n", gSize[0], gSize[1]);// 写图片格式、宽高、最大像素值
+	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);// 写图片格式、宽高、最大像素值
 
 	unsigned char color;
-	for (INT32S i = 0; i < gSize[1]; i++) {
-		for (INT32S j = 0; j < gSize[0]; j++) {
+	for (INT32S i = 0; i < gHeight; i++) {
+		for (INT32S j = 0; j < gWidth; j++) {
 			for (INT32S k = 0; k < 3; k++) {
 				color = readPoint(j, i) >> (8 * k);
 				fwrite(&color, sizeof(color), 1, fp);// 写RGB数据
@@ -54,12 +51,14 @@ void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 void Graphics::confirmTrans()
 {
 	Graphics Maptemp;
-	Maptemp.setGSize(gSize[0], gSize[1]);
+	Maptemp.setSize(gWidth, gHeight);
+	Maptemp.init();
 	Maptemp.clear(TRANSPARENT);
-	Mat<FP64> p(3, 1);
+	Mat<FP64> p;
+	p.zero(3, 1);
 	p.setValue(2, 0, 1);
-	for (INT32S y = 0; y < gSize[1]; y++) {
-		for (INT32S x = 0; x < gSize[0]; x++) {
+	for (INT32S y = 0; y < gHeight; y++) {
+		for (INT32S x = 0; x < gWidth; x++) {
 			p.setValue(0, 0, (FP64)x); p.setValue(1, 0, (FP64)y);
 			p.mult(gM, p, p);
 			RGB t = readPoint(x, y);
@@ -70,6 +69,17 @@ void Graphics::confirmTrans()
 	gM.E(3);
 	free(Map);
 	Map = Maptemp.Map;	Maptemp.Map = NULL;
+}
+/* ---------------- DRAW COPY ---------------- */
+void Graphics::drawCopy(INT32S x0, INT32S y0, Graphics* gt)
+{
+	for (INT32S i = 0; i < gt->gHeight; i++) {
+		for (INT32S j = 0; j < gt->gWidth; j++) {
+			RGB t = gt->readPoint(j, i);
+			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
+			setPoint(x0 + j, y0 + i, t);
+		}
+	}
 }
 /******************************************************************************
 *                    底层无关
@@ -248,7 +258,7 @@ void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
 /* ---------------- DRAW BEZIER CURVE ---------------- */
 void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 {
-	INT32S N = gSize[0]+ gSize[1];					//#待优化
+	INT32S N = gWidth+ gHeight;					//#待优化
 	FP64 C[50];
 	for (INT32S i = 0; i < n; i++) {
 		setPoint(xCtrl[i], yCtrl[i],0xFFFFFF);
@@ -269,17 +279,6 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 			y += yCtrl[i] * bezBlendFcn;
 		}
 		drawPoint(x, y);
-	}
-}
-/* ---------------- DRAW COPY ---------------- */
-void Graphics::drawCopy(INT32S x0, INT32S y0, Graphics* gt)
-{
-	for (INT32S i = 0; i < gt->gSize[1]; i++) {
-		for (INT32S j = 0; j < gt->gSize[0]; j++) {
-			RGB t = gt->readPoint(j, i); 
-			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
-			setPoint(x0 + j, y0 + i, t);
-		}
 	}
 }
 /* ---------------- FILL ---------------- */
@@ -350,7 +349,6 @@ void Graphics::drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n)
 	}
 }
 /* ---------------- DRAW NUMBER ---------------- */
-#include<iostream>
 void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 {
 	CHAR numstr[100];
@@ -390,7 +388,8 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 /* ---------------- TRANSLATION ---------------- */
 void Graphics::translation(INT32S dx, INT32S dy)
 {
-	Mat<FP64> M(3);
+	Mat<FP64> M;
+	M.E(3);
 	M.setValue(0, 2, dx);	M.setValue(1, 2, dy);
 	gM.mult(M, gM, gM);
 }
@@ -398,7 +397,8 @@ void Graphics::translation(INT32S dx, INT32S dy)
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
 	translation(-x0, -y0);
-	Mat<FP64> M(3);
+	Mat<FP64> M;
+	M.E(3);
 	M.setValue(0, 0, cos(theta));	M.setValue(0, 1, -1 * sin(theta));
 	M.setValue(1, 0, sin(theta));	M.setValue(1, 1, cos(theta));
 	gM.mult(M, gM, gM);
@@ -407,19 +407,22 @@ void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0)
 /* ---------------- scaling ---------------- */
 void Graphics::scaling(FP64 sx, FP64 sy)
 {
-	Mat<FP64> M(3);
+	Mat<FP64> M;
+	M.E(3);
 	M.setValue(0, 0, sx);	M.setValue(1, 1, sy);
 	if (sx <= 1 && sy <= 1) {
 		gM.mult(M, gM, gM);
 		return;
 	}
 	Graphics Maptemp;
-	Maptemp.setGSize(gSize[0], gSize[1]);
+	Maptemp.setSize(gWidth, gHeight);
+	Maptemp.init();
 	Maptemp.clear(TRANSPARENT);
-	Mat<FP64> p0(3, 1), p1(3, 1), p2(3, 1);
+	Mat<FP64> p0, p1, p2;
+	p0.zero(3, 1); p1.zero(3, 1); p2.zero(3, 1);
 	p0.setValue(2, 0, 1);
-	for (INT32S y = 0; y < gSize[1]; y++) {
-		for (INT32S x = 0; x < gSize[0]; x++) {
+	for (INT32S y = 0; y < gHeight; y++) {
+		for (INT32S x = 0; x < gWidth; x++) {
 			p0.setValue(0, 0, (FP64)x); p0.setValue(1, 0, (FP64)y);
 			p1.mult(M, p0, p1);
 			RGB t = readPoint(x, y);
@@ -435,17 +438,15 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 /******************************************************************************
 *                    SET 设置
 ******************************************************************************/
-/* ---------------- setGSize ---------------- */
-void Graphics::setGSize(INT32S width, INT32S height)
+/* ---------------- setSize ---------------- */
+void Graphics::setSize(INT32S width, INT32S height)
 {
-	gSize[0] = width;
-	gSize[1] = height;
-	init();
+	gWidth = width;	gHeight = height;
 }
 /* ---------------- judgeOutRange ---------------- */
 bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
 {
-	if (x0<0 || x0>= gSize[0])return true;
-	if (y0<0 || y0>= gSize[1])return true;
+	if (x0<0 || x0>= gWidth)return true;
+	if (y0<0 || y0>= gHeight)return true;
 	return false;
 }

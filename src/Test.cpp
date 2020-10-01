@@ -5,9 +5,10 @@ int main()
 {
 	Graphics *g = new Graphics;
 	Plot* plot = new Plot(g);
+	g->setSize(2048, 2000);
 	g->init();
-	g->setGSize(2048, 2000);
 
+	g->PaintColor = 0xFFFFFF;
 	for (int i = 0; i < 50; i++) {
 		g->PaintSize = i;
 		g->drawPoint(50 + i * 38, 1800);
@@ -41,7 +42,8 @@ int main()
 	g->drawNum(1000, 1200, -1203.567);
 	
 	Graphics* gt = new Graphics;
-	gt->setGSize(500, 500);
+	gt->setSize(500, 500);
+	gt->init();
 	gt->clear(gt->TRANSPARENT);
 	gt->PaintSize = 2;
 	gt->PaintColor = 0xFFCC66;
@@ -88,7 +90,8 @@ int main()
 	g->drawCopy(1800 - 120, 1000 + 100, gt);
 
 
-	gt->setGSize(g->gSize[0], g->gSize[1]);
+	gt->setSize(g->gWidth, g->gHeight);
+	gt->init();
 	gt->drawCopy(0, 0, g);
 	gt->scaling(0.2, 0.2);
 	gt->confirmTrans();
