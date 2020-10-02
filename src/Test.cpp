@@ -5,7 +5,7 @@
 int main()
 {
 	Graphics* g = new Graphics;
-	g->setSize(2000, 2000);
+	g->setSize(2048, 2048);
 	Plot* plot = new Plot;
 	plot->init(g);
 
