@@ -1,16 +1,13 @@
 ﻿#include "Graphics.h"
 #include "Plot.h"
 #include "math.h"
+#include "Mat.h"
 
 int main()
 {
 	Graphics* g = new Graphics;
-	g->setSize(2048, 2048);
 	Plot* plot = new Plot;
 	plot->init(g);
-	g->PaintColor = 0x88FFFF00;
-	g->PaintSize = 100;
-	g->drawPoint(1200, 1200);
 
 	const int N = 1000;
 	double x[N], y[N];
@@ -23,13 +20,22 @@ int main()
 	g->PaintColor = 0xFF0000;
 	g->PaintSize = 2;
 	plot->plotWave(x, y, N);
+	g->PaintColor = 0xFFFF00;
 
-	g->fill(100, 100, 500, 500, 0x88FFFF00);
-	g->fill(600, 600, 800, 800, 0x88FF00FF);
-	g->fill(900, 900, 1200, 1200, 0x8800FFFF);
-	g->fill(900, 1500, 1200, 1800, 0x8800FF00);
-	g->fill(100, 900, 500, 1200, 0x880000FF);
-	g->fill(600, 900, 800, 1200, 0x88FF0000);
+	Mat<double> map;
+	map.zero(N, N);
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			map.data[i * map.cols + j] = i + j;
+		}
+	}
+	g->PaintSize = 0;
+	g->PaintColor = 0xFFFF00;
+	plot->contourface(&map, 100);
+	plot->contour(&map, 5);
+	int x2[] = { 395,479,1199,1101 ,1294 ,1417,857 ,668 ,1111 };
+	int y2[] = { 1887,1998,1433,1867, 1715 ,1171 ,1163 ,1314,1321 };
+	g->fillPolygon(x2, y2, 9);
 
 	g->PicWrite("D:/LIGU.ppm");
 }
@@ -129,6 +135,13 @@ int main()
 	gt->scaling(0.2, 0.2);
 	gt->confirmTrans();
 	g->drawCopy(0, 300, gt->Map, gt->gWidth, gt->gHeight);
+
+	g->fill(100, 100, 500, 500, 0x88FFFF00);
+	g->fill(600, 600, 800, 800, 0x88FF00FF);
+	g->fill(900, 900, 1200, 1200, 0x8800FFFF);
+	g->fill(900, 1500, 1200, 1800, 0x8800FF00);
+	g->fill(100, 900, 500, 1200, 0x880000FF);
+	g->fill(600, 900, 800, 1200, 0x88FF0000);
 
 	g->PicWrite("D:/LIGU.ppm");
 }

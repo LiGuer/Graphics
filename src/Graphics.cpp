@@ -342,10 +342,84 @@ void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 		Qx.pop(); Qy.pop();
 	}
 }
-/* ---------------- fillTriangle ----------------*/
-void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n, RGB color)
+/* ---------------- fillTriangle ----------------
+*	扫描线填充算法
+*	
+*	基本思想：
+*	每条水平扫描线与多边形的边产生一系列交点，
+*	交点之间形成一条一条的线段，该线段上的像素就是需要被填充的像素。
+*	将这些交点按照x坐标排序，将排序后的交点两两成对，作为线段的两个端点。
+*	水平扫描线从上到下（或从下到上）扫描由多条首尾相连的线段，
+*	使用要求的颜色填充该水平线段上的像素。
+*	多边形扫描完成后，颜色填充也就完成了。
+** ---------------------------------------- */
+struct fillPolygon_Edge{		//边表
+	int ymax;					//ymax:边的上端点
+	double x,dx;				//x:当前水平扫描线的交点//dx:斜率m的倒数
+	fillPolygon_Edge* next = NULL;
+};
+void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 {
-	
+	const int ETSzie = 1024;
+	fillPolygon_Edge* AET = new fillPolygon_Edge(), *ET[ETSzie];	//Active-Edge Table:活动边表//Edge Table边表
+	/*------ 计算y最大最小值 ------*/
+	int maxY = 0, minY = 0x7FFFFFFF;
+	for (int i = 0; i < n; i++) {
+		maxY = maxY >= y[i] ? maxY : y[i];
+		minY = minY <= y[i] ? minY : y[i];
+	}
+	for (int i = 0; i <= maxY - minY; i++){
+		ET[i] = new fillPolygon_Edge();
+	}
+	/*------ 建立边表ETy坐标 ------*/
+	for (int i = 0; i < n; i++){
+		int x1 = x[i], x2 = x[(i + 1) % n];
+		int y1 = y[i], y2 = y[(i + 1) % n];
+		if (y1 == y2)continue;							//水平线舍弃
+		int ymin = y1 < y2 ? y1 : y2, ymax = y1 > y2 ? y1 : y2;	//下端点y,上端点y,下端点x,斜率倒数
+		double x = y1 < y2 ? x1 : x2, dx = (double)(x2 - x1) / (y2 - y1);
+		fillPolygon_Edge* tE = new fillPolygon_Edge;
+		tE->ymax = ymax; tE->x = x; tE->dx = dx; tE->next = ET[ymin - minY]->next;
+		ET[ymin - minY]->next = tE;					//创建新边，插入边表ET
+	}
+	/*------ 扫描线从下往上扫描，y坐标每次加1 ------*/
+	for (int y = minY; y <= maxY; y++) {
+		fillPolygon_Edge* p = AET;
+		while (ET[y - minY]->next) {					//ET[y]链表遍历
+			fillPolygon_Edge* pET = ET[y - minY]->next;
+			while (p->next) {							//AET链表遍历,在AET中搜索合适的插入位置
+				if ((pET->x < p->next->x) || (pET->x == p->next->x && pET->dx < p->next->dx))//按x增序(若相等按dx增序)插入AET
+					break;								//找到位置
+				p = p->next;						
+			}
+			ET[y - minY]->next = pET->next;				//ET链表中删除pET
+			pET->next = p->next; p->next = pET;			//pET插入AET的当前位置
+		}
+		/*------ AET中边两两配对,填充该扫描线 ------*/
+		p = AET;
+		while (p->next && p->next->next) {				//链表遍历
+			for (int x = p->next->x; x <= p->next->next->x; x++) {
+				setPoint(x, y, PaintColor);
+			}
+			p = p->next->next;
+		}
+		/*------ 删除AET中满足AET->ymax = y的边 ------*/
+		p = AET;
+		while (p->next) {
+			if (p->next->ymax == y + 1) {
+				fillPolygon_Edge* pt = p->next;
+				p->next = pt->next;
+				delete pt;
+			}
+			else p = p->next;
+		}
+		/*------ 更新AET边x值 ------*/
+		p = AET;
+		while (p->next) {
+			p->next->x += p->next->dx;
+			p = p->next;
+		}
+	}
 }
 /* ---------------- DRAW CHARACTER ----------------
 *	字库: font.h

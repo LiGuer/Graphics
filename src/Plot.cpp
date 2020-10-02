@@ -5,7 +5,9 @@
 /*---------------- init ----------------*/
 void Plot::init(Graphics* gt) {
 	g = gt;
+	g->setSize(2048, 2048);
 	g->init();
+	g->PaintColor = 0xFFFFFF;
 	pSizeMax[0] = pSizeMax[1] = pSizeMin[0] = pSizeMin[1] = 0;
 }
 /*---------------- clear ----------------*/
@@ -24,7 +26,8 @@ void Plot::setAxisRange(const double minx, const double miny, const double maxx,
 ******************************************************************************/
 /*---------------- COOR TO PIX ----------------*/
 int Plot::coor2pix(double coor, int dim) {
-	return (coor - pSizeMin[dim]) * pDelta[dim];
+	if (dim == 0)return (coor - pSizeMin[dim]) * pDelta[dim];
+	else return g->gHeight - (coor - pSizeMin[dim]) * pDelta[dim];//y转pix时反转
 }
 /*---------------- value TO PIX ----------------*/
 int Plot::value2pix(double value, int dim) {
@@ -36,6 +39,10 @@ int Plot::value2pix(double value, int dim) {
 /*---------------- 画点 ----------------*/
 void Plot::plotPoint(const double x, const double y) {
 	g->drawPoint(coor2pix(x, 0), coor2pix(y, 1));
+}
+/*---------------- 画线 ----------------*/
+void Plot::plotLine(const double x1, const double y1, const double x2, const double y2){
+	g->drawLine(coor2pix(x1, 0), coor2pix(y1, 1), coor2pix(x2, 0), coor2pix(y2, 1));
 }
 /*---------------- 画曲线 ----------------*/
 void Plot::plotWave(const double x[], const double y[], const int n) {

@@ -19,6 +19,7 @@ public:
 	int value2pix(double value, int dim);								//÷µToœÒÀÿ÷µ
 	/*---------------- PLOT ----------------*/
 	void plotPoint(const double x, const double y);						//ª≠µ„
+	void plotLine(const double x1, const double y1, const double x2, const double y2);//ª≠œﬂ
 	void plotWave(const double x[], const double y[], const int n);		//ª≠«˙œﬂ
 	void plotCircle(const double x, const double y, const double r);	//ª≠‘≤
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//ª≠Õ÷‘≤
