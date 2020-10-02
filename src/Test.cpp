@@ -5,19 +5,20 @@
 int main()
 {
 	Graphics* g = new Graphics;
-	g->setSize(2048, 2048);
-	g->PaintColor = 0x0000FF;
-	g->PaintSize = 2;
+	g->setSize(2000, 2000);
 	Plot* plot = new Plot;
 	plot->init(g);
 
 	const int N = 1000;
 	double x[N], y[N];
 	for (int i = 0; i < N; i++) {
-		x[i] = i;
-		y[i] = sin(i*2*3.14/360);
+		x[i] = i - 500;
+		y[i] = sin(x[i] *2*3.14/360);
 	}
-	plot->setAxisRange(0, 1, 1000, -1);
+	plot->setAxisRange(-500, -1, 500, 1);
+	plot->grid();
+	g->PaintColor = 0x0000FF;
+	g->PaintSize = 2;
 	plot->plotWave(x, y, N);
 
 	g->PicWrite("D:/LIGU.ppm");

@@ -106,11 +106,14 @@ void Plot::contourface(const Mat<double>* map, const int N)
 }
 /*---------------- 画网格 ----------------*/
 void Plot::grid() {
+	int x0 = coor2pix(0, 0), y0 = coor2pix(0, 1);		//原点像素坐标
 	double size[2] = { pSizeMax[0] - pSizeMin[0],pSizeMax[1] - pSizeMin[1] };
-	size[0] /= 10;
-	size[1] /= 10;
-
-	double delta[2] = { 1,1 };
+	/*------ 网格 ------*/
+	g->PaintColor = 0xffcc00;
+	g->PaintSize = 1;
+	/*------ 计算间隔值 ------*/
+	size[0] /= 10;size[1] /= 10;
+	double delta[2] = { 1,1 };	
 	for (int dim = 0; dim < 2; dim++) {
 		while ((int)size[dim] == 0) {
 			size[dim] *= 10;
@@ -120,18 +123,25 @@ void Plot::grid() {
 			size[dim] /= 10;
 			delta[dim] *= 10;
 		}
+		delta[dim] *= (int)size[dim];
 	}
-	int gs[2];
+	/*------ 计算始末点 ------*/
+	int gs[2], ge[2];
 	for (int dim = 0; dim < 2; dim++) {
 		double s = (int)(pSizeMin[dim] / delta[dim]) * delta[dim];
-		gs[dim] = coor2pix(s, dim);
-	}
-	int ge[2];
-	for (int dim = 0; dim < 2; dim++) {
 		double e = (int)(pSizeMax[dim] / delta[dim]) * delta[dim] + 1;
+		gs[dim] = coor2pix(s, dim);
 		ge[dim] = coor2pix(e, dim);
 	}
 	g->drawGrid(gs[0], gs[1], ge[0], ge[1], value2pix(delta[0], 0), value2pix(delta[1], 1));
+	/*------ 坐标轴 ------*/
+	g->PaintColor = 0xffffff;
+	g->PaintSize = 3;
+	g->drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
+	g->drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
+	/*------ 轴标号 ------*/
+	g->PaintSize = 0;
+	g->drawChar(x0 - 25, y0 + 15, '0');
 }
 /*---------------- 色谱 ----------------*/
 RGB Plot::colorlist(const int N, const int i, const int model)
