@@ -445,7 +445,7 @@ void Graphics::setSize(INT32S width, INT32S height)
 	gWidth = width;	gHeight = height;
 }
 /* ---------------- judgeOutRange ---------------- */
-bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
+BOOL Graphics::judgeOutRange(INT32S x0, INT32S y0)
 {
 	if (x0<0 || x0>= gWidth)return true;
 	if (y0<0 || y0>= gHeight)return true;

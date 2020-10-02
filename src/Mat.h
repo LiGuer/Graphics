@@ -20,22 +20,22 @@ public:
 	void E(const int _rows) {
 		zero(_rows, _rows);
 		for (int i = 0; i < rows; i++) {
-			*(data + i * cols + i) = 1;
+			data[i * cols + i] = 1;
 		}
 	}
 	/* ---------------- È¡Öµ ¸³Öµ ---------------- */
 	void setValue(int i, int j, T value) {
-		*(data + i * cols + j) = value;
+		data[i * cols + j] = value;
 	}
 	T getValue(int i, int j) const {
-		return *(data + i * cols + j);
+		return data[i * cols + j];
 	}
 	/* ---------------- max min ---------------- */
 	T max() const{
 		T max = *data ;
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
-				max = max >= *(data + i * cols + j) ? max : *(data + i * cols + j);
+				max = max >= data[i * cols + j] ? max : data[i * cols + j];
 			}
 		}
 		return max;
@@ -44,7 +44,7 @@ public:
 		T min = getValue(0, 0);
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
-				min = min <=  *(data + i * cols + j) ? min :  *(data + i * cols + j);
+				min = min <=  data[i * cols + j] ? min :  data[i * cols + j];
 			}
 		}
 		return min;
@@ -63,8 +63,8 @@ public:
 				T sum;
 				memset(&sum, 0, sizeof(sum));
 				for (int k = 0; k < a.cols; k++) {
-					T aV = *(a.data + i * a.cols + k);
-					T bV = *(b.data + k * b.cols + j);
+					T aV = data[i * cols + k];
+					T bV = data[k * cols + j];
 					sum += aV * bV;
 				}
 				ansTemp.setValue(i, j, sum);

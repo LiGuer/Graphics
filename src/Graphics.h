@@ -10,7 +10,7 @@
 /******************************************************************************
 *                    定义与编译器无关的数据类型
 ******************************************************************************/
-typedef unsigned char  BOOLEAN;
+typedef bool  BOOL;
 typedef unsigned char  INT8U;			/* Unsigned  8 bit quantity       */
 typedef signed   char  INT8S;			/* Signed    8 bit quantity       */
 typedef unsigned short INT16U;			/* Unsigned 16 bit quantity       */
@@ -28,7 +28,7 @@ typedef INT32U  RGB;
 class Graphics {
 public:
 	/*---------------- 基础参数 ----------------*/
-	INT32S gWidth = 2048, gHeight=2048;										//窗口尺寸
+	INT32S gWidth = 0, gHeight=0;											//窗口尺寸
 	RGB* Map = NULL;														//图
 	RGB PaintColor;															//画笔颜色
 	INT32S PaintSize = 0;													//画笔大小
@@ -44,7 +44,6 @@ public:
 	RGB  readPoint(INT32S x, INT32S y); 									//读点 
 	void PicWrite(const CHAR* filename);									//存图
 	void confirmTrans();													//确认变换
-
 	/*---------------- DRAW ----------------*/
 	void drawPoint(INT32S x0, INT32S y0);									//画点
 	void drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2);				//画线
@@ -66,7 +65,7 @@ public:
 	void rotate(FP64 theta, INT32S x0, INT32S y0);							//旋转
 	void scaling(FP64 sx, FP64 sy);											//缩放(>1直接完成变换)
 	/*---------------- SET ----------------*/
-	bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
+	BOOL judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
 	void setSize(INT32S width, INT32S height);								//设置窗口尺寸
 };
 #endif

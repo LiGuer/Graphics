@@ -7,27 +7,25 @@
 class Plot
 {
 public:
-	Graphics* g;
-	double pMax[2], pMin[2];											//XY轴范围
-	int WindowSize[2];													//长宽像素格数
-	double deltaXY[2];													//单位一的像素格数
-
-	Plot(Graphics* gt);
-	/*---------------- SET ----------------*/
-	void clear();														//清屏
-	void setXYRange(const double x[], const double y[], const int n);	//自动设置XY轴范围
+	Graphics* g;														//核心图形学类
+	double pSizeMax[2], pSizeMin[2];									//XY轴范围
+	double pDelta[2];													//单位一的像素格数
+	/*---------------- SET 设置 ----------------*/
+	void init(Graphics* gt);											//初始化
+	void clear(RGB color);												//清屏
+	void setAxisRange(const double minx, const double miny, const double maxx, const double maxy);	//设置轴范围
+	/*---------------- 实数坐标 To 像素坐标 ----------------*/
+	int coor2pix(double coor, int dim);									//坐标To像素坐标
+	int value2pix(double value, int dim);								//值To像素值
 	/*---------------- PLOT ----------------*/
-	void plotPoint(const double x, const double y);		//画点
+	void plotPoint(const double x, const double y);						//画点
 	void plotWave(const double x[], const double y[], const int n);		//画曲线
 	void plotCircle(const double x, const double y, const double r);	//画圆
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//画椭圆
 	void plotRectangle(const double sx, const double sy, const double ex, const double ey);//画矩形
-	void contour(const Mat<double> *map, const int N);
-	void contourface(const Mat<double>* map, const int N);
+	void contour(const Mat<double> *map, const int N);					//画等高线
+	void contourface(const Mat<double>* map, const int N);				//画等高线2
 	void grid();														//显示网格
-	/*---------------- COOR TO PIX ----------------*/
-	int coor2pix(double coor, int dim);									//坐标To像素坐标
-	int value2pix(double value, int dim);								//值To像素值
 	RGB colorlist(const int N, const int i, const int model);
 };
 #endif
