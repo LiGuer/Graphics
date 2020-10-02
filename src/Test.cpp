@@ -8,6 +8,9 @@ int main()
 	g->setSize(2048, 2048);
 	Plot* plot = new Plot;
 	plot->init(g);
+	g->PaintColor = 0x88FFFF00;
+	g->PaintSize = 100;
+	g->drawPoint(1200, 1200);
 
 	const int N = 1000;
 	double x[N], y[N];
@@ -24,7 +27,7 @@ int main()
 	g->fill(100, 100, 500, 500, 0x88FFFF00);
 	g->fill(600, 600, 800, 800, 0x88FF00FF);
 	g->fill(900, 900, 1200, 1200, 0x8800FFFF);
-	g->fill(900, 900, 1200, 1200, 0x8800FF00);
+	g->fill(900, 1500, 1200, 1800, 0x8800FF00);
 	g->fill(100, 900, 500, 1200, 0x880000FF);
 	g->fill(600, 900, 800, 1200, 0x88FF0000);
 

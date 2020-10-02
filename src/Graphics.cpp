@@ -22,7 +22,9 @@ void Graphics::clear(RGB color)
 		}
 	}
 }
-/* ---------------- SET/READ POINT ---------------- */
+/* ---------------- SET/READ POINT ---------------- 
+*	AlphaBlend 算法,	8位ARGB色彩
+** ---------------------------------------- */
 void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
 	if (judgeOutRange(x, y))return;
 	double alpha = (color >> 24) / 255.0;
@@ -84,17 +86,13 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 	if (judgeOutRange(x0, y0))return;
 	setPoint(x0, y0, PaintColor);						//基础点(点粗==0)
 	/*------ 点粗>0时 ------*/
-	for (INT32S r = 1; r <= PaintSize; r++) {
-		INT32S x = 0, y = r, p = 3 - (r << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
+	if (PaintSize > 0) {
+		INT32S x = 0, y = PaintSize, p = 3 - (PaintSize << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
 		INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
 		/*------ 绘制圆 (x=0始,y=x终) ------*/
 		while (x <= y) {
-			for (int i = 0; i < 4; i++) {
-				setPoint(x0 + x * x_step[i], y0 + y * y_step[i], PaintColor);
-				setPoint(x0 + y * x_step[i], y0 + x * y_step[i], PaintColor);
-				setPoint(x0 + x * x_step[i], y0 + (y - 1) * y_step[i], PaintColor);	//#补丁，需优化
-				setPoint(x0 + (y - 1) * x_step[i], y0 + x * y_step[i], PaintColor);
-			}
+			for (int i = x0 - x; i <= x0 + x; i++) { setPoint(i, y0 - y, PaintColor); setPoint(i, y0 + y, PaintColor); }	//填充圆内
+			for (int i = x0 - y; i <= x0 + y; i++) { setPoint(i, y0 - x, PaintColor); setPoint(i, y0 + x, PaintColor); }
 			x++;
 			INT32S dp = 4 * x + 6;
 			if (p < 0)p += dp;
