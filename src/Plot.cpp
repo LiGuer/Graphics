@@ -109,7 +109,7 @@ void Plot::grid() {
 	int x0 = coor2pix(0, 0), y0 = coor2pix(0, 1);		//原点像素坐标
 	double size[2] = { pSizeMax[0] - pSizeMin[0],pSizeMax[1] - pSizeMin[1] };
 	/*------ 网格 ------*/
-	g->PaintColor = 0xffcc00;
+	g->PaintColor = 0x00ccff;
 	g->PaintSize = 1;
 	/*------ 计算间隔值 ------*/
 	size[0] /= 10;size[1] /= 10;
@@ -153,5 +153,5 @@ RGB Plot::colorlist(const int N, const int i, const int model)
 	}break;
 	}
 	R *= 0xFF, G *= 0xFF, B *= 0xFF;
-	return (RGB)R + (RGB)G * 0x100 + (RGB)B * 0x10000;
+	return (RGB)R * 0x10000 + (RGB)G * 0x100 + (RGB)B;
 }

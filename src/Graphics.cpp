@@ -18,32 +18,38 @@ void Graphics::clear(RGB color)
 	}
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
-			setPoint(x, y, color);
+			Map[y * gWidth + x] = color;
 		}
 	}
 }
 /* ---------------- SET/READ POINT ---------------- */
 void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
 	if (judgeOutRange(x, y))return;
-	*(Map + y * gWidth + x) = color;
+	double alpha = (color >> 24) / 255.0;
+	unsigned char R = color >> 16, G = color >> 8, B = color;
+	R = alpha * (Map[y * gWidth + x] >> 16) + (1 - alpha) * R;
+	G = alpha * (Map[y * gWidth + x] >> 8) + (1 - alpha) * G;
+	B = alpha * (Map[y * gWidth + x]) + (1 - alpha) * B;
+	Map[y * gWidth + x] = (RGB)R * 0x10000 + (RGB)G * 0x100 + (RGB)B;
 }
-
 RGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
-	return *(Map + y * gWidth + x);
+	return Map[y * gWidth + x];
 }
 /* ---------------- PicWrite ---------------- */
 void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 	FILE* fp = fopen(filename, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);// 写图片格式、宽高、最大像素值
 
-	unsigned char color;
+	unsigned char R,G,B;
 	for (INT32S i = 0; i < gHeight; i++) {
 		for (INT32S j = 0; j < gWidth; j++) {
-			for (INT32S k = 0; k < 3; k++) {
-				color = readPoint(j, i) >> (8 * k);
-				fwrite(&color, sizeof(color), 1, fp);// 写RGB数据
-			}
+				B = readPoint(j, i) >> (8 * 0);
+				G = readPoint(j, i) >> (8 * 1);
+				R = readPoint(j, i) >> (8 * 2);
+				fwrite(&R, sizeof(char), 1, fp);// 写RGB数据
+				fwrite(&G, sizeof(char), 1, fp);// 写RGB数据
+				fwrite(&B, sizeof(char), 1, fp);// 写RGB数据
 		}
 	}fclose(fp);
 }
@@ -317,7 +323,7 @@ void Graphics::fill(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color)
 /* ---------------- FLOOD FILL ----------------
 *	广度优先搜索	队列
 ** ----------------------------------------*/
-void Graphics::floodfill(INT32S x0, INT32S y0, RGB color) 
+void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 {
 	RGB color0 = readPoint(x0, y0);
 	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 };
@@ -337,6 +343,11 @@ void Graphics::floodfill(INT32S x0, INT32S y0, RGB color)
 		}
 		Qx.pop(); Qy.pop();
 	}
+}
+/* ---------------- fillTriangle ----------------*/
+void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n, RGB color)
+{
+	
 }
 /* ---------------- DRAW CHARACTER ----------------
 *	字库: font.h

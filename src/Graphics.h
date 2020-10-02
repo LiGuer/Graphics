@@ -55,7 +55,8 @@ public:
 	void drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, INT32S dy);//画网格
 	void drawCopy(INT32S x0, INT32S y0, RGB* gt, INT32S width, INT32S height);//复制别的图
 	void fill(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color);		//填充单色
-	void floodfill(INT32S x0, INT32S y0, RGB color);						//泛滥填充
+	void fillflood(INT32S x0, INT32S y0, RGB color);						//泛滥填充
+	void fillPolygon(INT32S x[], INT32S y[], INT32S n, RGB color);//多边形填充
 	void drawChar(INT32S x0, INT32S y0, CHAR charac);						//显示字符
 	void drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n);		//显示字符串
 	void drawNum(INT32S x0, INT32S y0, FP64 num);							//显示数字
