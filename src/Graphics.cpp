@@ -228,13 +228,29 @@ void Graphics::drawEllipse(INT32S x0, INT32S y0, INT32S rx, INT32S ry)
 /* ---------------- DRAW GRID ---------------- */
 void Graphics::drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, INT32S dy)
 {
-	for (int x = sx; x <= ex; x += dx) {
-		if (judgeOutRange(x, 0))continue;
-		drawLine(x, sy, x, ey);
+	if (dx > 0) {
+		for (int x = sx; x <= ex; x += dx) {
+			if (judgeOutRange(x, 0))continue;
+			drawLine(x, sy, x, ey);
+		}
 	}
-	for (int y = sy; y <= ey; y += dy) {
-		if (judgeOutRange(0, y))continue;
-		drawLine(sx, y, ex, y);
+	else {
+		for (int x = sx; x >= ex; x += dx) {
+			if (judgeOutRange(x, 0))continue;
+			drawLine(x, sy, x, ey);
+		}
+	}
+	if (dy > 0) {
+		for (int y = sy; y <= ey; y += dy) {
+			if (judgeOutRange(0, y))continue;
+			drawLine(sx, y, ex, y);
+		}
+	}
+	else {
+		for (int y = sy; y >= ey; y += dy) {
+			if (judgeOutRange(0, y))continue;
+			drawLine(sx, y, ex, y);
+		}
 	}
 }
 /* ---------------- DRAW WAVE ---------------- */

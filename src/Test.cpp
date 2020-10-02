@@ -12,14 +12,16 @@ int main()
 	const int N = 1000;
 	double x[N], y[N];
 	for (int i = 0; i < N; i++) {
-		x[i] = i - 500;
-		y[i] = sin(x[i] *2*3.14/360);
+		x[i] = (i - 500) * 2 * 3.14 / 360;
+		y[i] = sin(x[i]);
 	}
-	plot->setAxisRange(-500, -1, 500, 1);
+	plot->setAxisRange(-500 * 2 * 3.14 / 360, -1, 500 * 2 * 3.14 / 360, 1);
 	plot->grid();
 	g->PaintColor = 0x0000FF;
 	g->PaintSize = 2;
 	plot->plotWave(x, y, N);
+
+	plot->plotCircle(0,0,0.5);
 
 	g->PicWrite("D:/LIGU.ppm");
 }

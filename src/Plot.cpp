@@ -125,15 +125,10 @@ void Plot::grid() {
 		}
 		delta[dim] *= (int)size[dim];
 	}
-	/*------ 计算始末点 ------*/
-	int gs[2], ge[2];
-	for (int dim = 0; dim < 2; dim++) {
-		double s = (int)(pSizeMin[dim] / delta[dim]) * delta[dim];
-		double e = (int)(pSizeMax[dim] / delta[dim]) * delta[dim] + 1;
-		gs[dim] = coor2pix(s, dim);
-		ge[dim] = coor2pix(e, dim);
-	}
-	g->drawGrid(gs[0], gs[1], ge[0], ge[1], value2pix(delta[0], 0), value2pix(delta[1], 1));
+	g->drawGrid(x0, y0, 0, 0, -value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	g->drawGrid(x0, y0, g->gWidth, 0, value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	g->drawGrid(x0, y0, 0, g->gHeight, -value2pix(delta[0], 0), value2pix(delta[1], 1));
+	g->drawGrid(x0, y0, g->gWidth, g->gHeight, value2pix(delta[0], 0), value2pix(delta[1], 1));
 	/*------ 坐标轴 ------*/
 	g->PaintColor = 0xffffff;
 	g->PaintSize = 3;
