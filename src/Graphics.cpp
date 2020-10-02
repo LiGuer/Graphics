@@ -70,7 +70,6 @@ void Graphics::confirmTrans()
 	free(Map);
 	Map = Maptemp.Map;	Maptemp.Map = NULL;
 }
-
 /******************************************************************************
 *                    底层无关
 ******************************************************************************/
@@ -339,24 +338,33 @@ void Graphics::floodfill(INT32S x0, INT32S y0, RGB color)
 		Qx.pop(); Qy.pop();
 	}
 }
-/* ---------------- DRAW CHARACTER ---------------- 
+/* ---------------- DRAW CHARACTER ----------------
 *	字库: font.h
 ** ---------------------------------------- */
 void Graphics::drawChar(INT32S x0, INT32S y0, CHAR charac)
 {
-	INT32S x = x0, y = y0;
-	for (INT32S i = 0; i < FontSize; i++){
-		INT8U temp = asc2_1608[charac - 32][i];	//调用2412字体
-		for (INT32S j = 0; j < 8; j++){
-			if (temp & 0x80)drawPoint(x, y);
-			temp <<= 1;
+	const INT32S FontLibSize = 16;
+	Graphics Maptemp;
+	Maptemp.setSize(FontSize, FontSize);
+	Maptemp.init();
+	Maptemp.clear(TRANSPARENT);
+	Maptemp.PaintColor = PaintColor;
+	INT32S x = 0, y = 0;
+	for (INT32S i = 0; i < FontLibSize; i++) {
+		INT8U t = asc2_1608[charac - 32][i];	//调用2412字体
+		for (INT32S j = 0; j < 8; j++) {
+			if (t & 0x80)Maptemp.drawPoint(x, y);
+			t <<= 1;
 			y++;
-			if ((y - y0) == FontSize){
-				y = y0;	x++;
+			if (y == FontLibSize) {
+				y = 0;	x++;
 				break;
 			}
 		}
 	}
+	Maptemp.scaling((double)FontSize / FontLibSize, (double)FontSize / FontLibSize);
+	if ((double)FontSize / FontLibSize < 1)Maptemp.confirmTrans();
+	drawCopy(x0, y0, Maptemp.Map, FontSize, FontSize);
 }
 /* ---------------- DRAW STRING ---------------- */
 void Graphics::drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n)

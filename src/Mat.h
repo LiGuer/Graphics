@@ -63,8 +63,8 @@ public:
 				T sum;
 				memset(&sum, 0, sizeof(sum));
 				for (int k = 0; k < a.cols; k++) {
-					T aV = data[i * cols + k];
-					T bV = data[k * cols + j];
+					T aV = a.data[i * a.cols + k];
+					T bV = b.data[k * b.cols + j];
 					sum += aV * bV;
 				}
 				ansTemp.setValue(i, j, sum);

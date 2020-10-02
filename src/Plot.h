@@ -13,7 +13,7 @@ public:
 	/*---------------- SET 设置 ----------------*/
 	void init(Graphics* gt);											//初始化
 	void clear(RGB color);												//清屏
-	void setAxisRange(const double minx, const double miny, const double maxx, const double maxy);	//设置轴范围
+	void setAxisRange(const double minx, const double miny, const double maxx, const double maxy);//设置轴范围
 	/*---------------- 实数坐标 To 像素坐标 ----------------*/
 	int coor2pix(double coor, int dim);									//坐标To像素坐标
 	int value2pix(double value, int dim);								//值To像素值
@@ -27,6 +27,6 @@ public:
 	void contour(const Mat<double> *map, const int N);					//画等高线
 	void contourface(const Mat<double>* map, const int N);				//画等高线2
 	void grid();														//显示网格
-	RGB colorlist(const int N, const int i, const int model);
+	RGB colorlist(const int N, const int i, const int model);			//色谱
 };
 #endif

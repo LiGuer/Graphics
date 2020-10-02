@@ -135,8 +135,10 @@ void Plot::grid() {
 	g->drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
 	g->drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
 	/*------ Öá±êºÅ ------*/
-	g->PaintSize = 0;
-	g->drawChar(x0 - 25, y0 + 15, '0');
+	g->PaintSize = 1;
+	g->FontSize = 50;
+	g->PaintColor = 0xffffff;
+	g->drawChar(x0 - 40, y0 + 15, '0');
 }
 /*---------------- É«Æ× ----------------*/
 RGB Plot::colorlist(const int N, const int i, const int model)

@@ -31,11 +31,10 @@ public:
 	INT32S gWidth = 0, gHeight=0;											//窗口尺寸
 	RGB* Map = NULL;														//图
 	RGB PaintColor;															//画笔颜色
-	INT32S PaintSize = 0;													//画笔大小
+	INT32S PaintSize = 0, FontSize=16;										//画笔大小//字符大小
 	Mat<FP64> gM;															//变换矩阵
 	/*---------------- 常数 ----------------*/
 	const RGB TRANSPARENT = 0xFFFFFFFF;										//RGB:透明
-	const INT32S FontSize = 16;												//字符大小
 	/*---------------- 底层 ----------------*/
 	~Graphics() { free(Map); }												//析构函数
 	void init();															//初始化
