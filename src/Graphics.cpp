@@ -351,17 +351,30 @@ void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 *	将这些交点按照x坐标排序，将排序后的交点两两成对，作为线段的两个端点。
 *	水平扫描线从上到下（或从下到上）扫描由多条首尾相连的线段，
 *	使用要求的颜色填充该水平线段上的像素。
-*	多边形扫描完成后，颜色填充也就完成了。
+*
+*	利用两张链表列出边，
+*	*边表ET: 待相交边的存储表	*活动边表AET: 目前扫描线相交的边表，
+*	利用ymin确定什么时候考虑该边，利用ymax确定什么时候放弃该边，利用+dx确定交点.
+
+*	算法流程:
+*		1.创建链表(链表组): Active-Edge Table活动边表, Edge Table边表组
+*		2.计算扫描区域y最大最小值
+*		3.基于输入边数据, 初始化ET[y]边表组
+*		4.扫描循环开始, 扫描线由Ymin -> Ymax扫描
+*			5.将当前ET[y]中边数据，即刚开始相交的边数据插入AET
+*			6.AET中边两两配对,填充该扫描线
+*			7.删除AET中不再相交的边，即ymax < y+1的边
+*			8.更新AET各边同扫描线的相交点x值
 ** ---------------------------------------- */
-struct fillPolygon_Edge{		//边表
-	int ymax;					//ymax:边的上端点
-	double x,dx;				//x:当前水平扫描线的交点//dx:斜率m的倒数
+struct fillPolygon_Edge{								//边表(链表)
+	int ymax;											//ymax:边的下端点
+	double x,dx;										//x:当前水平扫描线的交点//dx:斜率m的倒数
 	fillPolygon_Edge* next = NULL;
 };
 void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 {
 	const int ETSzie = 1024;
-	fillPolygon_Edge* AET = new fillPolygon_Edge(), *ET[ETSzie];	//Active-Edge Table:活动边表//Edge Table边表
+	fillPolygon_Edge* AET = new fillPolygon_Edge(), *ET[ETSzie];//Active-Edge Table:活动边表//Edge Table边表
 	/*------ 计算y最大最小值 ------*/
 	int maxY = 0, minY = 0x7FFFFFFF;
 	for (int i = 0; i < n; i++) {
@@ -376,19 +389,22 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 		int x1 = x[i], x2 = x[(i + 1) % n];
 		int y1 = y[i], y2 = y[(i + 1) % n];
 		if (y1 == y2)continue;							//水平线舍弃
-		int ymin = y1 < y2 ? y1 : y2, ymax = y1 > y2 ? y1 : y2;	//下端点y,上端点y,下端点x,斜率倒数
-		double x = y1 < y2 ? x1 : x2, dx = (double)(x2 - x1) / (y2 - y1);
-		fillPolygon_Edge* tE = new fillPolygon_Edge;
-		tE->ymax = ymax; tE->x = x; tE->dx = dx; tE->next = ET[ymin - minY]->next;
-		ET[ymin - minY]->next = tE;					//创建新边，插入边表ET
+		int ymin = y1 < y2 ? y1 : y2;
+		fillPolygon_Edge* tE = new fillPolygon_Edge;	//创建新边表节点
+		tE->ymax = y1 > y2 ? y1 : y2; 					//下端点ymin,上端点ymax,下端点x,斜率倒数
+		tE->x = y1 < y2 ? x1 : x2;
+		tE->dx = (double)(x2 - x1) / (y2 - y1); 
+		tE->next = ET[ymin - minY]->next;
+		ET[ymin - minY]->next = tE;						//插入ET
 	}
-	/*------ 扫描线从下往上扫描，y坐标每次加1 ------*/
+	/*------ 扫描线由Ymin -> Ymax扫描 ------*/
 	for (int y = minY; y <= maxY; y++) {
 		fillPolygon_Edge* p = AET;
+		/*------ 将当前ET[y]中边数据，即刚开始相交的边数据插入AET ------*/
 		while (ET[y - minY]->next) {					//ET[y]链表遍历
 			fillPolygon_Edge* pET = ET[y - minY]->next;
 			while (p->next) {							//AET链表遍历,在AET中搜索合适的插入位置
-				if ((pET->x < p->next->x) || (pET->x == p->next->x && pET->dx < p->next->dx))//按x增序(若相等按dx增序)插入AET
+				if ((pET->x < p->next->x) || (pET->x == p->next->x && pET->dx < p->next->dx))//按x增序(相等则dx增序)插入AET
 					break;								//找到位置
 				p = p->next;						
 			}
@@ -403,7 +419,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 			}
 			p = p->next->next;
 		}
-		/*------ 删除AET中满足AET->ymax = y的边 ------*/
+		/*------ 删除AET中不再相交的边 ------*/
 		p = AET;
 		while (p->next) {
 			if (p->next->ymax == y + 1) {
@@ -413,7 +429,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 			}
 			else p = p->next;
 		}
-		/*------ 更新AET边x值 ------*/
+		/*------ 更新AET各边同扫描线的相交点x值 ------*/
 		p = AET;
 		while (p->next) {
 			p->next->x += p->next->dx;

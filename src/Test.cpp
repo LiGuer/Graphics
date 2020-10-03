@@ -30,7 +30,7 @@ int main()
 		}
 	}
 	g->PaintSize = 0;
-	g->PaintColor = 0xFFFF00;
+	g->PaintColor = 0x88FFFF00;
 	plot->contourface(&map, 100);
 	plot->contour(&map, 5);
 	int x2[] = { 395,479,1199,1101 ,1294 ,1417,857 ,668 ,1111 };
