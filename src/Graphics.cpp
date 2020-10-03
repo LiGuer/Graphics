@@ -355,7 +355,7 @@ void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 *	利用两张链表列出边，
 *	*边表ET: 待相交边的存储表	*活动边表AET: 目前扫描线相交的边表，
 *	利用ymin确定什么时候考虑该边，利用ymax确定什么时候放弃该边，利用+dx确定交点.
-
+*
 *	算法流程:
 *		1.创建链表(链表组): Active-Edge Table活动边表, Edge Table边表组
 *		2.计算扫描区域y最大最小值

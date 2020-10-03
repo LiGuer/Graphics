@@ -5,39 +5,7 @@
 
 int main()
 {
-	Graphics* g = new Graphics;
-	Plot* plot = new Plot;
-	plot->init(g);
 
-	const int N = 1000;
-	double x[N], y[N];
-	for (int i = 0; i < N; i++) {
-		x[i] = (i - 500);
-		y[i] = sin(x[i] * 2 * 3.14 / 360);
-	}
-	plot->setAxisRange(-500, -1, 500, 1);
-	plot->grid();
-	g->PaintColor = 0xFF0000;
-	g->PaintSize = 2;
-	plot->plotWave(x, y, N);
-	g->PaintColor = 0xFFFF00;
-
-	Mat<double> map;
-	map.zero(N, N);
-	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			map.data[i * map.cols + j] = i + j;
-		}
-	}
-	g->PaintSize = 0;
-	g->PaintColor = 0x88FFFF00;
-	plot->contourface(&map, 100);
-	plot->contour(&map, 5);
-	int x2[] = { 395,479,1199,1101 ,1294 ,1417,857 ,668 ,1111 };
-	int y2[] = { 1887,1998,1433,1867, 1715 ,1171 ,1163 ,1314,1321 };
-	g->fillPolygon(x2, y2, 9);
-
-	g->PicWrite("D:/LIGU.ppm");
 }
 
 /***************************************************************************
@@ -54,26 +22,26 @@ int main()
 	}
 
 	g->PaintSize = 5;
-	g->PaintColor = 0xFFCC66;
+	g->PaintColor = 0x66CCFF;
 	g->drawEllipse(1000, 1000, 500, 300);
-	g->PaintColor = 0x0000FF;
+	g->PaintColor = 0xFF0000;
 	g->drawCircle(1000, 1000, 500);
 	g->PaintSize = 3;
-	g->PaintColor = 0x66FFCC;
+	g->PaintColor = 0xCCFF66;
 	g->drawEllipse(1000, 1000, 200, 500);
 
-	g->PaintColor = 0x6600CC;
+	g->PaintColor = 0xCC0066;
 	g->drawTriangle(100, 900, 300, 1500, 100, 1700);
-	g->PaintColor = 0x00FFCC;
+	g->PaintColor = 0xCCFF00;
 	g->drawRectangle(1900, 100, 1700, 300);
-	g->fill(1850, 150, 1750, 250, 0x00FFCC);
+	g->fill(1850, 150, 1750, 250, 0xCCFF00);
 
-	g->PaintColor = 0x0000FF;
+	g->PaintColor = 0xFF0000;
 	const int N = 100;
 	int x[N], y[N];
 	for (int i = 0; i < N; i++) {
-		x[i] = i*10 + 500;
-		y[i] = sin(0.02 * x[i])*100+200;
+		x[i] = i * 10 + 500;
+		y[i] = sin(0.02 * x[i]) * 100 + 200;
 	}
 	g->drawWave(x, y, N);
 

@@ -28,9 +28,9 @@ typedef INT32U  RGB;
 class Graphics {
 public:
 	/*---------------- 基础参数 ----------------*/
-	INT32S gWidth = 0, gHeight=0;											//窗口尺寸
+	INT32S gWidth = 100, gHeight = 100;										//窗口尺寸
 	RGB* Map = NULL;														//图
-	RGB PaintColor;															//画笔颜色
+	RGB PaintColor = 0xFFFFFF;												//画笔颜色
 	INT32S PaintSize = 0, FontSize=16;										//画笔大小//字符大小
 	Mat<FP64> gM;															//变换矩阵
 	/*---------------- 常数 ----------------*/
