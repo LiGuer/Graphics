@@ -22,6 +22,7 @@ typedef float          FP32;			/* Single precision floating point*/
 typedef double         FP64;			/* Double precision floating point*/
 typedef char    CHAR;			/* 字符       */
 typedef INT32U  RGB;
+typedef INT8U  RGBBASIC;
 /******************************************************************************
 *                    Graphics 计算机图形学
 ******************************************************************************/
@@ -29,7 +30,7 @@ class Graphics {
 public:
 	/*---------------- 基础参数 ----------------*/
 	INT32S gWidth = 100, gHeight = 100;										//窗口尺寸
-	RGB* Map = NULL;														//图
+	RGBBASIC* Map = NULL;														//图
 	RGB PaintColor = 0xFFFFFF;												//画笔颜色
 	INT32S PaintSize = 0, FontSize=16;										//画笔大小//字符大小
 	Mat<FP64> gM;															//变换矩阵
@@ -53,7 +54,7 @@ public:
 	void drawWave(INT32S x[], INT32S y[], INT32S n);						//画曲线
 	void drawBezier(INT32S x[], INT32S y[], INT32S n);						//画贝塞尔曲线
 	void drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, INT32S dy);//画网格
-	void drawCopy(INT32S x0, INT32S y0, RGB* gt, INT32S width, INT32S height);//复制别的图
+	void drawCopy(INT32S x0, INT32S y0, RGBBASIC* gt, INT32S width, INT32S height);//复制别的图
 	void fill(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color);		//填充单色
 	void fillflood(INT32S x0, INT32S y0, RGB color);						//泛滥填充
 	void fillPolygon(INT32S x[], INT32S y[], INT32S n);						//多边形填充

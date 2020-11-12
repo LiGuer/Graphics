@@ -5,7 +5,7 @@
 /* ---------------- INIT ---------------- */
 void Graphics::init() {
 	if (Map != NULL)free(Map);
-	Map = (RGB*)malloc(sizeof(RGB) * gWidth * gHeight);
+	Map = (RGBBASIC*)malloc(sizeof(RGBBASIC) * 3 * gWidth * gHeight);
 	clear(0);
 	gM.E(3);
 }
@@ -13,12 +13,14 @@ void Graphics::init() {
 void Graphics::clear(RGB color)
 {
 	if (color == TRANSPARENT || color == 0) {	//memset按字节处理，故只能处理高低字节相同的值
-		memset(Map, color, sizeof(RGB) * gWidth * gHeight);
+		memset(Map, color, sizeof(RGBBASIC) * 3 * gWidth * gHeight);
 		return;
 	}
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
-			Map[y * gWidth + x] = color;
+			Map[(y * gWidth + x) * 3 + 0] = color >> 16;
+			Map[(y * gWidth + x) * 3 + 1] = color >> 8;
+			Map[(y * gWidth + x) * 3 + 2] = color;
 		}
 	}
 }
@@ -29,31 +31,23 @@ void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
 	if (judgeOutRange(x, y))return;
 	double alpha = (color >> 24) / 255.0;
 	unsigned char R = color >> 16, G = color >> 8, B = color;
-	R = alpha * (Map[y * gWidth + x] >> 16) + (1 - alpha) * R;
-	G = alpha * (Map[y * gWidth + x] >> 8) + (1 - alpha) * G;
-	B = alpha * (Map[y * gWidth + x]) + (1 - alpha) * B;
-	Map[y * gWidth + x] = (RGB)R * 0x10000 + (RGB)G * 0x100 + (RGB)B;
+	Map[(y * gWidth + x) * 3 + 0] = alpha * Map[(y * gWidth + x) * 3 + 0] + (1 - alpha) * R;
+	Map[(y * gWidth + x) * 3 + 1] = alpha * Map[(y * gWidth + x) * 3 + 1] + (1 - alpha) * G;
+	Map[(y * gWidth + x) * 3 + 2] = alpha * Map[(y * gWidth + x) * 3 + 2] + (1 - alpha) * B;
 }
 RGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
-	return Map[y * gWidth + x];
+	RGB R = Map[(y * gWidth + x) * 3 + 0];
+	RGB G = Map[(y * gWidth + x) * 3 + 1];
+	RGB B = Map[(y * gWidth + x) * 3 + 2];
+	return R * 0x10000 + G * 0x100 + B;
 }
 /* ---------------- PicWrite ---------------- */
 void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 	FILE* fp = fopen(filename, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);// 写图片格式、宽高、最大像素值
-
-	unsigned char R,G,B;
-	for (INT32S i = 0; i < gHeight; i++) {
-		for (INT32S j = 0; j < gWidth; j++) {
-				B = readPoint(j, i) >> (8 * 0);
-				G = readPoint(j, i) >> (8 * 1);
-				R = readPoint(j, i) >> (8 * 2);
-				fwrite(&R, sizeof(char), 1, fp);// 写RGB数据
-				fwrite(&G, sizeof(char), 1, fp);// 写RGB数据
-				fwrite(&B, sizeof(char), 1, fp);// 写RGB数据
-		}
-	}fclose(fp);
+	fwrite(Map, 1, gHeight * gWidth * 3, fp);// 写RGB数据
+	fclose(fp);
 }
 /*---------------- CONFIRM Trans ----------------*/
 void Graphics::confirmTrans()
@@ -64,14 +58,14 @@ void Graphics::confirmTrans()
 	Maptemp.clear(TRANSPARENT);
 	Mat<FP64> p;
 	p.zero(3, 1);
-	p.setValue(2, 0, 1);
+	p[2] = 1;
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
-			p.setValue(0, 0, (FP64)x); p.setValue(1, 0, (FP64)y);
+			p[0] = (FP64)x; p[1] = (FP64)y;
 			p.mult(gM, p, p);
 			RGB t = readPoint(x, y);
-			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0), p.getValue(1, 0), t);
-			if (t != TRANSPARENT)Maptemp.setPoint(p.getValue(0, 0) + 0.4, p.getValue(1, 0) + 0.4, t);	//#补丁
+			if (t != TRANSPARENT)Maptemp.setPoint(p[0], p[1], t);
+			if (t != TRANSPARENT)Maptemp.setPoint(p[0] + 0.4, p[1] + 0.4, t);	//#补丁
 		}
 	}
 	gM.E(3);
@@ -291,7 +285,7 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 	}
 }
 /* ---------------- DRAW COPY ---------------- */
-void Graphics::drawCopy(INT32S x0, INT32S y0, RGB* gt, INT32S width, INT32S height)
+void Graphics::drawCopy(INT32S x0, INT32S y0, RGBBASIC* gt, INT32S width, INT32S height)
 {
 	for (INT32S i = 0; i < height; i++) {
 		for (INT32S j = 0; j < width; j++) {
@@ -514,7 +508,7 @@ void Graphics::translation(INT32S dx, INT32S dy)
 {
 	Mat<FP64> M;
 	M.E(3);
-	M.setValue(0, 2, dx);	M.setValue(1, 2, dy);
+	M[2] = dx; M[1 * M.cols + 2] = dy;
 	gM.mult(M, gM, gM);
 }
 /* ---------------- ROMOTE ---------------- */
@@ -523,8 +517,8 @@ void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0)
 	translation(-x0, -y0);
 	Mat<FP64> M;
 	M.E(3);
-	M.setValue(0, 0, cos(theta));	M.setValue(0, 1, -1 * sin(theta));
-	M.setValue(1, 0, sin(theta));	M.setValue(1, 1, cos(theta));
+	M[0 * M.cols + 0] = cos(theta); M[0 * M.cols + 1] = -1 * sin(theta);
+	M[1 * M.cols + 0] = sin(theta); M[1 * M.cols + 1] = cos(theta);
 	gM.mult(M, gM, gM);
 	translation(x0, y0);
 }
@@ -533,7 +527,7 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 {
 	Mat<FP64> M;
 	M.E(3);
-	M.setValue(0, 0, sx);	M.setValue(1, 1, sy);
+	M[0 * M.cols + 0] = sx; M[1 * M.cols + 1] = sy;
 	if (sx <= 1 && sy <= 1) {
 		gM.mult(M, gM, gM);
 		return;
@@ -544,16 +538,16 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 	Maptemp.clear(TRANSPARENT);
 	Mat<FP64> p0, p1, p2;
 	p0.zero(3, 1); p1.zero(3, 1); p2.zero(3, 1);
-	p0.setValue(2, 0, 1);
+	M[2 * M.cols + 0] = 1;
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
-			p0.setValue(0, 0, (FP64)x); p0.setValue(1, 0, (FP64)y);
+			p0[0 * p0.cols + 0] = (FP64)x;	p0[1 * p0.cols + 0] = (FP64)y;
 			p1.mult(M, p0, p1);
 			RGB t = readPoint(x, y);
 			if (t == TRANSPARENT)continue;
-			p0.setValue(0, 0, (FP64)x + 1); p0.setValue(1, 0, (FP64)y + 1);
+			p0[0 * p0.cols + 0] = (FP64)x + 1;	p0[1 * p0.cols + 0] = (FP64)y + 1;
 			p2.mult(M, p0, p2);
-			Maptemp.fill(p1.getValue(0, 0), p1.getValue(1, 0), p2.getValue(0, 0), p2.getValue(1, 0), t);
+			Maptemp.fill(p1[0 * p1.cols + 0], p1[1 * p1.cols + 0], p2[0 * p2.cols + 0], p2[1 * p2.cols + 0], t);
 		}
 	}
 	free(Map);
