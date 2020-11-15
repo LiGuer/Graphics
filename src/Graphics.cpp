@@ -9,6 +9,10 @@ void Graphics::init() {
 	clear(0);
 	gM.E(3);
 }
+void Graphics::init(INT32S width, INT32S height) {
+	gWidth = width; gHeight = height;
+	init();
+}
 /* ---------------- CLEAR ---------------- */
 void Graphics::clear(RGB color)
 {

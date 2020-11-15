@@ -37,8 +37,11 @@ public:
 	/*---------------- 常数 ----------------*/
 	const RGB TRANSPARENT = 0xFFFFFFFF;										//RGB:透明
 	/*---------------- 底层 ----------------*/
+	Graphics() { ; }
+	Graphics(INT32S width, INT32S height) { init(width, height); }
 	~Graphics() { free(Map); }												//析构函数
 	void init();															//初始化
+	void init(INT32S width, INT32S height);									//初始化
 	void clear(RGB color);	 												//清屏
 	void setPoint(INT32S x, INT32S y, RGB color);							//底层画点
 	RGB  readPoint(INT32S x, INT32S y); 									//读点 
