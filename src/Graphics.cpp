@@ -66,7 +66,7 @@ void Graphics::confirmTrans()
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
 			p[0] = (FP64)x; p[1] = (FP64)y;
-			p.mult(gM, p, p);
+			p.mult(gM, p);
 			RGB t = readPoint(x, y);
 			if (t != TRANSPARENT)Maptemp.setPoint(p[0], p[1], t);
 			if (t != TRANSPARENT)Maptemp.setPoint(p[0] + 0.4, p[1] + 0.4, t);	//#补丁
@@ -513,7 +513,7 @@ void Graphics::translation(INT32S dx, INT32S dy)
 	Mat<FP64> M;
 	M.E(3);
 	M[2] = dx; M[1 * M.cols + 2] = dy;
-	gM.mult(M, gM, gM);
+	gM.mult(M, gM);
 }
 /* ---------------- ROMOTE ---------------- */
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
@@ -523,7 +523,7 @@ void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0)
 	M.E(3);
 	M[0 * M.cols + 0] = cos(theta); M[0 * M.cols + 1] = -1 * sin(theta);
 	M[1 * M.cols + 0] = sin(theta); M[1 * M.cols + 1] = cos(theta);
-	gM.mult(M, gM, gM);
+	gM.mult(M, gM);
 	translation(x0, y0);
 }
 /* ---------------- scaling ---------------- */
@@ -533,7 +533,7 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 	M.E(3);
 	M[0 * M.cols + 0] = sx; M[1 * M.cols + 1] = sy;
 	if (sx <= 1 && sy <= 1) {
-		gM.mult(M, gM, gM);
+		gM.mult(M, gM);
 		return;
 	}
 	Graphics Maptemp;
@@ -546,11 +546,11 @@ void Graphics::scaling(FP64 sx, FP64 sy)
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
 			p0[0 * p0.cols + 0] = (FP64)x;	p0[1 * p0.cols + 0] = (FP64)y;
-			p1.mult(M, p0, p1);
+			p1.mult(M, p0);
 			RGB t = readPoint(x, y);
 			if (t == TRANSPARENT)continue;
 			p0[0 * p0.cols + 0] = (FP64)x + 1;	p0[1 * p0.cols + 0] = (FP64)y + 1;
-			p2.mult(M, p0, p2);
+			p2.mult(M, p0);
 			Maptemp.fill(p1[0 * p1.cols + 0], p1[1 * p1.cols + 0], p2[0 * p2.cols + 0], p2[1 * p2.cols + 0], t);
 		}
 	}

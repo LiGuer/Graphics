@@ -73,26 +73,26 @@ void Plot::plotRectangle(const double sx, const double sy, const double ex, cons
 	g->drawRectangle(coor2pix(sx, 0), coor2pix(sy, 1), coor2pix(ex, 0), coor2pix(ey, 1));
 }
 /*---------------- 画等高线 ----------------*/
-void Plot::contour(const Mat<double>* map, const int N)
+void Plot::contour(Mat<double>& map, const int N)
 {
 	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
-	double max = map->max(), min = map->min();			//get the max & min of the map
+	double max = map.max(), min = map.min();			//get the max & min of the map
 	double delta = (max - min) / N, layer = min;
 	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
-		for (int y = 0; y < map->rows - 1; y++) {		//for every point(x,y) to compute
-			for (int x = 0; x < map->cols - 1; x++) {
-				int flag = map->data[y * map->cols + x] >= layer ? 1 : 0;
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				int flag = map.data[y * map.cols + x] >= layer ? 1 : 0;
 				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
 					int xt = x + x_step[k];
 					int yt = y + y_step[k];
-					int flagtemp = map->data[yt * map->cols + xt] >= layer ? 1 : 0;
+					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
 					if (flagtemp != flag) { flag = 2; break; }
 				}
 				if (flag == 2) {
 					for (int k = 0; k < 3; k++) {
 						int xt = x + x_step[k];
 						int yt = y + y_step[k];
-						if (map->data[yt * map->cols + xt] >= layer) {
+						if (map.data[yt * map.cols + xt] >= layer) {
 							g->drawPoint(xt, yt);
 						}
 					}
@@ -102,15 +102,15 @@ void Plot::contour(const Mat<double>* map, const int N)
 	}
 }
 /*---------------- 画等高线2 ----------------*/
-void Plot::contourface(const Mat<double>* map, const int N)
+void Plot::contourface(Mat<double>& map, const int N)
 {
 	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
-	double max = map->max(), min = map->min();			//get the max & min of the map
+	double max = map.max(), min = map.min();			//get the max & min of the map
 	double delta = (max - min) / N, layer = min;
 	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
-		for (int y = 0; y < map->rows - 1; y++) {		//for every point(x,y) to compute
-			for (int x = 0; x < map->cols - 1; x++) {
-				if (map->data[y * map->cols + x] >= layer)
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				if (map.data[y * map.cols + x] >= layer)
 					g->setPoint(x, y, colorlist(N, i, 1));
 			}
 		}

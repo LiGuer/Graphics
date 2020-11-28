@@ -27,8 +27,8 @@ public:
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//画椭圆
 	void plotRectangle(const double sx, const double sy, const double ex, const double ey);//画矩形
 	void plotVector(const double sx, const double sy, const double ex, const double ey);//画箭头
-	void contour(const Mat<double>* map, const int N);					//画等高线
-	void contourface(const Mat<double>* map, const int N);				//画等高线2
+	void contour(Mat<double>& map, const int N);					//画等高线
+	void contourface(Mat<double>& map, const int N);				//画等高线2
 	void grid();														//显示网格
 	RGB colorlist(const int N, const int i, const int model);			//色谱
 };
