@@ -1,38 +1,39 @@
-#ifndef GRAPHICS3D_H
+ï»¿#ifndef GRAPHICS3D_H
 #define GRAPHICS3D_H
 #include "Graphics.h"
-struct GraphicsCoor {
-	INT32S x, y, z;
-};
 class Graphics3D
 {
 public:
-	/*---------------- »ù´¡²ÎÊı ----------------*/
-	Graphics* g;															//ºËĞÄÍ¼ĞÎÑ§Àà
-	GraphicsCoor gSize;														//Í¼´óĞ¡
-	RGB PaintColor;															//»­±ÊÑÕÉ«
-	INT32S PaintSize = 0;													//»­±Ê´óĞ¡
-	Mat<FP64> gM;															//±ä»»¾ØÕó
-	/*---------------- µ×²ã ----------------*/
-	void init();															//³õÊ¼»¯
-	void clear();															//ÇåÆÁ
+	/*---------------- åŸºç¡€å‚æ•° ----------------*/
+	Graphics* g = NULL;														//æ ¸å¿ƒå›¾å½¢å­¦ç±»
+	Mat<FP64> WindowSize{ 2,1 };											//çª—å£å°ºå¯¸
+	Mat<FP64> TransformMat;													//å˜æ¢çŸ©é˜µ
+	/*---------------- åº•å±‚ ----------------*/
+	Graphics3D(int WindowSize_Width, int WindowSize_height);				//æ„é€ å‡½æ•°
+	~Graphics3D();															//ææ„å‡½æ•°
+	void init(int WindowSize_Width, int WindowSize_height);					//åˆå§‹åŒ–
+	void clear();															//æ¸…å±
 	/*---------------- DRAW ----------------*/
-	void drawPoint(GraphicsCoor p0);										//»­µã
-	void drawLine(GraphicsCoor sp, GraphicsCoor ep);						//»­Ö±Ïß
-	void drawPlane(GraphicsCoor p1, GraphicsCoor p2, GraphicsCoor p3);		//»­Æ½Ãæ
-	void drawSphere(GraphicsCoor p0, INT32S r);								//»­Çò
-	void drawEllipsoid(GraphicsCoor p0, GraphicsCoor r);					//»­ÍÖÇò
-	void drawFace();														//»­ÇúÃæ
-	void drawBezier();														//»­±´Èû¶ûÇúÃæ
-	void drawCopy(GraphicsCoor p0, RGB* gt, GraphicsCoor size);				//¸´ÖÆ±ğµÄ3DÍ¼
-	void fill(GraphicsCoor sp, GraphicsCoor ep, RGB color);					//Ìî³ä
-	void floodfill(GraphicsCoor p0, RGB color);								//·ºÀÄÌî³ä
-	void drawChar(GraphicsCoor p0, CHAR charac);							//ÏÔÊ¾×Ö·û
-	void drawString(GraphicsCoor p0, const CHAR* str, INT32S n);			//ÏÔÊ¾×Ö·û´®
-	void drawNum(GraphicsCoor p0, FP64 num);								//ÏÔÊ¾Êı×Ö
+	void drawPoint(Mat<double>& p0);										//ç”»ç‚¹
+	void drawLine(Mat<double>& sp, Mat<double>& ep);						//ç”»ç›´çº¿
+	void drawPlane(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3);		//ç”»å¹³é¢
+	void drawSphere(Mat<double>& p0, INT32S r);								//ç”»çƒ
+	void drawEllipsoid(Mat<double>& p0, Mat<double>& r);					//ç”»æ¤­çƒ
+	void drawFace();														//ç”»æ›²é¢
+	void drawBezier();														//ç”»è´å¡å°”æ›²é¢
+	void fill(Mat<double>& sp, Mat<double>& ep, RGB color);					//å¡«å……
+	void fillTriangle(Mat<double> p0[]);									//ä¸‰è§’å½¢å¡«å……
+	void fillflood(Mat<double>& p0, RGB color);								//æ³›æ»¥å¡«å……
+	void drawChar(Mat<double>& p0, CHAR charac);							//æ˜¾ç¤ºå­—ç¬¦
+	void drawString(Mat<double>& p0, const CHAR* str, INT32S n);			//æ˜¾ç¤ºå­—ç¬¦ä¸²
+	void drawNum(Mat<double>& p0, FP64 num);								//æ˜¾ç¤ºæ•°å­—
+	/*---------------- Transformation ----------------*/
+	void translation(Mat<double>& delta);									//å¹³ç§»
+	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center);//ä¸‰ç»´æ—‹è½¬-å››å…ƒæ•°
+	void scaling(Mat<double>& scale, Mat<double>& center);					//ç¼©æ”¾
 	/*---------------- SET ----------------*/
-	BOOL judgeOutRange(INT32S x0, INT32S y0);								//ÅĞ¶Ï×ø±êÊÇ·ñ¹ı½ç
-	void setSize();															//ÉèÖÃ´°¿Ú³ß´ç
+	BOOL judgeOutRange(INT32S x0, INT32S y0);								//åˆ¤æ–­åæ ‡æ˜¯å¦è¿‡ç•Œ
+	void setSize();															//è®¾ç½®çª—å£å°ºå¯¸
 };
 
 #endif

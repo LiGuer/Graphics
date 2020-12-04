@@ -3,7 +3,6 @@
 #include "Graphics.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include "Mat.h"
 class Plot
 {
 public:
