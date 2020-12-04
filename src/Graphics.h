@@ -10,7 +10,6 @@
 /******************************************************************************
 *                    定义与编译器无关的数据类型
 ******************************************************************************/
-typedef bool  BOOL;
 typedef unsigned char  INT8U;			/* Unsigned  8 bit quantity       */
 typedef signed   char  INT8S;			/* Signed    8 bit quantity       */
 typedef unsigned short INT16U;			/* Unsigned 16 bit quantity       */
@@ -69,7 +68,7 @@ public:
 	void rotate(FP64 theta, INT32S x0, INT32S y0);							//旋转
 	void scaling(FP64 sx, FP64 sy);											//缩放(>1直接完成变换)
 	/*---------------- SET ----------------*/
-	BOOL judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
+	bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
 	void setSize(INT32S width, INT32S height);								//设置窗口尺寸
 };
 #endif

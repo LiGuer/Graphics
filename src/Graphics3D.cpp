@@ -38,6 +38,83 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	endpoint.mult(TransformMat, endpoint);
 	g->drawLine(startpoint[0], startpoint[1], endpoint[0], endpoint[1]);
 }
+/*--------------------------------[ 画多边形 ]--------------------------------*/
+void Graphics3D::drawPolygon(Mat<double> p[],int n) {
+	for (int i = 0; i < n; i++) drawLine(p[i], p[(i + 1) % n]);
+}
+/*--------------------------------[ 画四面体 ]--------------------------------*/
+void Graphics3D::drawTetrahedron(Mat<double> p[]) {
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < i; j++)
+			drawLine(p[i], p[j]);
+}
+/*--------------------------------[ 画圆 ]--------------------------------
+*	[约束方程]:
+		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
+		球方程: (x-x0)² + (y-y0)² + (z-z0)² = r²
+			x = r cosΦ cosθ + x0    Φ∈[-π/2, π/2]
+			y = r cosΦ sinθ + y0    θ∈[-π, π]
+			z = r sinΦ + z0
+	[推导]:
+		Ax + By + Cz = A x0 + B y0 + C z0
+		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = ( A x0 + B y0 + C z0 )/r
+		对于某一θ值:
+		(A cosθ + B sinθ)cosΦ  + C sinΦ = ( A x0 + B y0 + C z0 )/r
+		C1 cosΦ + C sinΦ = C2
+		sin(Φ + α) = C2 / sqrt(C1² + C²)    α = arcsin sqrt(C1² + C²)
+		Φ = arcsin(C2 / sqrt(C1² + C²)) - arcsin sqrt(C1² + C²)
+**-----------------------------------------------------------------------*/
+void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& direction) {
+	Mat<double> point[36];
+	for (int i = 0; i < 36; i++) {
+		point[i].zero(3, 1);
+		double theta = i * 10.0;
+		double C2 = (direction[0] * center[0] + direction[1] * center[1] + direction[2] * center[2]) / r;
+		double C1 = direction[0] * cos(theta) + direction[1] * sin(theta);
+		C1 = sqrt(C1 * C1 + direction[2] * direction[2]);
+		double Phi = asin(C2 / C1) - asin(C1);
+		point[i][0] = r * cos(Phi) * cos(theta) + center[0];
+		point[i][1] = r * cos(Phi) * sin(theta) + center[1];
+		point[i][2] = r * sin(Phi) + center[2];
+	}
+	drawPolygon(point, 36);
+}
+/*--------------------------------[ 画球 ]--------------------------------
+*	[公式]: x² + y² + z² = R²
+		参数方程,点集:
+			x = r cosΦ cosθ    Φ∈[-π/2, π/2]
+			y = r cosΦ sinθ    θ∈[0, 2π]
+			z = r sinΦ
+*	[流程]:
+		[1] 画纬度线
+		[2] 画经度线
+**-----------------------------------------------------------------------*/
+void Graphics3D::drawSphere(Mat<double>& center, double r) {
+	Mat<double> point(3, 1);
+	for (int i = 0; i < 360 / 5; i++) {
+		double theta = i * 5.0;
+		for (int j = -90 / 5; j < 90 / 5; j++) {
+			double phi = j * 5.0;
+			point[0] = r * cos(phi) * cos(theta) + center[0];
+			point[1] = r * cos(phi) * sin(theta) + center[1];
+			point[2] = r * sin(phi) + center[2];
+			drawPoint(point);
+		}
+	}
+}
+/*--------------------------------[ 画椭球 ]--------------------------------
+*	[公式]: (x/rx)² + (y/ry)² + (z/rz)² = 1
+		参数方程,点集:
+			x = rx cosΦ cosθ    Φ∈[-π/2, π/2]
+			y = ry cosΦ sinθ    θ∈[-π, π]
+			z = rz sinΦ
+*	[流程]:
+		[1] 画纬度线
+		[2] 画经度线
+**-----------------------------------------------------------------------*/
+void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
+
+}
 /******************************************************************************
 *                    Transformation-3D
 ******************************************************************************/
@@ -46,7 +123,7 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 |y'|   | 0  1  0  dy| |y|
  z'|   | 0  0  1  dz| |z|
 [1 ]   [ 0  0  0  1 ] [1]
-------------------------------------------------------------------------*/
+**-----------------------------------------------------------------------*/
 void Graphics3D::translation(Mat<double>& delta) {
 	int n = delta.rows;
 	Mat<double> translationMat(n + 1);

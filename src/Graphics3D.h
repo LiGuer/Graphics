@@ -12,13 +12,15 @@ public:
 	Graphics3D(int WindowSize_Width, int WindowSize_height);				//构造函数
 	~Graphics3D();															//析构函数
 	void init(int WindowSize_Width, int WindowSize_height);					//初始化
-	void clear();															//清屏
 	/*---------------- DRAW ----------------*/
 	void drawPoint(Mat<double>& p0);										//画点
 	void drawLine(Mat<double>& sp, Mat<double>& ep);						//画直线
 	void drawPlane(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3);		//画平面
-	void drawSphere(Mat<double>& p0, INT32S r);								//画球
-	void drawEllipsoid(Mat<double>& p0, Mat<double>& r);					//画椭球
+	void drawPolygon(Mat<double> p[], int n);								//画多边形
+	void drawTetrahedron(Mat<double> p[]);									//画四面体
+	void drawCircle(Mat<double>& center, double r, Mat<double>& direction);	//画圆
+	void drawSphere(Mat<double>& center, double r);							//画球
+	void drawEllipsoid(Mat<double>& center, Mat<double>& r);				//画椭球
 	void drawFace();														//画曲面
 	void drawBezier();														//画贝塞尔曲面
 	void fill(Mat<double>& sp, Mat<double>& ep, RGB color);					//填充
@@ -32,7 +34,7 @@ public:
 	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center);//三维旋转-四元数
 	void scaling(Mat<double>& scale, Mat<double>& center);					//缩放
 	/*---------------- SET ----------------*/
-	BOOL judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
+	bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
 	void setSize();															//设置窗口尺寸
 };
 
