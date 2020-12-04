@@ -2,7 +2,7 @@
 * <Graphics.h/cpp>          2D图形学类 (核心类)
 * <Plot.h/cpp>              科学制图类
 * <Graphics3D.h/cpp>        3D图形学类
-
+* ------
 * <ReadImg.exe>: 可实时动态显示所存储的图片。
 ## API:  
 <Graphics.h>
@@ -48,7 +48,7 @@ void scaling(FP64 sx, FP64 sy);											//缩放(>1直接完成变换)
 bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
 void setSize(INT32S width, INT32S height);								//设置窗口尺寸
 ```
-![image](https://github.com/LiGuer/LiGu_Graphics/test/LIGU.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/test/LIGU.png) 
 
 ## Reference
 * [1].Computer Graphics with OpenGL. Donald Hearn, M. Pauline Baker, Warren R. Carithers
