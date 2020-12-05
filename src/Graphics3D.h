@@ -8,6 +8,7 @@ public:
 	Graphics* g = NULL;														//核心图形学类
 	Mat<FP64> WindowSize{ 2,1 };											//窗口尺寸
 	Mat<FP64> TransformMat;													//变换矩阵
+	const double PI = 3.141592653598;
 	/*---------------- 底层 ----------------*/
 	Graphics3D(int WindowSize_Width, int WindowSize_height);				//构造函数
 	~Graphics3D();															//析构函数
@@ -24,7 +25,7 @@ public:
 	void drawFace();														//画曲面
 	void drawBezier();														//画贝塞尔曲面
 	void fill(Mat<double>& sp, Mat<double>& ep, RGB color);					//填充
-	void fillTriangle(Mat<double> p0[]);									//三角形填充
+	void fillTriangle(Mat<double> p0[]);									//三角填充
 	void fillflood(Mat<double>& p0, RGB color);								//泛滥填充
 	void drawChar(Mat<double>& p0, CHAR charac);							//显示字符
 	void drawString(Mat<double>& p0, const CHAR* str, INT32S n);			//显示字符串

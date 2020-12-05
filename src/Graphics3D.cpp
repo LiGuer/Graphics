@@ -56,29 +56,28 @@ void Graphics3D::drawTetrahedron(Mat<double> p[]) {
 			y = r cosΦ sinθ + y0    θ∈[-π, π]
 			z = r sinΦ + z0
 	[推导]:
-		Ax + By + Cz = A x0 + B y0 + C z0
-		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = ( A x0 + B y0 + C z0 )/r
+		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = 0
 		对于某一θ值:
-		(A cosθ + B sinθ)cosΦ  + C sinΦ = ( A x0 + B y0 + C z0 )/r
-		C1 cosΦ + C sinΦ = C2
-		sin(Φ + α) = C2 / sqrt(C1² + C²)    α = arcsin sqrt(C1² + C²)
-		Φ = arcsin(C2 / sqrt(C1² + C²)) - arcsin sqrt(C1² + C²)
+		(A cosθ + B sinθ)cosΦ  + C sinΦ = 0
+		C1 cosΦ + C sinΦ = 0
+		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
+		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& direction) {
-	Mat<double> point[36];
-	for (int i = 0; i < 36; i++) {
+	Mat<double> point[72];
+	for (int i = 0; i < 72; i++) {
 		point[i].zero(3, 1);
-		double theta = i * 10.0;
-		double C2 = (direction[0] * center[0] + direction[1] * center[1] + direction[2] * center[2]) / r;
+		double theta = (i * 5.0) * 2.0 * PI / 360;
 		double C1 = direction[0] * cos(theta) + direction[1] * sin(theta);
-		C1 = sqrt(C1 * C1 + direction[2] * direction[2]);
-		double Phi = asin(C2 / C1) - asin(C1);
-		point[i][0] = r * cos(Phi) * cos(theta) + center[0];
-		point[i][1] = r * cos(Phi) * sin(theta) + center[1];
-		point[i][2] = r * sin(Phi) + center[2];
+		double Ct = sqrt(C1 * C1 + direction[2] * direction[2]);
+		double phi = -asin(C1 / Ct);
+		point[i][0] = r * cos(phi) * cos(theta) + center[0];
+		point[i][1] = r * cos(phi) * sin(theta) + center[1];
+		point[i][2] = r * sin(phi) + center[2];
 	}
-	drawPolygon(point, 36);
+	drawPolygon(point, 72);
 }
+#include<math.h>
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
 		参数方程,点集:
@@ -90,11 +89,12 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& directio
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawSphere(Mat<double>& center, double r) {
+	const int delta = 5;
 	Mat<double> point(3, 1);
-	for (int i = 0; i < 360 / 5; i++) {
-		double theta = i * 5.0;
-		for (int j = -90 / 5; j < 90 / 5; j++) {
-			double phi = j * 5.0;
+	for (int i = 0; i < 360 / delta; i++) {
+		double theta = (i * delta) * 2.0 * PI / 360;
+		for (int j = -90 / delta; j <= 90 / delta; j++) {
+			double phi = (j * delta) * 2.0 * PI / 360;
 			point[0] = r * cos(phi) * cos(theta) + center[0];
 			point[1] = r * cos(phi) * sin(theta) + center[1];
 			point[2] = r * sin(phi) + center[2];
@@ -113,7 +113,30 @@ void Graphics3D::drawSphere(Mat<double>& center, double r) {
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
-
+	const int delta = 5;
+	Mat<double> point(3, 1);
+	for (int i = 0; i < 360 / delta; i++) {
+		double theta = (i * delta) * 2.0 * PI / 360;
+		for (int j = -90 / delta; j <= 90 / delta; j++) {
+			double phi = (j * delta) * 2.0 * PI / 360;
+			point[0] = r[0] * cos(phi) * cos(theta) + center[0];
+			point[1] = r[1] * cos(phi) * sin(theta) + center[1];
+			point[2] = r[2] * sin(phi) + center[2];
+			drawPoint(point);
+		}
+	}
+}
+/*--------------------------------[ 三角填充 ]--------------------------------
+**-----------------------------------------------------------------------*/
+void Graphics3D::fillTriangle(Mat<double> p0[]) {
+	int x[3], y[3];
+	Mat<double> point(4, 1);
+	for (int k = 0; k < 3; k++) {
+		for (int i = 0; i < 3; i++)point[i] = p0[k][i]; point[3] = 1;
+		point.mult(TransformMat, point);
+		x[k] = point[0]; y[k] = point[1];
+	}
+	g->fillPolygon(x, y, 3);
 }
 /******************************************************************************
 *                    Transformation-3D
