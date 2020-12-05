@@ -1,3 +1,15 @@
+/*
+Copyright 2020 LiGuer. All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+	http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
 #ifndef _PLOT_H
 #define _PLOT_H
 #include "Graphics.h"
@@ -6,12 +18,12 @@
 class Plot
 {
 public:
-	Graphics* g = NULL;														//核心图形学类
+	Graphics* g = NULL;													//核心图形学类
 	double pSizeMax[2], pSizeMin[2];									//XY轴范围
 	double pDelta[2];													//单位一的像素格数
 	/*---------------- SET 设置 ----------------*/
 	Plot(void) { init(); }
-	void init();											//初始化
+	void init();														//初始化
 	void clear(RGB color);												//清屏
 	void setAxisRange(const double minx, const double miny, const double maxx, const double maxy);//设置轴范围
 	/*---------------- 实数坐标 To 像素坐标 ----------------*/
@@ -26,8 +38,8 @@ public:
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//画椭圆
 	void plotRectangle(const double sx, const double sy, const double ex, const double ey);//画矩形
 	void plotVector(const double sx, const double sy, const double ex, const double ey);//画箭头
-	void contour(Mat<double>& map, const int N);					//画等高线
-	void contourface(Mat<double>& map, const int N);				//画等高线2
+	void contour(Mat<double>& map, const int N);						//画等高线
+	void contourface(Mat<double>& map, const int N);					//画等高线2
 	void grid();														//显示网格
 	RGB colorlist(const int N, const int i, const int model);			//色谱
 };
