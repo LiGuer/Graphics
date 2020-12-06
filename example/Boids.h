@@ -9,6 +9,20 @@ void Delay(int time){clock_t now = clock(); while (clock() - now < time); }//tim
 		[1] Collision Avoidance: avoid collisions with nearby flockmates
 		[2] Velocity Matching: attempt to match velocity with nearby flockmates
 		[3] Flock Centering: attempt to stay close to nearby flockmates
+*	[过程]:
+		[可见域内]:
+			[1] 可见距离判定
+			[2] 可见角度判定
+		[Rule 1]: 可见域内，同各个个体的反向方向，除以距离，作为加速度 a1
+		[Rule 2]: 可见域内, 质心速度, 作为加速度 a2
+		[Rule 3]: 可见域内, 质心位置方向, 作为加速度 a3
+		[障碍规避]:
+			[1] 生成均匀球星点分布
+			[2] 依次从速度方向,向四周,发出射线进行障碍检测,射线距离在可见域内
+			[3] 选择第一束探测无障碍的射线, 作为避障加速度 a4
+		[ v ]: v = (Σwi·ai)·dt
+				v 归一化单位矢量: ^v  =>  v = v0·^v
+		[ r ]: r = v·dt = v0·dt·^v
 *	[Referance]:
 		[1] Thanks for https://github.com/SebLague/Boids
 ******************************************************************************/
@@ -16,7 +30,8 @@ class Boids {
 public:
 	struct Boids_cell { Mat<double> r{ 3,1 }, v{ 3,1 }, a{ 3,1 }; };
 	Graphics3D g{ 1000, 1000 };
-	double visualField = 30, visualAngle = -0.5;	// 能见范围 // 能见角度cosθ
+	double size = 300;
+	double visualField = 20, visualAngle = -0.5;		// 能见范围 // 能见角度cosθ
 	double deltaT = 1, speed = 3;
 	double weight[4] = { 1,1,1,4 };					// 各规则的权值
 	Mat<double> obstacleAvoidance_direction[300];
@@ -48,21 +63,18 @@ public:
 			double angle = distance.dot(distance, cell[index].v) / (distance.norm() * cell[index].v.norm()); // cosθ = a * b / (|a| * |b|)
 			if (angle < visualAngle)continue;
 			groupNum++;
-			//[Rule 1]: collisionAvoid
-			avoidDirection.add(avoidDirection, temp.mult(1.0 / distance.norm(), distance.negative(temp)));
-			//[Rule 2]: velocityMatching  [Rule 3]: flockCentering
+			//[Rule 1]: collisionAvoid  [Rule 2]: velocityMatching  [Rule 3]: flockCentering
+			avoidDirection.add(avoidDirection, temp.mult(1 / distance.norm(), distance));
 			groupVelocity.add(groupVelocity, cell[i].v);
 			groupCenter.add(groupCenter, distance);
 		}
+		avoidDirection.negative(avoidDirection);
 		// Update Acceleration
 		cell[index].a.clean();
 		if (groupNum == 0) return;
-		avoidDirection.mult(weight[0] * 1.0 / groupNum, avoidDirection);
-		groupVelocity.mult(weight[1] * 1.0 / groupNum, groupVelocity);
-		groupCenter.mult(weight[2] * 1.0 / groupNum, groupCenter);
-		cell[index].a.add(cell[index].a, avoidDirection.normalization());
-		cell[index].a.add(cell[index].a, groupVelocity.normalization());
-		cell[index].a.add(cell[index].a, groupCenter.normalization());
+		cell[index].a.add(cell[index].a, avoidDirection.mult(weight[0], avoidDirection.normalization()));
+		cell[index].a.add(cell[index].a, groupVelocity.mult(weight[1], groupVelocity.normalization()));
+		cell[index].a.add(cell[index].a, groupCenter.mult(weight[2], groupCenter.normalization()));
 	}
 	/*--------------------------------[ obstacleAvoidance 障碍规避 ]--------------------------------*/
 	void obstacleAvoidance_init() {
@@ -89,33 +101,34 @@ public:
 		for (int i = 0; i < 3; i++)for (int j = 0; j < 3; j++)rotateMat(i, j) = Temp(i, j);
 		// 碰撞检测
 		Mat<double>derection(3, 1);
-		for (int k = 0; k < 300; k++) {
+		for (int k = 0; k < 200; k++) {
 			derection.mult(rotateMat, obstacleAvoidance_direction[k]);
 			derection[0] = -derection[0];
-			bool flag = 1; int distance = 1;
-			while (distance < visualField) {
+			bool flag = 1; int distance = visualField;
+			while (--distance > 0) {
 				Temp.add(Temp.mult(distance, derection), cell.r);
 				if (obstacleFunction(Temp)) { flag = 0; break; }
-				distance += 1;
 			}
 			if (flag)break;
 		}
 		cell.a.add(cell.a, derection.mult(weight[3], derection));
 	}
 	bool obstacleFunction(Mat<double>& point) {
-		double size = 300;
 		for (int i = 0; i < 3; i++) {
-			if (fabs(point[i])>= 300)return true;
+			if (fabs(point[i])>= size)return true;
 		}
 		return false;
 	}
 	/*--------------------------------[ Boidss 主函数 ]--------------------------------*/
 	void Boids_main() {
-		double size = 300;
+		// set Graphics3D
 		Mat<double> Axis(3, 1); Axis[0] = 0.7; Axis[1] = 0.4; Axis[2] = 0.59;
 		Mat<double> center(3, 1); center[0] = 500; center[1] = 500; center[2] = 500;
 		double theta = 1;
-
+		// 
+		Mat<double> zero(3, 1), CuboidL(3, 1), CuboidR(3, 1);
+		CuboidR[0] = size; CuboidR[1] = size; CuboidR[2] = size; CuboidL[0] = -size; CuboidL[1] = -size; CuboidL[2] = -size;
+		// set Boids_cell
 		int N = 200;
 		Boids_cell cell[200];
 		for (int i = 0; i < N; i++) {
@@ -123,30 +136,27 @@ public:
 			cell[i].v.rands(3, 1, 0, 1);
 			cell[i].v.normalization();
 		}
-
 		Mat<double> temp;
-		Mat<double> zero0(3, 1), zero(3, 1), zero2(3, 1); zero2[0] = size; zero2[1] = size; zero2[2] = size; zero[0] = -size; zero[1] = -size; zero[2] = -size;
 		obstacleAvoidance_init();
 		while (1) {
 			theta += 0.01; if (theta >= 2 * 3.1415926) theta = 0;
 			g.TransformMat.E(4);
-			g.rotate(Axis, theta, zero0);
+			g.rotate(Axis, theta, zero);
 			g.translation(center);
 
 			play(cell, N);
-			for (int i = 0; i < N; i++) {
-				g.g->PaintColor = 0xFFFFFF;
+			for (int i = 0; i < N; i++) 
 				g.drawLine(cell[i].r, temp.add(temp.mult(10, cell[i].v), cell[i].r));
-			}
+
 			Delay(20);
 			g.g->PicWrite("D:/LIGU.ppm");
 			g.g->clear(0);
-			for (int i = 0; i < 3; i++) {
-				g.drawCuboid(zero, zero2);
-			}
+			g.drawCuboid(CuboidL, CuboidR);
 		}
 	}
 };
+
+
 
 /*
 int main()
