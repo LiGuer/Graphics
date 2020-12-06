@@ -60,6 +60,27 @@ void Graphics3D::drawTetrahedron(Mat<double> p[]) {
 		for (int j = 0; j < i; j++)
 			drawLine(p[i], p[j]);
 }
+/*--------------------------------[ 画矩体 ]--------------------------------
+*	矩体共十二条边，从对角点引出6条: 
+		(x0,y0,z0)&(x1,y0,z0)  (x0,y0,z0)&(x0,y1,z0)  (x0,y0,z0)&(x0,y0,z1)
+		(x1,y1,z1)&(x0,y1,z1)  (x1,y1,z1)&(x1,y0,z1)  (x1,y1,z1)&(x1,y1,z0)
+	另外六条:
+		(x1,y0,z0)&(x0,y1,z0)  (x1,y0,z0)&(x0,y0,z1)
+		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
+		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
+**------------------------------------------------------------------------*/
+void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
+	Mat<double> pMinTemp, pMaxTemp;
+	for (int i = 0; i < 3; i++) {
+		pMinTemp = pMin; pMaxTemp = pMax;
+		pMinTemp[i] = pMax[i]; pMaxTemp[(i + 1) % 3] = pMin[(i + 1) % 3];
+		drawLine(pMin, pMinTemp);
+		drawLine(pMax, pMaxTemp);
+		drawLine(pMinTemp, pMaxTemp);
+		pMaxTemp[(i + 1) % 3] = pMax[(i + 1) % 3]; pMaxTemp[(i + 2) % 3] = pMin[(i + 2) % 3];
+		drawLine(pMinTemp, pMaxTemp);
+	}
+}
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
 		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
@@ -156,13 +177,17 @@ void Graphics3D::fillTriangle(Mat<double> p0[]) {
 /*--------------------------------[ 平移 ]--------------------------------
 [x'] = [ 1  0  0  dx] [x]
 |y'|   | 0  1  0  dy| |y|
- z'|   | 0  0  1  dz| |z|
+|z'|   | 0  0  1  dz| |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::translation(Mat<double>& delta) {
+void Graphics3D::translation(Mat<double>& delta, Mat<double>& translationMat) {
 	int n = delta.rows;
-	Mat<double> translationMat(n + 1);
+	translationMat.E(n + 1);
 	for (int i = 0; i < n; i++)translationMat(i, n) = delta[i];
+}
+void Graphics3D::translation(Mat<double>& delta) {
+	Mat<double> translationMat;
+	translation(delta, translationMat);
 	TransformMat.mult(translationMat, TransformMat);
 }
 /*--------------------------------[ 三维旋转·四元数 ]--------------------------------
@@ -183,14 +208,14 @@ void Graphics3D::translation(Mat<double>& delta) {
 				|c -d  a  b|
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
-void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center) {
-	Mat<double> temp;
-	translation(center.negative(temp));
+void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& rotateMat) {
+	Mat<double> temp, translationMat;
+	translation(center.negative(temp), translationMat);
 	// rotate
 	Mat<double> q(4, 1);
 	q[0] = cos(theta / 2);
 	for (int i = 1; i < 4; i++) q[i] = rotateAxis[i - 1] * sin(theta / 2);
-	Mat<double> rotateMat(4, 4);
+	rotateMat.zero(4, 4);
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
@@ -205,24 +230,36 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			rotateMat(i, j) = rotateMatR(i + 1, j + 1);
-	TransformMat.mult(rotateMat, TransformMat);
 
-	translation(center);
+	rotateMat.mult(rotateMat, translationMat);
+	translation(center, translationMat);
+	rotateMat.mult(rotateMat, translationMat);
+}
+void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center) {
+	Mat<double> rotateMat;
+	rotate(rotateAxis, theta, center, rotateMat);
+	TransformMat.mult(rotateMat, TransformMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------
 [x'] = [ sx 0  0  0 ] [x]
 |y'|   | 0  sy 0  0 | |y|
- z'|   | 0  0  sz 0 | |z|
+|z'|   | 0  0  sz 0 | |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center) {
-	Mat<double> temp;
-	translation(center.negative(temp));
+void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& scaleMat) {
+	Mat<double> temp, translationMat;
+	translation(center.negative(temp), translationMat);
 	// scaling
 	int n = scale.rows;
-	Mat<double> scalingMat(n + 1);
-	for (int i = 0; i < n; i++)scalingMat(i, i) = scale[i];
-	TransformMat.mult(scalingMat, TransformMat);
+	scaleMat.E(n + 1);
+	for (int i = 0; i < n; i++)scaleMat(i, i) = scale[i];
 
-	translation(center);
+	scaleMat.mult(scaleMat, translationMat);
+	translation(center, translationMat);
+	scaleMat.mult(scaleMat, translationMat);
+}
+void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center) {
+	Mat<double> scaleMat;
+	scaling(scale, center, scaleMat);
+	TransformMat.mult(scaleMat, TransformMat);
 }

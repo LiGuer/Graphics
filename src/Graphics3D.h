@@ -20,7 +20,6 @@ public:
 	Graphics* g = NULL;														//核心图形学类
 	Mat<FP64> WindowSize{ 2,1 };											//窗口尺寸
 	Mat<FP64> TransformMat;													//变换矩阵
-	const double PI = 3.141592653598;
 	/*---------------- 底层 ----------------*/
 	Graphics3D(int WindowSize_Width, int WindowSize_height);				//构造函数
 	~Graphics3D();															//析构函数
@@ -31,6 +30,7 @@ public:
 	void drawPlane(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3);		//画平面
 	void drawPolygon(Mat<double> p[], int n);								//画多边形
 	void drawTetrahedron(Mat<double> p[]);									//画四面体
+	void drawCuboid(Mat<double> pMin, Mat<double> pMax);					//画矩体
 	void drawCircle(Mat<double>& center, double r, Mat<double>& direction);	//画圆
 	void drawSphere(Mat<double>& center, double r);							//画球
 	void drawEllipsoid(Mat<double>& center, Mat<double>& r);				//画椭球
@@ -43,8 +43,11 @@ public:
 	void drawString(Mat<double>& p0, const CHAR* str, INT32S n);			//显示字符串
 	void drawNum(Mat<double>& p0, FP64 num);								//显示数字
 	/*---------------- Transformation ----------------*/
+	void translation(Mat<double>& delta, Mat<double>& translationMat);		//平移
 	void translation(Mat<double>& delta);									//平移
+	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& rotateMat);//三维旋转-四元数
 	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center);//三维旋转-四元数
+	void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& scaleMat);//缩放
 	void scaling(Mat<double>& scale, Mat<double>& center);					//缩放
 	/*---------------- SET ----------------*/
 	bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
