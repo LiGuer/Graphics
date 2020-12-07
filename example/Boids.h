@@ -1,6 +1,7 @@
 #ifndef BOIDS_H
 #define BOIDS_H
 #include "LiGu_Graphics/Graphics3D.h"
+#include "LiGu_AlgorithmLib/ComputationalGeometry.h"
 #include <ctime> 
 void Delay(int time){clock_t now = clock(); while (clock() - now < time); }//time*1000为秒数 
 /******************************************************************************
@@ -17,7 +18,7 @@ void Delay(int time){clock_t now = clock(); while (clock() - now < time); }//tim
 		[Rule 2]: 可见域内, 质心速度, 作为加速度 a2
 		[Rule 3]: 可见域内, 质心位置方向, 作为加速度 a3
 		[障碍规避]:
-			[1] 生成均匀球星点分布
+			[1] 生成均匀球面点分布
 			[2] 依次从速度方向,向四周,发出射线进行障碍检测,射线距离在可见域内
 			[3] 选择第一束探测无障碍的射线, 作为避障加速度 a4
 		[ v ]: v = (Σwi·ai)·dt
@@ -34,7 +35,7 @@ public:
 	double visualField = 20, visualAngle = -0.5;		// 能见范围 // 能见角度cosθ
 	double deltaT = 1, speed = 3;
 	double weight[4] = { 1,1,1,4 };					// 各规则的权值
-	Mat<double> obstacleAvoidance_direction[300];
+	Mat<double>* obstacleAvoidance_direction;
 	/*********************************[ 函数 ]*********************************/
 	/*--------------------------------[ play 运行 ]--------------------------------*/
 	void play(Boids_cell cell[], int n) {
@@ -50,9 +51,9 @@ public:
 		}
 	}
 	/*--------------------------------[ rule 规则 ]--------------------------------*/
-	void rule(Boids_cell cell[], int n,int index) {
+	void rule(Boids_cell cell[], int n, int index) {
 		Mat<double> distance(3, 1);
-		Mat<double> avoidDirection(3, 1),groupVelocity(3, 1), groupCenter(3, 1),temp;
+		Mat<double> avoidDirection(3, 1), groupVelocity(3, 1), groupCenter(3, 1), temp;
 		int groupNum = 0;
 		for (int i = 0; i < n; i++) {
 			if (i == index)continue;
@@ -77,18 +78,9 @@ public:
 		cell[index].a.add(cell[index].a, groupCenter.mult(weight[2], groupCenter.normalization()));
 	}
 	/*--------------------------------[ obstacleAvoidance 障碍规避 ]--------------------------------*/
-	void obstacleAvoidance_init() {
-		int numViewDirections = 300;
-		// 均匀球面点
-		double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
-		double angleIncrement = PI * 2 * goldenRatio;
-		for (int i = 0; i < numViewDirections; i++) {
-			double t = (double)i / numViewDirections, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;
-			obstacleAvoidance_direction[i].zero(3, 1);
-			obstacleAvoidance_direction[i][0] = sin(inclination) * cos(azimuth);
-			obstacleAvoidance_direction[i][1] = sin(inclination) * sin(azimuth);
-			obstacleAvoidance_direction[i][2] = cos(inclination);
-		}
+	void obstacleAvoidance_init() {// 均匀球面点
+		int numViewDirections;  Mat<double>zero(3,1);
+		obstacleAvoidance_direction = getSphereFibonacciPoint(numViewDirections);
 	}
 	void obstacleAvoidance(Boids_cell& cell) {
 		// 确定坐标变换矩阵
@@ -103,7 +95,6 @@ public:
 		Mat<double>derection(3, 1);
 		for (int k = 0; k < 200; k++) {
 			derection.mult(rotateMat, obstacleAvoidance_direction[k]);
-			derection[0] = -derection[0];
 			bool flag = 1; int distance = visualField;
 			while (--distance > 0) {
 				Temp.add(Temp.mult(distance, derection), cell.r);
@@ -115,7 +106,7 @@ public:
 	}
 	bool obstacleFunction(Mat<double>& point) {
 		for (int i = 0; i < 3; i++) {
-			if (fabs(point[i])>= size)return true;
+			if (fabs(point[i]) >= size)return true;
 		}
 		return false;
 	}
@@ -145,7 +136,7 @@ public:
 			g.translation(center);
 
 			play(cell, N);
-			for (int i = 0; i < N; i++) 
+			for (int i = 0; i < N; i++)
 				g.drawLine(cell[i].r, temp.add(temp.mult(10, cell[i].v), cell[i].r));
 
 			Delay(20);
