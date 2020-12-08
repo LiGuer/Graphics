@@ -149,11 +149,10 @@ void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
 	}
 }
 /* ---------------- DRAW TRIANGLE ---------------- */
-void Graphics::drawTriangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2, INT32S x3, INT32S y3)
+void Graphics::drawPolygon(INT32S x[], INT32S y[], INT32S n)
 {
-	drawLine(x1, y1, x2, y2);
-	drawLine(x1, y1, x3, y3);
-	drawLine(x2, y2, x3, y3);
+	for (int i = 0; i < n; i++) 
+		drawLine(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
 }
 /* ---------------- DRAW RACTANGLE ---------------- */
 //画矩形	  

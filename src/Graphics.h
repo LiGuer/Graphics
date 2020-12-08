@@ -19,7 +19,6 @@ limitations under the License.
 #include <queue>
 #include "font.h"
 #include "../LiGu_AlgorithmLib/Mat.h"
-const double PI = 3.141592653598;
 /******************************************************************************
 *                    定义与编译器无关的数据类型
 ******************************************************************************/
@@ -64,7 +63,7 @@ public:
 	void drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2);				//画线
 	void drawCircle(INT32S x0, INT32S y0, INT32S r);					    //画圆
 	void drawEllipse(INT32S x0, INT32S y0, INT32S rx,INT32S ry);			//画椭圆
-	void drawTriangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2, INT32S x3, INT32S y3);//画三角形
+	void drawPolygon(INT32S x[], INT32S y[], INT32S n);						//画多边形
 	void drawRectangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2);		   	//画矩形
 	void drawWave(INT32S x[], INT32S y[], INT32S n);						//画曲线
 	void drawBezier(INT32S x[], INT32S y[], INT32S n);						//画贝塞尔曲线

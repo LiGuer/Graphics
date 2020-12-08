@@ -13,6 +13,7 @@ limitations under the License.
 #ifndef GRAPHICS3D_H
 #define GRAPHICS3D_H
 #include "Graphics.h"
+const double PI = 3.141592653598;
 class Graphics3D
 {
 public:

@@ -110,7 +110,6 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& directio
 	}
 	drawPolygon(point, 72);
 }
-#include<math.h>
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
 		参数方程,点集:
@@ -122,6 +121,7 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& directio
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawSphere(Mat<double>& center, double r) {
+	// 经纬度法
 	const int delta = 5;
 	Mat<double> point(3, 1);
 	for (int i = 0; i < 360 / delta; i++) {

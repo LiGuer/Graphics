@@ -34,6 +34,7 @@ public:
 	void plotPoint(const double x, const double y);						//»­µã
 	void plotLine(const double x1, const double y1, const double x2, const double y2);//»­Ïß
 	void plotWave(const double x[], const double y[], const int n);		//»­ÇúÏß
+	void ploPolygon(const double x[], const double y[], int n);			//»­¶à±ßÐÎ
 	void plotCircle(const double x, const double y, const double r);	//»­Ô²
 	void plotEllipse(const double x, const double y, const double rx, const double ry);//»­ÍÖÔ²
 	void plotRectangle(const double sx, const double sy, const double ex, const double ey);//»­¾ØÐÎ

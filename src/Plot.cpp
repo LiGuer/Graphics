@@ -80,6 +80,17 @@ void Plot::plotCircle(const double x, const double y, const double r) {
 void Plot::plotEllipse(const double x, const double y, const double rx, const double ry) {
 	g->drawEllipse(coor2pix(x, 0), coor2pix(y, 1), value2pix(rx, 0), value2pix(ry, 1));
 }
+/*---------------- »­¶à±ßÐÎ ----------------*/
+void Plot::ploPolygon(const double x[], const double y[], int n) {
+	INT32S* gx = (INT32S*)malloc(sizeof(INT32S) * n);
+	INT32S* gy = (INT32S*)malloc(sizeof(INT32S) * n);
+	for (int i = 0; i < n; i++) {
+		gx[i] = coor2pix(x[i], 0);
+		gy[i] = coor2pix(y[i], 1);
+	}
+	g->drawPolygon(gx, gy, n);
+	free(gx); free(gy);
+}
 /*---------------- »­¾ØÐÎ ----------------*/
 void Plot::plotRectangle(const double sx, const double sy, const double ex, const double ey) {
 	g->drawRectangle(coor2pix(sx, 0), coor2pix(sy, 1), coor2pix(ex, 0), coor2pix(ey, 1));
