@@ -212,6 +212,7 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 	Mat<double> temp, translationMat;
 	translation(center.negative(temp), translationMat);
 	// rotate
+	rotateAxis.normalization();
 	Mat<double> q(4, 1);
 	q[0] = cos(theta / 2);
 	for (int i = 1; i < 4; i++) q[i] = rotateAxis[i - 1] * sin(theta / 2);
@@ -262,4 +263,19 @@ void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center) {
 	Mat<double> scaleMat;
 	scaling(scale, center, scaleMat);
 	TransformMat.mult(scaleMat, TransformMat);
+}
+/******************************************************************************
+*                    Set
+******************************************************************************/
+void Graphics3D::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
+	Mat<double> center, scale, zero(pMin.rows, 1);
+	center.add(pMax, pMin.negative(center));
+	scale = center;
+	center.mult(1.0 / 2, center);
+	translation(center);
+	for (int i = 0; i < scale.rows; i++) {
+		if (i == 1)scale[i] = g->gHeight / scale[i];
+		else scale[i] = g->gWidth / scale[i];
+	}
+	scaling(scale, center);
 }

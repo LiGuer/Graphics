@@ -51,8 +51,7 @@ public:
 	void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& scaleMat);//缩放
 	void scaling(Mat<double>& scale, Mat<double>& center);					//缩放
 	/*---------------- SET ----------------*/
-	bool judgeOutRange(INT32S x0, INT32S y0);								//判断坐标是否过界
-	void setSize();															//设置窗口尺寸
+	void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//判断坐标范围
 };
 
 #endif
