@@ -12,20 +12,21 @@ limitations under the License.
 ==============================================================================*/
 #include "Graphics.h"
 /******************************************************************************
+
 *                    Basic Function
+
 ******************************************************************************/
-/* ---------------- INIT ---------------- */
+/*----------------[ INIT ]----------------*/
 void Graphics::init() {
 	if (Map != NULL)free(Map);
-	Map = (RGBBASIC*)malloc(sizeof(RGBBASIC) * 3 * gWidth * gHeight);
-	clear(0);
-	gM.E(3);
+	Map = (RGBBASIC*)calloc(3 * gWidth * gHeight, sizeof(RGBBASIC));
+	TransMat.E(3);
 }
 void Graphics::init(INT32S width, INT32S height) {
 	gWidth = width; gHeight = height;
 	init();
 }
-/* ---------------- CLEAR ---------------- */
+/*----------------[ CLEAR ]----------------*/
 void Graphics::clear(RGB color)
 {
 	if (color == TRANSPARENT || color == 0) {	//memset按字节处理，故只能处理高低字节相同的值
@@ -40,10 +41,13 @@ void Graphics::clear(RGB color)
 		}
 	}
 }
-/* ---------------- SET/READ POINT ---------------- 
+/*----------------[ SET/READ POINT ]---------------- 
 *	AlphaBlend 算法,	8位ARGB色彩
 ** ---------------------------------------- */
 void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
+	INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
+	INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
+	x = xt; y = yt;
 	if (judgeOutRange(x, y))return;
 	double alpha = (color >> 24) / 255.0;
 	unsigned char R = color >> 16, G = color >> 8, B = color;
@@ -58,40 +62,47 @@ RGB Graphics::readPoint(INT32S x, INT32S y) {
 	RGB B = Map[(y * gWidth + x) * 3 + 2];
 	return R * 0x10000 + G * 0x100 + B;
 }
-/* ---------------- PicWrite ---------------- */
+/*----------------[ 存图 ]----------------*/
 void Graphics::PicWrite(const CHAR* filename) {		// 太慢
 	FILE* fp = fopen(filename, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);// 写图片格式、宽高、最大像素值
 	fwrite(Map, 1, gHeight * gWidth * 3, fp);// 写RGB数据
 	fclose(fp);
 }
-/*---------------- CONFIRM Trans ----------------*/
-void Graphics::confirmTrans()
+/*----------------[ 判断过界 ]----------------*/
+bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
 {
-	Graphics Maptemp;
-	Maptemp.setSize(gWidth, gHeight);
-	Maptemp.init();
-	Maptemp.clear(TRANSPARENT);
-	Mat<FP64> p;
-	p.zero(3, 1);
-	p[2] = 1;
+	if (x0 < 0 || x0 >= gWidth)return true;
+	if (y0 < 0 || y0 >= gHeight)return true;
+	return false;
+}
+/*----------------[ 全图变换 ]----------------*/
+void Graphics::transSelf() {
+	RGBBASIC* tmp = (RGBBASIC*)calloc(gHeight * gWidth * 3, sizeof(RGBBASIC));
 	for (INT32S y = 0; y < gHeight; y++) {
 		for (INT32S x = 0; x < gWidth; x++) {
-			p[0] = (FP64)x; p[1] = (FP64)y;
-			p.mult(gM, p);
-			RGB t = readPoint(x, y);
-			if (t != TRANSPARENT)Maptemp.setPoint(p[0], p[1], t);
-			if (t != TRANSPARENT)Maptemp.setPoint(p[0] + 0.4, p[1] + 0.4, t);	//#补丁
+			 INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
+			 INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
+			 memcpy(tmp + yt * gWidth * 3 + xt * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
 		}
 	}
-	gM.E(3);
-	free(Map);
-	Map = Maptemp.Map;	Maptemp.Map = NULL;
+	free(Map); Map = tmp; tmp = NULL;
+}
+/*----------------[ 剪切图 ]----------------*/
+void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
+	int width = ex - sx, height = ey - sy;
+	RGBBASIC* tmp = (RGBBASIC*)calloc(width * height * 3, sizeof(RGBBASIC));
+	for (int i = 0; i < ey - sy; i++)
+		memcpy(tmp + i * width * 3, Map + (sy + i) * gWidth * 3 + sx * 3, sizeof(RGBBASIC) * width * 3);
+	free(Map); Map = tmp; tmp = NULL;
+	gWidth = width; gHeight = height;
 }
 /******************************************************************************
+
 *                    底层无关
+
 ******************************************************************************/
-/* ---------------- DRAW POINT ---------------- */
+/*----------------[ DRAW POINT ]----------------*/
 void Graphics::drawPoint(INT32S x0, INT32S y0) {
 	if (judgeOutRange(x0, y0))return;
 	setPoint(x0, y0, PaintColor);						//基础点(点粗==0)
@@ -113,7 +124,7 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 		}
 	}
 }
-/* ---------------- DRAW LINE ---------------- 
+/*----------------[ DRAW LINE ]---------------- 
 *	Bresenham Algorithm		
 *	优化：
 		1. 化[浮点运算]为[整数运算]：err
@@ -148,13 +159,13 @@ void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
 		}
 	}
 }
-/* ---------------- DRAW TRIANGLE ---------------- */
+/*----------------[ DRAW TRIANGLE ]----------------*/
 void Graphics::drawPolygon(INT32S x[], INT32S y[], INT32S n)
 {
 	for (int i = 0; i < n; i++) 
 		drawLine(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
 }
-/* ---------------- DRAW RACTANGLE ---------------- */
+/*----------------[ DRAW RACTANGLE ]----------------*/
 //画矩形	  
 //(x1,y1),(x2,y2):矩形的对角坐标
 void Graphics::drawRectangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2)
@@ -164,7 +175,7 @@ void Graphics::drawRectangle(INT32S x1, INT32S y1, INT32S x2, INT32S y2)
 	drawLine(x1, y2, x2, y2);
 	drawLine(x2, y1, x2, y2);
 }
-/* ---------------- DRAW CIRCLE ---------------
+/*----------------[ DRAW CIRCLE ]---------------
 *	Bresenham Algorithm 画圆
 *	充分利用圆的对称性: 1/8圆 (主: 45`-90`,斜率<=1)
 *
@@ -190,7 +201,7 @@ void Graphics::drawCircle(INT32S x0, INT32S y0, INT32S r)
 		}
 	}
 }
-/* ---------------- DRAW ELLIPSE ---------------
+/*----------------[ DRAW ELLIPSE ]---------------
 *	中点算法
 *	椭圆的对称性: 1/4椭圆
 *	区域1:斜率<=1	区域2:斜率>1
@@ -237,7 +248,7 @@ void Graphics::drawEllipse(INT32S x0, INT32S y0, INT32S rx, INT32S ry)
 		}
 	}
 }
-/* ---------------- DRAW GRID ---------------- */
+/*----------------[ DRAW GRID ]----------------*/
 void Graphics::drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, INT32S dy)
 {
 	if (dx > 0) {
@@ -265,7 +276,7 @@ void Graphics::drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, I
 		}
 	}
 }
-/* ---------------- DRAW WAVE ---------------- */
+/*----------------[ DRAW WAVE ]----------------*/
 void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
 	INT32S xt, yt;
 	for (INT32S i = 0; i < n; i++) {
@@ -273,7 +284,7 @@ void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
 		xt = x[i], yt = y[i];	
 	}
 }
-/* ---------------- DRAW BEZIER CURVE ---------------- */
+/*----------------[ DRAW BEZIER CURVE ]----------------*/
 void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 {
 	INT32S N = gWidth+ gHeight;					//#待优化
@@ -299,38 +310,25 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 		drawPoint(x, y);
 	}
 }
-/* ---------------- DRAW COPY ---------------- */
+/*----------------[ 复制别的图 ]---------------- */
 void Graphics::drawCopy(INT32S x0, INT32S y0, RGBBASIC* gt, INT32S width, INT32S height)
 {
-	for (INT32S i = 0; i < height; i++) {
-		for (INT32S j = 0; j < width; j++) {
-			RGB t = *(gt + i * width + j);
-			if (t == TRANSPARENT)continue;					//RGB 0xFF000000即透明
-			setPoint(x0 + j, y0 + i, t);
-		}
-	}
+	for (INT32S i = 0; i < height; i++)
+		memcpy(Map + (y0 + i) * gWidth * 3 + x0 * 3, gt + i * width * 3, sizeof(RGBBASIC) * width * 3);
 }
-/* ---------------- FILL ---------------- */
-void Graphics::fill(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color)
+/*----------------[ FILL ]----------------*/
+void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color)
 {
-	if (sy > ey) {
-		INT32S t = ey;
-		ey = sy, sy = t;
-	}
-	if (sx > ex) {
-		INT32S t = ex;
-		ex = sx, sx = t;
-	}
-	for (INT32S y = sy; y <= ey; y++) {
-		for (INT32S x = sx; x <= ex; x++) {
+	if (sy > ey) { INT32S t = ey; ey = sy, sy = t; }
+	if (sx > ex) { INT32S t = ex; ex = sx, sx = t; }
+	for (INT32S y = sy; y <= ey; y++)
+		for (INT32S x = sx; x <= ex; x++)
 			setPoint(x, y, color);
-		}
-	}
 }
-/* ---------------- FLOOD FILL ----------------
+/*----------------[ FLOOD FILL ----------------
 *	广度优先搜索	队列
 ** ----------------------------------------*/
-void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
+void Graphics::fillFlood(INT32S x0, INT32S y0, RGB color)
 {
 	RGB color0 = readPoint(x0, y0);
 	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 };
@@ -351,10 +349,10 @@ void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 		Qx.pop(); Qy.pop();
 	}
 }
-/* ---------------- fillTriangle ----------------
+/*----------------[ fillTriangle ]----------------
 *	扫描线填充算法
 *	
-*	基本思想：
+*	[基本思想]:
 *	每条水平扫描线与多边形的边产生一系列交点，
 *	交点之间形成一条一条的线段，该线段上的像素就是需要被填充的像素。
 *	将这些交点按照x坐标排序，将排序后的交点两两成对，作为线段的两个端点。
@@ -365,7 +363,7 @@ void Graphics::fillflood(INT32S x0, INT32S y0, RGB color)
 *	*边表ET: 待相交边的存储表	*活动边表AET: 目前扫描线相交的边表，
 *	利用ymin确定什么时候考虑该边，利用ymax确定什么时候放弃该边，利用+dx确定交点.
 *
-*	算法流程:
+*	[算法流程]:
 *		1.创建链表(链表组): Active-Edge Table活动边表, Edge Table边表组
 *		2.计算扫描区域y最大最小值
 *		3.基于输入边数据, 初始化ET[y]边表组
@@ -384,7 +382,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 {
 	const int ETSzie = 1024;
 	fillPolygon_Edge* AET = new fillPolygon_Edge(), *ET[ETSzie];//Active-Edge Table:活动边表//Edge Table边表
-	/*------ 计算y最大最小值 ------*/
+	//------ 计算y最大最小值 ------
 	int maxY = 0, minY = 0x7FFFFFFF;
 	for (int i = 0; i < n; i++) {
 		maxY = maxY >= y[i] ? maxY : y[i];
@@ -393,7 +391,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 	for (int i = 0; i <= maxY - minY; i++){
 		ET[i] = new fillPolygon_Edge();
 	}
-	/*------ 建立边表ETy坐标 ------*/
+	//------ 建立边表ETy坐标 ------
 	for (int i = 0; i < n; i++){
 		int x1 = x[i], x2 = x[(i + 1) % n];
 		int y1 = y[i], y2 = y[(i + 1) % n];
@@ -406,10 +404,10 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 		tE->next = ET[ymin - minY]->next;
 		ET[ymin - minY]->next = tE;						//插入ET
 	}
-	/*------ 扫描线由Ymin -> Ymax扫描 ------*/
+	//------ 扫描线由Ymin -> Ymax扫描 ------
 	for (int y = minY; y <= maxY; y++) {
 		fillPolygon_Edge* p = AET;
-		/*------ 将当前ET[y]中边数据，即刚开始相交的边数据插入AET ------*/
+		//------ 将当前ET[y]中边数据，即刚开始相交的边数据插入AET ------
 		while (ET[y - minY]->next) {					//ET[y]链表遍历
 			fillPolygon_Edge* pET = ET[y - minY]->next;
 			while (p->next) {							//AET链表遍历,在AET中搜索合适的插入位置
@@ -420,7 +418,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 			ET[y - minY]->next = pET->next;				//ET链表中删除pET
 			pET->next = p->next; p->next = pET;			//pET插入AET的当前位置
 		}
-		/*------ AET中边两两配对,填充该扫描线 ------*/
+		//------ AET中边两两配对,填充该扫描线 ------
 		p = AET;
 		while (p->next && p->next->next) {				//链表遍历
 			for (int x = p->next->x; x <= p->next->next->x; x++) {
@@ -428,7 +426,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 			}
 			p = p->next->next;
 		}
-		/*------ 删除AET中不再相交的边 ------*/
+		//------ 删除AET中不再相交的边 ------
 		p = AET;
 		while (p->next) {
 			if (p->next->ymax == y + 1) {
@@ -438,7 +436,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 			}
 			else p = p->next;
 		}
-		/*------ 更新AET各边同扫描线的相交点x值 ------*/
+		//------ 更新AET各边同扫描线的相交点x值 ------
 		p = AET;
 		while (p->next) {
 			p->next->x += p->next->dx;
@@ -446,42 +444,30 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 		}
 	}
 }
-/* ---------------- DRAW CHARACTER ----------------
+/*----------------[ DRAW CHARACTER ]----------------
 *	字库: font.h
 ** ---------------------------------------- */
 void Graphics::drawChar(INT32S x0, INT32S y0, CHAR charac)
 {
-	const INT32S FontLibSize = 16;
-	Graphics Maptemp;
-	Maptemp.setSize(FontSize, FontSize);
-	Maptemp.init();
-	Maptemp.clear(TRANSPARENT);
-	Maptemp.PaintColor = PaintColor;
+	static const INT32S FontLibSize = 16;
+	int k = FontSize / FontLibSize + 1;
 	INT32S x = 0, y = 0;
 	for (INT32S i = 0; i < FontLibSize; i++) {
-		INT8U t = asc2_1608[charac - 32][i];	//调用2412字体
+		INT8U t = asc2_1608[charac - 32][i];
 		for (INT32S j = 0; j < 8; j++) {
-			if (t & 0x80)Maptemp.drawPoint(x, y);
-			t <<= 1;
-			y++;
-			if (y == FontLibSize) {
-				y = 0;	x++;
-				break;
-			}
+			if (t & 0x80)
+				fillRectangle(x * k + x0, y * k + y0, (x + 1) * k + x0, (y + 1) * k + y0, PaintColor);
+			t <<= 1;  y++;
+			if (y == FontLibSize) { y = 0;	x++; break; }
 		}
 	}
-	Maptemp.scaling((double)FontSize / FontLibSize, (double)FontSize / FontLibSize);
-	if ((double)FontSize / FontLibSize < 1)Maptemp.confirmTrans();
-	drawCopy(x0, y0, Maptemp.Map, FontSize, FontSize);
 }
-/* ---------------- DRAW STRING ---------------- */
+/*----------------[ DRAW STRING ]----------------*/
 void Graphics::drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n)
 {
-	for (int i = 0; i < n; i++) {
-		drawChar(x0 + FontSize * i, y0, str[i]);
-	}
+	for (int i = 0; i < n; i++) drawChar(x0 + FontSize * i, y0, str[i]);
 }
-/* ---------------- DRAW NUMBER ---------------- */
+/*----------------[ DRAW NUMBER ]----------------*/
 void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 {
 	CHAR numstr[100];
@@ -516,63 +502,33 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 	drawString(x0, y0, numstr, cur);
 }
 /******************************************************************************
-*                    二维变换
+
+*                    2-D Trans 二维变换
+
 ******************************************************************************/
-/* ---------------- TRANSLATION ---------------- */
+/*----------------[ TRANSLATION ]----------------*/
 void Graphics::translation(INT32S dx, INT32S dy)
 {
 	Mat<FP64> M(3);
 	M(0, 2) = dx; M(1, 2) = dy;
-	gM.mult(M, gM);
+	TransMat.mult(M, TransMat);
 }
-/* ---------------- ROMOTE ---------------- */
+/*----------------[ ROMOTE ]----------------*/
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
 	translation(-x0, -y0);
 	Mat<FP64> M(3);
 	M(0, 0) = cos(theta); M(0, 1) = -1 * sin(theta);
 	M(1, 0) = sin(theta); M(1, 1) = cos(theta);
-	gM.mult(M, gM);
+	TransMat.mult(M, TransMat);
 	translation(x0, y0);
 }
-/* ---------------- scaling ---------------- */
-void Graphics::scaling(FP64 sx, FP64 sy)
+/*----------------[ scaling ]----------------*/
+void Graphics::scaling(FP64 sx, FP64 sy, INT32S x0, INT32S y0)
 {
+	translation(-x0, -y0);
 	Mat<FP64> M(3);
 	M(0, 0) = sx; M(1, 1) = sy;
-	if (sx <= 1 && sy <= 1) { gM.mult(M, gM); return; }
-	Graphics Maptemp;
-	Maptemp.setSize(gWidth, gHeight);
-	Maptemp.init();
-	Maptemp.clear(TRANSPARENT);
-	Mat<FP64> p0(3, 1), p1(3, 1), p2(3, 1);
-	M(2, 0) = 1;
-	for (INT32S y = 0; y < gHeight; y++) {
-		for (INT32S x = 0; x < gWidth; x++) {
-			p0(0, 0) = (FP64)x;	p0(1, 0) = (FP64)y;
-			p1.mult(M, p0);
-			RGB t = readPoint(x, y);
-			if (t == TRANSPARENT)continue;
-			p0(0, 0) = (FP64)x + 1;	p0(1, 0) = (FP64)y + 1;
-			p2.mult(M, p0);
-			Maptemp.fill(p1(0, 0), p1(1, 0), p2(0, 0), p2(1, 0), t);
-		}
-	}
-	free(Map);
-	Map = Maptemp.Map;	Maptemp.Map = NULL;
-}
-/******************************************************************************
-*                    SET 设置
-******************************************************************************/
-/* ---------------- setSize ---------------- */
-void Graphics::setSize(INT32S width, INT32S height)
-{
-	gWidth = width;	gHeight = height;
-}
-/* ---------------- judgeOutRange ---------------- */
-bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
-{
-	if (x0<0 || x0>= gWidth)return true;
-	if (y0<0 || y0>= gHeight)return true;
-	return false;
+	TransMat.mult(M, TransMat);
+	translation(x0, y0);
 }

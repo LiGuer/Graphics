@@ -17,9 +17,7 @@ limitations under the License.
 /*---------------- init ----------------*/
 void Plot::init() {
 	if (g != NULL)free(g);
-	g = new Graphics;
-	g->setSize(1000, 1000);
-	g->init();
+	g = new Graphics(1000, 1000);
 	g->PaintColor = 0xFFFFFF;
 	pSizeMax[0] = pSizeMax[1] = pSizeMin[0] = pSizeMin[1] = 0;
 }

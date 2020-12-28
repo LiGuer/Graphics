@@ -11,8 +11,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 #include "Graphics3D.h"
+Mat<FP64> Graphics3D::TransformMat;											//变换矩阵
 /******************************************************************************
+
 *                    底层函数
+
 ******************************************************************************/
 /*--------------------------------[ 构造函数 ]--------------------------------*/
 Graphics3D::Graphics3D(int WindowSize_Width, int WindowSize_height) {
@@ -25,30 +28,81 @@ Graphics3D::~Graphics3D() {
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void Graphics3D::init(int WindowSize_Width, int WindowSize_height) {
 	if (g != NULL)free(g);
-	g = new Graphics;
-	g->init(WindowSize_Width, WindowSize_height);
+	g = new Graphics(WindowSize_Width, WindowSize_height);
 	TransformMat.E(4);
 }
-/******************************************************************************
-*                    Draw
-******************************************************************************/
-/*--------------------------------[ 画点 ]--------------------------------*/
-void Graphics3D::drawPoint(Mat<double>& p0) {
+/*--------------------------------[ value2xy ]--------------------------------*/
+void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y) {
 	Mat<double> point(4, 1);
 	for (int i = 0; i < 3; i++)point[i] = p0[i]; point[3] = 1;
 	point.mult(TransformMat, point);
-	g->drawPoint((int)point[0], (int)point[1]);
+	x = (int)point[0]; y = (int)point[1];
+}
+/******************************************************************************
+
+*                    Draw
+
+******************************************************************************/
+/*--------------------------------[ 画点 ]--------------------------------*/
+void Graphics3D::drawPoint(Mat<double>& p0) {
+	int x, y; value2pix(p0, x, y);
+	g->drawPoint(x, y);
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
 void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
-	Mat<double> startpoint(4, 1), endpoint(4, 1);
-	for (int i = 0; i < 3; i++) {
-		startpoint[i] = sp[i];
-		endpoint[i] = ep[i];
-	}startpoint[3] = 1; endpoint[3] = 1;
-	startpoint.mult(TransformMat, startpoint);
-	endpoint.mult(TransformMat, endpoint);
-	g->drawLine(startpoint[0], startpoint[1], endpoint[0], endpoint[1]);
+	int sx, sy, ex, ey;
+	value2pix(sp, sx, sy); value2pix(ep, ex, ey);
+	g->drawLine(sx, sy, ex, ey);
+}
+/*--------------------------------[ 画折线 ]--------------------------------*/
+void Graphics3D::drawPolyline(Mat<double> *p, int n) {
+	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
+}
+/*--------------------------------[ 画矩形 ]--------------------------------*/
+void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
+	int sx, sy, ex, ey;
+	value2pix(sp, sx, sy); value2pix(ep, ex, ey);
+	g->drawRectangle(sx, sy, ex, ey);
+}
+/*--------------------------------[ 画圆 ]--------------------------------
+*	[约束方程]:
+		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
+		球方程: (x-x0)² + (y-y0)² + (z-z0)² = r²
+			x = r cosΦ cosθ + x0    Φ∈[-π/2, π/2]
+			y = r cosΦ sinθ + y0    θ∈[-π, π]
+			z = r sinΦ + z0
+	[推导]:
+		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = 0
+		对于某一θ值:
+		(A cosθ + B sinθ)cosΦ  + C sinΦ = 0
+		C1 cosΦ + C sinΦ = 0
+		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
+		Φ = - arcsin(C1 / sqrt(C1² + C²))
+**-----------------------------------------------------------------------*/
+void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
+	int cx, cy, rx, ry;
+	value2pix(center, cx, cy);
+	//g->drawEllipse(cx, cy,rx, ry);
+}
+/*--------------------------------[ 画椭圆 ]--------------------------------
+*	[约束方程]:
+		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
+		球方程: (x-x0)² + (y-y0)² + (z-z0)² = r²
+			x = r cosΦ cosθ + x0    Φ∈[-π/2, π/2]
+			y = r cosΦ sinθ + y0    θ∈[-π, π]
+			z = r sinΦ + z0
+	[推导]:
+		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = 0
+		对于某一θ值:
+		(A cosθ + B sinθ)cosΦ  + C sinΦ = 0
+		C1 cosΦ + C sinΦ = 0
+		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
+		Φ = - arcsin(C1 / sqrt(C1² + C²))
+**-----------------------------------------------------------------------*/
+void Graphics3D::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
+	//int cx, cy, rx, ry;
+	//value2pix(center, cx, cy);
+	//g->drawEllipse(cx, cy,rx, ry);
 }
 /*--------------------------------[ 画多边形 ]--------------------------------*/
 void Graphics3D::drawPolygon(Mat<double> p[],int n) {
@@ -80,35 +134,6 @@ void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
 		pMaxTemp[(i + 1) % 3] = pMax[(i + 1) % 3]; pMaxTemp[(i + 2) % 3] = pMin[(i + 2) % 3];
 		drawLine(pMinTemp, pMaxTemp);
 	}
-}
-/*--------------------------------[ 画圆 ]--------------------------------
-*	[约束方程]:
-		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
-		球方程: (x-x0)² + (y-y0)² + (z-z0)² = r²
-			x = r cosΦ cosθ + x0    Φ∈[-π/2, π/2]
-			y = r cosΦ sinθ + y0    θ∈[-π, π]
-			z = r sinΦ + z0
-	[推导]:
-		A cosΦ cosθ + B cosΦ sinθ + C sinΦ = 0
-		对于某一θ值:
-		(A cosθ + B sinθ)cosΦ  + C sinΦ = 0
-		C1 cosΦ + C sinΦ = 0
-		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
-		Φ = - arcsin(C1 / sqrt(C1² + C²))
-**-----------------------------------------------------------------------*/
-void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>& direction) {
-	Mat<double> point[72];
-	for (int i = 0; i < 72; i++) {
-		point[i].zero(3, 1);
-		double theta = (i * 5.0) * 2.0 * PI / 360;
-		double C1 = direction[0] * cos(theta) + direction[1] * sin(theta);
-		double Ct = sqrt(C1 * C1 + direction[2] * direction[2]);
-		double phi = -asin(C1 / Ct);
-		point[i][0] = r * cos(phi) * cos(theta) + center[0];
-		point[i][1] = r * cos(phi) * sin(theta) + center[1];
-		point[i][2] = r * sin(phi) + center[2];
-	}
-	drawPolygon(point, 72);
 }
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
@@ -159,20 +184,45 @@ void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 		}
 	}
 }
-/*--------------------------------[ 三角填充 ]--------------------------------
-**-----------------------------------------------------------------------*/
+/*--------------------------------[ 三角填充 ]--------------------------------*/
 void Graphics3D::fillTriangle(Mat<double> p0[]) {
 	int x[3], y[3];
-	Mat<double> point(4, 1);
-	for (int k = 0; k < 3; k++) {
-		for (int i = 0; i < 3; i++)point[i] = p0[k][i]; point[3] = 1;
-		point.mult(TransformMat, point);
-		x[k] = point[0]; y[k] = point[1];
-	}
+	for (int i = 0; i < 3; i++)value2pix(p0[i], x[i], y[i]);
 	g->fillPolygon(x, y, 3);
 }
+/*--------------------------------[ 多边形填充 ]--------------------------------*/
+void Graphics3D::fillPolygon(Mat<double> p0[],int n) {
+	int* x = (int*)calloc(n, sizeof(int)), * y = (int*)calloc(n, sizeof(int));
+	for (int i = 0; i < 3; i++)value2pix(p0[i], x[i], y[i]);
+	g->fillPolygon(x, y, n);
+	free(x); free(y);
+}
+/*---------------- 色谱 ----------------*/
+RGB Graphics3D::colorlist(double index, int model)
+{
+	double A = 0, R = 0, G = 0, B = 0, a = index, b = 1 - a;
+	switch (model)
+	{
+	case 1: {
+		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+	}break;
+	case 2: {
+		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+		A = 0.8;
+	}break;
+	}
+	A *= 0xFF, R *= 0xFF, G *= 0xFF, B *= 0xFF;
+	return (RGB)A * 0x1000000 + (RGB)R * 0x10000 + (RGB)G * 0x100 + (RGB)B;
+}
+
 /******************************************************************************
-*                    Transformation-3D
+
+*                    Transformation - 3D
+
 ******************************************************************************/
 /*--------------------------------[ 平移 ]--------------------------------
 [x'] = [ 1  0  0  dx] [x]
@@ -180,15 +230,11 @@ void Graphics3D::fillTriangle(Mat<double> p0[]) {
 |z'|   | 0  0  1  dz| |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::translation(Mat<double>& delta, Mat<double>& translationMat) {
+void Graphics3D::translation(Mat<double>& delta, Mat<double>& transMat) {
 	int n = delta.rows;
-	translationMat.E(n + 1);
+	Mat<double> translationMat(n + 1);
 	for (int i = 0; i < n; i++)translationMat(i, n) = delta[i];
-}
-void Graphics3D::translation(Mat<double>& delta) {
-	Mat<double> translationMat;
-	translation(delta, translationMat);
-	TransformMat.mult(translationMat, TransformMat);
+	transMat.mult(translationMat, transMat);
 }
 /*--------------------------------[ 三维旋转·四元数 ]--------------------------------
 *	[公式]: v' = q v q`¹
@@ -208,15 +254,15 @@ void Graphics3D::translation(Mat<double>& delta) {
 				|c -d  a  b|
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
-void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& rotateMat) {
-	Mat<double> temp, translationMat;
-	translation(center.negative(temp), translationMat);
+void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
+	Mat<double> tmp;
+	translation(center.negative(tmp), transMat);
 	// rotate
 	rotateAxis.normalization();
 	Mat<double> q(4, 1);
 	q[0] = cos(theta / 2);
 	for (int i = 1; i < 4; i++) q[i] = rotateAxis[i - 1] * sin(theta / 2);
-	rotateMat.zero(4, 4);
+	Mat<double> rotateMat(4, 4);
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
@@ -231,15 +277,8 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			rotateMat(i, j) = rotateMatR(i + 1, j + 1);
-
-	rotateMat.mult(rotateMat, translationMat);
-	translation(center, translationMat);
-	rotateMat.mult(rotateMat, translationMat);
-}
-void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center) {
-	Mat<double> rotateMat;
-	rotate(rotateAxis, theta, center, rotateMat);
-	TransformMat.mult(rotateMat, TransformMat);
+	transMat.mult(rotateMat, transMat);
+	translation(center, transMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------
 [x'] = [ sx 0  0  0 ] [x]
@@ -247,25 +286,20 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 |z'|   | 0  0  sz 0 | |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& scaleMat) {
-	Mat<double> temp, translationMat;
-	translation(center.negative(temp), translationMat);
+void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat) {
+	Mat<double> tmp;
+	translation(center.negative(tmp), transMat);
 	// scaling
 	int n = scale.rows;
-	scaleMat.E(n + 1);
+	Mat<double> scaleMat(n + 1);
 	for (int i = 0; i < n; i++)scaleMat(i, i) = scale[i];
-
-	scaleMat.mult(scaleMat, translationMat);
-	translation(center, translationMat);
-	scaleMat.mult(scaleMat, translationMat);
-}
-void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center) {
-	Mat<double> scaleMat;
-	scaling(scale, center, scaleMat);
-	TransformMat.mult(scaleMat, TransformMat);
+	transMat.mult(scaleMat, transMat);
+	translation(center, transMat);
 }
 /******************************************************************************
+
 *                    Set
+
 ******************************************************************************/
 void Graphics3D::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 	Mat<double> center, scale, zero(pMin.rows, 1);
