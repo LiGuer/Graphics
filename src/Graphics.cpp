@@ -63,10 +63,10 @@ RGB Graphics::readPoint(INT32S x, INT32S y) {
 	return R * 0x10000 + G * 0x100 + B;
 }
 /*----------------[ 存图 ]----------------*/
-void Graphics::PicWrite(const CHAR* filename) {		// 太慢
+void Graphics::PicWrite(const CHAR* filename) {
 	FILE* fp = fopen(filename, "wb");
-	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);// 写图片格式、宽高、最大像素值
-	fwrite(Map, 1, gHeight * gWidth * 3, fp);// 写RGB数据
+	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);	// 写图片格式、宽高、最大像素值
+	fwrite(Map, 1, gHeight * gWidth * 3, fp);			// 写RGB数据
 	fclose(fp);
 }
 /*----------------[ 判断过界 ]----------------*/
@@ -83,7 +83,13 @@ void Graphics::transSelf() {
 		for (INT32S x = 0; x < gWidth; x++) {
 			 INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
 			 INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
+			 if (judgeOutRange(xt, yt))continue;
 			 memcpy(tmp + yt * gWidth * 3 + xt * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
+			 // 反走样
+			 if (judgeOutRange(xt + 1, yt + 1))continue;
+			 memcpy(tmp + (yt + 1) * gWidth * 3 + xt * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
+			 memcpy(tmp + yt * gWidth * 3 + (xt + 1) * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
+			 memcpy(tmp + (yt + 1) * gWidth * 3 + (xt + 1) * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
 		}
 	}
 	free(Map); Map = tmp; tmp = NULL;
