@@ -39,7 +39,7 @@ public:
 	void drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct = NULL);//画椭圆
 	void drawPolygon(Mat<double> p[], int n);								//画多边形
 	void drawPlane(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3);		//画平面
-	void drawPolyface(Mat<double> p[]);													//画曲面
+	void drawSurface(Mat<double> z, double xs, double xe, double ys, double ye);//画曲面
 	void drawBezier();														//画贝塞尔曲面
 	// 3-D
 	void drawTetrahedron(Mat<double> p[]);									//画四面体

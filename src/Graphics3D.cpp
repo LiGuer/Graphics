@@ -108,6 +108,24 @@ void Graphics3D::drawEllipse(Mat<double>& center, double rx, double ry, Mat<doub
 void Graphics3D::drawPolygon(Mat<double> p[],int n) {
 	for (int i = 0; i < n; i++) drawLine(p[i], p[(i + 1) % n]);
 }
+/*--------------------------------[ 画曲面 ]--------------------------------*/
+void Graphics3D::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
+	Mat<double> p(3, 1), pl(3, 1), pu(3, 1);
+	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
+	for (int y = 0; y < z.cols; y++) {
+		for (int x = 0; x < z.rows; x++) {
+			{double t[] = { xs + x * dx,ys + y * dy,z(x,y) }; p.getData(t); }
+			if (x > 0) { 
+				double t[] = { xs + (x - 1) * dx,ys + y * dy,z(x - 1,y) }; 
+				pl.getData(t); drawLine(pl, p);
+			}
+			if (y > 0) { 
+				double t[] = { xs + x * dx,ys + (y - 1) * dy,z(x,y - 1) }; 
+				pu.getData(t); drawLine(pu, p);
+			}
+		}
+	}
+}
 /*--------------------------------[ 画四面体 ]--------------------------------*/
 void Graphics3D::drawTetrahedron(Mat<double> p[]) {
 	for (int i = 0; i < 4; i++)
