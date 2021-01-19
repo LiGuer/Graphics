@@ -19,20 +19,23 @@ class Graphics3D
 public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics* g = NULL;														//核心图形学类
+	Mat<int> Z_index;
 	Mat<FP64> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<FP64> TransformMat;											//变换矩阵
 	/*---------------- 底层 ----------------*/
 	Graphics3D(int WindowSize_Width, int WindowSize_height);				//构造函数
 	~Graphics3D();															//析构函数
 	void init(int WindowSize_Width, int WindowSize_height);					//初始化
-	void value2pix(Mat<double>& p0, int& x, int& y);
+	void value2pix(Mat<double>& p0, int& x, int& y, int& z);
 	/*---------------- DRAW ----------------*/
 	// 0-D
+	void drawPoint(double x0, double y0);									//画点
 	void drawPoint(Mat<double>& p0);										//画点
 	// 1-D
 	void drawLine(Mat<double>& sp, Mat<double>& ep);						//画直线
 	void drawPolyline(Mat<double>* p, int n);								//画折线
-	void contour();															//画等高线
+	void contour(Mat<double>& map, const int N);							//画等高线
+	void contourface(Mat<double>& map, const int N);						//画等高线
 	// 2-D
 	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL);//画矩形
 	void drawCircle(Mat<double>& center, double r, Mat<double>* direct = NULL);	//画圆

@@ -26,17 +26,19 @@ Graphics3D::~Graphics3D() {
 	if (g != NULL)free(g);
 }
 /*--------------------------------[ 初始化 ]--------------------------------*/
-void Graphics3D::init(int WindowSize_Width, int WindowSize_height) {
+void Graphics3D::init(int WindowSize_Width, int WindowSize_Height) {
 	if (g != NULL)free(g);
-	g = new Graphics(WindowSize_Width, WindowSize_height);
+	g = new Graphics(WindowSize_Width, WindowSize_Height);
 	TransformMat.E(4);
+	Z_index.zero(WindowSize_Height, WindowSize_Width);
+	for (int i = 0; i < WindowSize_Width * WindowSize_Height; i++)Z_index[i] = -0x7FFFFFFF;
 }
 /*--------------------------------[ value2xy ]--------------------------------*/
-void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y) {
+void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
 	Mat<double> point(4, 1);
-	for (int i = 0; i < 3; i++)point[i] = p0[i]; point[3] = 1;
+	{double t[] = { p0[0],p0[1],p0.rows < 3 ? 0 : p0[2],1 }; point.getData(t); }
 	point.mult(TransformMat, point);
-	x = (int)point[0]; y = (int)point[1];
+	x = (int)point[0]; y = (int)point[1]; z = (int)point[2];
 }
 /******************************************************************************
 
@@ -44,25 +46,98 @@ void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y) {
 
 ******************************************************************************/
 /*--------------------------------[ 画点 ]--------------------------------*/
+void Graphics3D::drawPoint(double x0, double y0) {
+	Mat<double> p(2, 1); p[0] = x0; p[1] = y0;
+	drawPoint(p);
+}
 void Graphics3D::drawPoint(Mat<double>& p0) {
-	int x, y; value2pix(p0, x, y);
-	g->drawPoint(x, y);
+	int x, y, z;
+	value2pix(p0, x, y, z);
+	if (g->judgeOutRange(x, y) || z < Z_index(x, y))return;
+	g->drawPoint(x, y); Z_index(x, y) = z;
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
 void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
-	int sx, sy, ex, ey;
-	value2pix(sp, sx, sy); value2pix(ep, ex, ey);
-	g->drawLine(sx, sy, ex, ey);
+	int sx, sy, sz, ex, ey, ez;
+	value2pix(sp, sx, sy, sz); value2pix(ep, ex, ey, ez);
+
+	INT32S err[3] = { 0 }, inc[2] = { 3 };
+	INT32S delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
+	INT32S index[3] = { sx, sy, sz };
+	//设置xyz单步方向	
+	for (int dim = 0; dim < 3; dim++) {
+		if (delta[dim] > 0)inc[dim] = 1; 								//向右
+		else if (delta[dim] == 0)inc[dim] = 0;							//垂直
+		else { inc[dim] = -1; delta[dim] = -delta[dim]; }				//向左
+	}
+	INT32S distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
+	distance = delta[2] > distance ? delta[2] : distance;//总步数
+	//画线
+	for (INT32S i = 0; i <= distance + 1; i++) {
+		//唯一输出：画点
+		if (!g->judgeOutRange(index[0], index[1]) && index[2] >= Z_index(index[0], index[1])){ 
+			g->drawPoint(index[0], index[1]); Z_index(index[0], index[1]) = index[2]; 
+		}
+		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
+			err[dim] += delta[dim];
+			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+		}
+	}
 }
 /*--------------------------------[ 画折线 ]--------------------------------*/
 void Graphics3D::drawPolyline(Mat<double> *p, int n) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 }
+/*--------------------------------[ 画等高线 ]--------------------------------*/
+void Graphics3D::contour(Mat<double>& map, const int N) {
+	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
+	double max = map.max(), min = map.min();			//get the max & min of the map
+	double delta = (max - min) / N, layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				int flag = map.data[y * map.cols + x] >= layer ? 1 : 0;
+				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
+					int xt = x + x_step[k];
+					int yt = y + y_step[k];
+					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
+					if (flagtemp != flag) { flag = 2; break; }
+				}
+				if (flag == 2) {
+					for (int k = 0; k < 3; k++) {
+						int xt = x + x_step[k];
+						int yt = y + y_step[k];
+						if (map.data[yt * map.cols + xt] >= layer) {
+							g->drawPoint(xt, yt);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+void Graphics3D::contourface(Mat<double>& map, const int N) {
+	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
+	double max = map.max(), min = map.min();			//get the max & min of the map
+	double delta = (max - min) / N, layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				if (map.data[y * map.cols + x] >= layer)
+					g->setPoint(x, y, colorlist((double)i/N, 1));
+			}
+		}
+	}
+}
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
-	int sx, sy, ex, ey;
-	value2pix(sp, sx, sy); value2pix(ep, ex, ey);
-	g->drawRectangle(sx, sy, ex, ey);
+	if (direct == NULL) {
+		Mat<double> pt(2, 1);
+		{double t[] = { sp[0],ep[1] }; pt.getData(t); }
+		drawLine(sp, pt); drawLine(pt, ep);
+		{double t[] = { sp[1],ep[0] }; pt.getData(t); }
+		drawLine(sp, pt); drawLine(pt, ep);
+	}
 }
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
@@ -80,9 +155,6 @@ void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* di
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
-	int cx, cy, rx, ry;
-	value2pix(center, cx, cy);
-	//g->drawEllipse(cx, cy,rx, ry);
 }
 /*--------------------------------[ 画椭圆 ]--------------------------------
 *	[约束方程]:
@@ -100,9 +172,6 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) 
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
-	//int cx, cy, rx, ry;
-	//value2pix(center, cx, cy);
-	//g->drawEllipse(cx, cy,rx, ry);
 }
 /*--------------------------------[ 画多边形 ]--------------------------------*/
 void Graphics3D::drawPolygon(Mat<double> p[],int n) {
@@ -204,16 +273,49 @@ void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 }
 /*--------------------------------[ 三角填充 ]--------------------------------*/
 void Graphics3D::fillTriangle(Mat<double> p0[]) {
-	int x[3], y[3];
-	for (int i = 0; i < 3; i++)value2pix(p0[i], x[i], y[i]);
-	g->fillPolygon(x, y, 3);
+
 }
 /*--------------------------------[ 多边形填充 ]--------------------------------*/
 void Graphics3D::fillPolygon(Mat<double> p0[],int n) {
-	int* x = (int*)calloc(n, sizeof(int)), * y = (int*)calloc(n, sizeof(int));
-	for (int i = 0; i < 3; i++)value2pix(p0[i], x[i], y[i]);
-	g->fillPolygon(x, y, n);
-	free(x); free(y);
+
+}
+/*--------------------------------[ 网格 ]--------------------------------*/
+void Graphics3D::grid() {
+	//int x0 = value2pix(0, 0), y0 = value2pix(0, 1);		//原点像素坐标
+	//double size[2] = { pSizeMax[0] - pSizeMin[0],pSizeMax[1] - pSizeMin[1] };
+	int x0, y0;
+	double size[2];
+	/*------ 网格 ------*/
+	g->PaintColor = 0x00ccff;
+	g->PaintSize = 1;
+	/*------ 计算间隔值 ------*/
+	size[0] /= 10; size[1] /= 10;
+	double delta[2] = { 1,1 };
+	for (int dim = 0; dim < 2; dim++) {
+		while ((int)size[dim] == 0) {
+			size[dim] *= 10;
+			delta[dim] /= 10;
+		}
+		while ((int)size[dim] >= 10) {
+			size[dim] /= 10;
+			delta[dim] *= 10;
+		}
+		delta[dim] *= (int)size[dim];
+	}
+	//g->drawGrid(x0, y0, 0, 0, -value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	//g->drawGrid(x0, y0, g->gWidth, 0, value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	//g->drawGrid(x0, y0, 0, g->gHeight, -value2pix(delta[0], 0), value2pix(delta[1], 1));
+	//g->drawGrid(x0, y0, g->gWidth, g->gHeight, value2pix(delta[0], 0), value2pix(delta[1], 1));
+	/*------ 坐标轴 ------*/
+	g->PaintColor = 0xffffff;
+	g->PaintSize = 3;
+	//g->drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
+	//g->drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
+	/*------ 轴标号 ------*/
+	g->PaintSize = 1;
+	g->FontSize = 50;
+	g->PaintColor = 0xffffff;
+	g->drawChar(x0 - 40, y0 + 15, '0');
 }
 /*---------------- 色谱 ----------------*/
 RGB Graphics3D::colorlist(double index, int model)
