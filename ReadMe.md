@@ -107,7 +107,7 @@ void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = Tr
 void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//判断坐标范围
 ```  
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/3D-surface.jpg) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU.jpg.jpg) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU.jpg) 
 
 ## Reference
 * [1].Computer Graphics with OpenGL. Donald Hearn, M. Pauline Baker, Warren R. Carithers
