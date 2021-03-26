@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 #include "Graphics3D.h"
-Mat<FP64> Graphics3D::TransformMat;											//变换矩阵
+Mat<double> Graphics3D::TransformMat;											//变换矩阵
 /******************************************************************************
 
 *                    底层函数
@@ -53,30 +53,30 @@ void Graphics3D::drawPoint(double x0, double y0) {
 void Graphics3D::drawPoint(Mat<double>& p0) {
 	int x, y, z;
 	value2pix(p0, x, y, z);
-	if (g->judgeOutRange(x, y) || z < Z_index(x, y))return;
-	g->drawPoint(x, y); Z_index(x, y) = z;
+	if (g->judgeOutRange(y, x) || z < Z_index(x, y))return;
+	g->drawPoint(y, x); Z_index(x, y) = z;
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
 void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	int sx, sy, sz, ex, ey, ez;
 	value2pix(sp, sx, sy, sz); value2pix(ep, ex, ey, ez);
 
-	INT32S err[3] = { 0 }, inc[2] = { 3 };
-	INT32S delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
-	INT32S index[3] = { sx, sy, sz };
+	int err[3] = { 0 }, inc[2] = { 3 };
+	int delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
+	int index[3] = { sx, sy, sz };
 	//设置xyz单步方向	
 	for (int dim = 0; dim < 3; dim++) {
 		if (delta[dim] > 0)inc[dim] = 1; 								//向右
 		else if (delta[dim] == 0)inc[dim] = 0;							//垂直
 		else { inc[dim] = -1; delta[dim] = -delta[dim]; }				//向左
 	}
-	INT32S distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
+	int distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
 	distance = delta[2] > distance ? delta[2] : distance;//总步数
 	//画线
-	for (INT32S i = 0; i <= distance + 1; i++) {
+	for (int i = 0; i <= distance + 1; i++) {
 		//唯一输出：画点
-		if (!g->judgeOutRange(index[0], index[1]) && index[2] >= Z_index(index[0], index[1])){ 
-			g->drawPoint(index[0], index[1]); Z_index(index[0], index[1]) = index[2]; 
+		if (!g->judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[0], index[1])){ 
+			g->drawPoint(index[1], index[0]); Z_index(index[0], index[1]) = index[2]; 
 		}
 		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
@@ -98,18 +98,14 @@ void Graphics3D::contour(Mat<double>& map, const int N) {
 			for (int x = 0; x < map.cols - 1; x++) {
 				int flag = map.data[y * map.cols + x] >= layer ? 1 : 0;
 				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
-					int xt = x + x_step[k];
-					int yt = y + y_step[k];
+					int xt = x + x_step[k], yt = y + y_step[k];
 					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
 					if (flagtemp != flag) { flag = 2; break; }
 				}
 				if (flag == 2) {
 					for (int k = 0; k < 3; k++) {
-						int xt = x + x_step[k];
-						int yt = y + y_step[k];
-						if (map.data[yt * map.cols + xt] >= layer) {
-							g->drawPoint(xt, yt);
-						}
+						int xt = x + x_step[k], yt = y + y_step[k];
+						if (map.data[yt * map.cols + xt] >= layer) drawPoint(xt, yt);
 					}
 				}
 			}
@@ -117,7 +113,6 @@ void Graphics3D::contour(Mat<double>& map, const int N) {
 	}
 }
 void Graphics3D::contourface(Mat<double>& map, const int N) {
-	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
 	double max = map.max(), min = map.min();			//get the max & min of the map
 	double delta = (max - min) / N, layer = min;
 	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
@@ -318,7 +313,7 @@ void Graphics3D::grid() {
 	g->drawChar(x0 - 40, y0 + 15, '0');
 }
 /*---------------- 色谱 ----------------*/
-RGB Graphics3D::colorlist(double index, int model)
+Graphics::ARGB Graphics3D::colorlist(double index, int model)
 {
 	double A = 0, R = 0, G = 0, B = 0, a = index, b = 1 - a;
 	switch (model)
@@ -336,7 +331,7 @@ RGB Graphics3D::colorlist(double index, int model)
 	}break;
 	}
 	A *= 0xFF, R *= 0xFF, G *= 0xFF, B *= 0xFF;
-	return (RGB)A * 0x1000000 + (RGB)R * 0x10000 + (RGB)G * 0x100 + (RGB)B;
+	return (Graphics::ARGB)A * 0x1000000 + (Graphics::ARGB)R * 0x10000 + (Graphics::ARGB)G * 0x100 + (Graphics::ARGB)B;
 }
 
 /******************************************************************************
@@ -428,8 +423,8 @@ void Graphics3D::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 	center.mult(1.0 / 2, center);
 	translation(center);
 	for (int i = 0; i < scale.rows; i++) {
-		if (i == 1)scale[i] = g->gHeight / scale[i];
-		else scale[i] = g->gWidth / scale[i];
+		if (i == 1)scale[i] = g->Canvas.rows / scale[i];
+		else scale[i] = g->Canvas.cols / scale[i];
 	}
 	scaling(scale, center);
 }

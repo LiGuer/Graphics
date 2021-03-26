@@ -17,91 +17,77 @@ limitations under the License.
 
 ******************************************************************************/
 /*----------------[ INIT ]----------------*/
-void Graphics::init() {
-	if (Map != NULL)free(Map);
-	Map = (RGBBASIC*)calloc(3 * gWidth * gHeight, sizeof(RGBBASIC));
-	TransMat.E(3);
-}
 void Graphics::init(INT32S width, INT32S height) {
-	gWidth = width; gHeight = height;
-	init();
+	Canvas.zero(height, width); TransMat.E(3);
 }
 /*----------------[ CLEAR ]----------------*/
-void Graphics::clear(RGB color)
+void Graphics::clear(ARGB color)
 {
 	if (color == TRANSPARENT || color == 0) {	//memset按字节处理，故只能处理高低字节相同的值
-		memset(Map, color, sizeof(RGBBASIC) * 3 * gWidth * gHeight);
-		return;
+		memset(Canvas.data, color, sizeof(RGB) * Canvas.rows * Canvas.cols); return;
 	}
-	for (INT32S y = 0; y < gHeight; y++) {
-		for (INT32S x = 0; x < gWidth; x++) {
-			Map[(y * gWidth + x) * 3 + 0] = color >> 16;
-			Map[(y * gWidth + x) * 3 + 1] = color >> 8;
-			Map[(y * gWidth + x) * 3 + 2] = color;
+	for (INT32S y = 0; y < Canvas.cols; y++) {
+		for (INT32S x = 0; x < Canvas.rows; x++) {
+			Canvas(x, y).R = color >> 16;
+			Canvas(x, y).G = color >> 8;
+			Canvas(x, y).B = color;
 		}
 	}
 }
 /*----------------[ SET/READ POINT ]---------------- 
-*	AlphaBlend 算法,	8位ARGB色彩
+*	AlphaBlend 算法,	8位AARGB色彩
 ** ---------------------------------------- */
-void Graphics::setPoint(INT32S x, INT32S y,RGB color) {
+void Graphics::setPoint(INT32S x, INT32S y,ARGB color) {
 	INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
 	INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
 	x = xt; y = yt;
 	if (judgeOutRange(x, y))return;
 	double alpha = (color >> 24) / 255.0;
 	unsigned char R = color >> 16, G = color >> 8, B = color;
-	Map[(y * gWidth + x) * 3 + 0] = alpha * Map[(y * gWidth + x) * 3 + 0] + (1 - alpha) * R;
-	Map[(y * gWidth + x) * 3 + 1] = alpha * Map[(y * gWidth + x) * 3 + 1] + (1 - alpha) * G;
-	Map[(y * gWidth + x) * 3 + 2] = alpha * Map[(y * gWidth + x) * 3 + 2] + (1 - alpha) * B;
+	Canvas(x, y).R = alpha * Canvas(x, y).R + (1 - alpha) * R;
+	Canvas(x, y).G = alpha * Canvas(x, y).G + (1 - alpha) * G;
+	Canvas(x, y).B = alpha * Canvas(x, y).B + (1 - alpha) * B;
 }
-RGB Graphics::readPoint(INT32S x, INT32S y) {
+Graphics::ARGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
-	RGB R = Map[(y * gWidth + x) * 3 + 0];
-	RGB G = Map[(y * gWidth + x) * 3 + 1];
-	RGB B = Map[(y * gWidth + x) * 3 + 2];
-	return R * 0x10000 + G * 0x100 + B;
+	return Canvas(x, y).R * 0x10000 + Canvas(x, y).G * 0x100 + Canvas(x, y).B;
 }
 /*----------------[ 存图 ]----------------*/
-void Graphics::PicWrite(const CHAR* filename) {
+void Graphics::writeImg(const char* filename) {
 	FILE* fp = fopen(filename, "wb");
-	fprintf(fp, "P6\n%d %d\n255\n", gWidth, gHeight);	// 写图片格式、宽高、最大像素值
-	fwrite(Map, 1, gHeight * gWidth * 3, fp);			// 写RGB数据
+	fprintf(fp, "P6\n%d %d\n255\n", Canvas.cols, Canvas.rows);			// 写图片格式、宽高、最大像素值
+	fwrite(Canvas.data, 1, Canvas.rows * Canvas.cols * 3, fp);			// 写RGB数据
 	fclose(fp);
 }
 /*----------------[ 判断过界 ]----------------*/
-bool Graphics::judgeOutRange(INT32S x0, INT32S y0)
-{
-	if (x0 < 0 || x0 >= gWidth)return true;
-	if (y0 < 0 || y0 >= gHeight)return true;
-	return false;
+bool Graphics::judgeOutRange(INT32S x0, INT32S y0){
+	return (x0 < 0 || x0 >= Canvas.cols) || (y0 < 0 || y0 >= Canvas.rows) ? true : false;
 }
 /*----------------[ 全图变换 ]----------------*/
 void Graphics::transSelf() {
-	RGBBASIC* tmp = (RGBBASIC*)calloc(gHeight * gWidth * 3, sizeof(RGBBASIC));
-	for (INT32S y = 0; y < gHeight; y++) {
-		for (INT32S x = 0; x < gWidth; x++) {
+	Mat<RGB> tmp(Canvas.rows, Canvas.cols);
+	for (INT32S y = 0; y < Canvas.rows; y++) {
+		for (INT32S x = 0; x < Canvas.cols; x++) {
 			 INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
 			 INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
 			 if (judgeOutRange(xt, yt))continue;
-			 memcpy(tmp + yt * gWidth * 3 + xt * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
+			 memcpy(tmp.data + yt * Canvas.cols + xt, Canvas.data + y * Canvas.rows + x, sizeof(RGB));
 			 // 反走样
 			 if (judgeOutRange(xt + 1, yt + 1))continue;
-			 memcpy(tmp + (yt + 1) * gWidth * 3 + xt * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
-			 memcpy(tmp + yt * gWidth * 3 + (xt + 1) * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
-			 memcpy(tmp + (yt + 1) * gWidth * 3 + (xt + 1) * 3, Map + y * gWidth * 3 + x * 3, sizeof(RGBBASIC) * 3);
+			 memcpy(tmp.data + (yt + 1) * Canvas.cols + xt, Canvas.data + y * Canvas.cols + x, sizeof(RGB));
+			 memcpy(tmp.data + yt * Canvas.cols + (xt + 1), Canvas.data + y * Canvas.cols + x, sizeof(RGB));
+			 memcpy(tmp.data + (yt + 1) * Canvas.cols + (xt + 1), Canvas.data + y * Canvas.cols + x, sizeof(RGB));
 		}
 	}
-	free(Map); Map = tmp; tmp = NULL;
+	Canvas = tmp;
 }
 /*----------------[ 剪切图 ]----------------*/
 void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
 	int width = ex - sx, height = ey - sy;
-	RGBBASIC* tmp = (RGBBASIC*)calloc(width * height * 3, sizeof(RGBBASIC));
-	for (int i = 0; i < ey - sy; i++)
-		memcpy(tmp + i * width * 3, Map + (sy + i) * gWidth * 3 + sx * 3, sizeof(RGBBASIC) * width * 3);
-	free(Map); Map = tmp; tmp = NULL;
-	gWidth = width; gHeight = height;
+	Mat<RGB> tmp(height, width);
+	for (int y = 0; y < ey - sy; y++)
+		memcpy(tmp.data + y * width, Canvas.data + (sy + y) * Canvas.cols + sx, sizeof(RGB) * width);
+	Canvas = tmp;
 }
 /******************************************************************************
 
@@ -293,7 +279,7 @@ void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
 /*----------------[ DRAW BEZIER CURVE ]----------------*/
 void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 {
-	INT32S N = gWidth+ gHeight;					//#待优化
+	INT32S N = Canvas.rows + Canvas.cols;					//#待优化
 	FP64 C[50];
 	for (INT32S i = 0; i < n; i++) {
 		setPoint(xCtrl[i], yCtrl[i],0xFFFFFF);
@@ -317,13 +303,13 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 	}
 }
 /*----------------[ 复制别的图 ]---------------- */
-void Graphics::drawCopy(INT32S x0, INT32S y0, RGBBASIC* gt, INT32S width, INT32S height)
+void Graphics::drawCopy(INT32S x0, INT32S y0, Mat<RGB>& gt)
 {
-	for (INT32S i = 0; i < height; i++)
-		memcpy(Map + (y0 + i) * gWidth * 3 + x0 * 3, gt + i * width * 3, sizeof(RGBBASIC) * width * 3);
+	for (INT32S x = 0; x < gt.rows; x++)
+		memcpy(Canvas.data + (x0 + x) * Canvas.cols + y0, gt.data + x * gt.cols, sizeof(RGB) * gt.cols);
 }
 /*----------------[ FILL ]----------------*/
-void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB color)
+void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, ARGB color)
 {
 	if (sy > ey) { INT32S t = ey; ey = sy, sy = t; }
 	if (sx > ex) { INT32S t = ex; ex = sx, sx = t; }
@@ -334,9 +320,9 @@ void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, RGB col
 /*----------------[ FLOOD FILL ----------------
 *	广度优先搜索	队列
 ** ----------------------------------------*/
-void Graphics::fillFlood(INT32S x0, INT32S y0, RGB color)
+void Graphics::fillFlood(INT32S x0, INT32S y0, ARGB color)
 {
-	RGB color0 = readPoint(x0, y0);
+	ARGB color0 = readPoint(x0, y0);
 	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 };
 	INT32S y_step[] = { 1,-1,0,0,1,-1,1,-1 };
 	std::queue<INT32S> Qx, Qy;
@@ -453,7 +439,7 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 /*----------------[ DRAW CHARACTER ]----------------
 *	字库: font.h
 ** ---------------------------------------- */
-void Graphics::drawChar(INT32S x0, INT32S y0, CHAR charac)
+void Graphics::drawChar(INT32S x0, INT32S y0, char charac)
 {
 	static const INT32S FontLibSize = 16;
 	int k = FontSize / FontLibSize + 1;
@@ -463,20 +449,20 @@ void Graphics::drawChar(INT32S x0, INT32S y0, CHAR charac)
 		for (INT32S j = 0; j < 8; j++) {
 			if (t & 0x80)
 				fillRectangle(x * k + x0, y * k + y0, (x + 1) * k + x0, (y + 1) * k + y0, PaintColor);
-			t <<= 1;  y++;
-			if (y == FontLibSize) { y = 0;	x++; break; }
+			t <<= 1;  x++;
+			if (x == FontLibSize) { x = 0;	y++; break; }
 		}
 	}
 }
 /*----------------[ DRAW STRING ]----------------*/
-void Graphics::drawString(INT32S x0, INT32S y0, const CHAR* str, INT32S n)
+void Graphics::drawString(INT32S x0, INT32S y0, const char* str, INT32S n)
 {
-	for (int i = 0; i < n; i++) drawChar(x0 + FontSize * i, y0, str[i]);
+	for (int i = 0; i < n; i++) drawChar(x0, y0 + FontSize * i, str[i]);
 }
 /*----------------[ DRAW NUMBER ]----------------*/
 void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 {
-	CHAR numstr[100];
+	char numstr[100];
 	INT32S cur = 0;
 	INT32S integer = num;							//整数部分
 	FP64 decimal = num - integer;					//小数部分
@@ -492,7 +478,7 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 	if (num < 0)numstr[cur++] = '-';
 	//反转一下
 	for (INT32S i = 0; i <= cur / 2; i++) {
-		CHAR t = numstr[i];
+		char t = numstr[i];
 		numstr[i] = numstr[cur - i - 1]; numstr[cur - i - 1] = t;
 	}
 	/*------ 小数部分 ------*/
@@ -501,7 +487,7 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 		numstr[cur++] = '.';
 		while (decimal > accur) {
 			decimal *= 10;
-			numstr[cur++] = (CHAR)decimal + '0';
+			numstr[cur++] = (char)decimal + '0';
 			decimal -= (INT32S)decimal;
 		}
 	}
@@ -516,17 +502,24 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 void Graphics::translation(INT32S dx, INT32S dy)
 {
 	Mat<FP64> M(3);
-	M(0, 2) = dx; M(1, 2) = dy;
-	TransMat.mult(M, TransMat);
+	FP64 t[] = {
+		1, 0, dx,
+		0, 1, dy,
+		0, 0, 1
+	};
+	TransMat.mult(M.getData(t), TransMat);
 }
 /*----------------[ ROMOTE ]----------------*/
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
 	translation(-x0, -y0);
 	Mat<FP64> M(3);
-	M(0, 0) = cos(theta); M(0, 1) = -1 * sin(theta);
-	M(1, 0) = sin(theta); M(1, 1) = cos(theta);
-	TransMat.mult(M, TransMat);
+	FP64 t[] = {
+		cos(theta), -sin(theta), 0,
+		sin(theta),  cos(theta), 0,
+		0, 0, 1
+	};
+	TransMat.mult(M.getData(t), TransMat);
 	translation(x0, y0);
 }
 /*----------------[ scaling ]----------------*/
@@ -534,7 +527,11 @@ void Graphics::scaling(FP64 sx, FP64 sy, INT32S x0, INT32S y0)
 {
 	translation(-x0, -y0);
 	Mat<FP64> M(3);
-	M(0, 0) = sx; M(1, 1) = sy;
-	TransMat.mult(M, TransMat);
+	FP64 t[] = {
+		sx,  0,  0,
+		 0, sy,  0,
+		 0,  0,  1
+	};
+	TransMat.mult(M.getData(t), TransMat);
 	translation(x0, y0);
 }
