@@ -20,6 +20,7 @@ limitations under the License.
 #pragma comment(lib,"../opencv2-include/opencv_world430.lib")
 
 namespace DigitalImageProcessing {
+#define PI 3.141592653589
 	/*--------------------------------[ 图像输入/输出 ]--------------------------------*/
 	Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
 		cv::Mat input = cv::imread(inputImgUrl, cv::IMREAD_COLOR);
@@ -116,6 +117,26 @@ namespace DigitalImageProcessing {
 	Mat<double>& InvFourierTransform(Mat<double>& input, Mat<double>& output) {
 		return output;
 	}
+	/*--------------------------------[ Gauss 滤波 ]--------------------------------
+	* [输入]: input: 输入原图 dst: 模糊图像  size: 核的大小  sigma: 正态分布标准差
+	--------------------------------------------------------------------------------*/
+	Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
+		if (size <= 0 || sigma == 0)return;
+		//二维Gauss核生成
+		Mat<double> kernel(size, size);
+		double sum = 0;
+		for (int y = 0; y < size; y++) {
+			for (int x = 0; x < size; x++) {
+				kernel(x, y) = (1 / (2 * PI * sigma * sigma))
+					* exp(-((x - size / 2) * (x - size / 2) + (y - size / 2) * (y - size / 2)) / (2 * sigma * sigma));
+				sum += kernel(x, y);
+			}
+		}
+		kernel.mult(1 / sum, kernel);
+		//Gauss卷积
+		output.conv(input, kernel, 1);
+		return output;
+	}
 	/*--------------------------------[ 转灰度图 ]--------------------------------
 	[目的]: RGB三通道合并为灰度一通道
 	[公式]: Gray = 0.3 R + 0.59 G + 0.11 B
@@ -153,6 +174,34 @@ namespace DigitalImageProcessing {
 	}
 	Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
 		for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
+	}
+	/*--------------------------------[ Perlin Noise ]--------------------------------
+	Function to linearly interpolate between a0 and a1 , Weight w should be in the range [0.0, 1.0]
+	--------------------------------------------------------------------------------*/
+	double PerlinNoise(double x, double y, Mat<double>& randomGridGradient) {
+		// 对四个格点
+		int x0[] = { x, x + 1, x, x + 1 }, y0[] = { y, y, y + 1, y + 1 };
+		double n[4];
+		for (int i = 0; i < 4; i++) {
+			//[1] 格点随机梯度矢量
+			double random = randomGridGradient(x0[i], y0[i]);
+			//[2] (x,y)与格点距离,梯度点积
+			double dx = x - x0[i], dy = y - y0[i];
+			n[i] = dx * cos(random) + dy * sin(random);
+		}
+		//[3] 插值
+		double sx = x - (int)x, sy = y - (int)y;
+		double ix0 = (n[1] - n[0]) * (3.0 - sx * 2.0) * sx * sx + n[0];
+		double ix1 = (n[3] - n[2]) * (3.0 - sx * 2.0) * sx * sx + n[2];
+		return (ix1 - ix0) * (3.0 - sy * 2.0) * sy * sy + ix0;
+	}
+	Mat<double>& PerlinNoise(Mat<double>& output, int frequency) {
+		Mat<double> randomGridGradient;
+		randomGridGradient.rands(frequency + 1, frequency + 1, 0, 256);
+		for (int y = 0; y < output.rows; y++)
+			for (int x = 0; x < output.cols; x++)
+				output(x, y) = PerlinNoise((double)x / output.cols * frequency, (double)y / output.rows * frequency, randomGridGradient);
+		return output;
 	}
 }
 /*//Example

@@ -53,8 +53,8 @@ void Graphics3D::drawPoint(double x0, double y0) {
 void Graphics3D::drawPoint(Mat<double>& p0) {
 	int x, y, z;
 	value2pix(p0, x, y, z);
-	if (g->judgeOutRange(y, x) || z < Z_index(x, y))return;
-	g->drawPoint(y, x); Z_index(x, y) = z;
+	if (g->judgeOutRange(y, x) || z < Z_index(y, x))return;
+	g->drawPoint(y, x); Z_index(y, x) = z;
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
 void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
@@ -75,8 +75,8 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
 		//唯一输出：画点
-		if (!g->judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[0], index[1])){ 
-			g->drawPoint(index[1], index[0]); Z_index(index[0], index[1]) = index[2]; 
+		if (!g->judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])){ 
+			g->drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2]; 
 		}
 		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
@@ -124,15 +124,22 @@ void Graphics3D::contourface(Mat<double>& map, const int N) {
 		}
 	}
 }
+/*--------------------------------[ 画三角形 ]--------------------------------*/
+void Graphics3D::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3) {
+	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p1);
+}
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
 	if (direct == NULL) {
 		Mat<double> pt(2, 1);
-		{double t[] = { sp[0],ep[1] }; pt.getData(t); }
+		{ double t[] = { sp[0],ep[1] }; pt.getData(t); }
 		drawLine(sp, pt); drawLine(pt, ep);
-		{double t[] = { sp[1],ep[0] }; pt.getData(t); }
+		{ double t[] = { sp[1],ep[0] }; pt.getData(t); }
 		drawLine(sp, pt); drawLine(pt, ep);
 	}
+}
+void Graphics3D::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
+	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
 }
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
@@ -217,6 +224,38 @@ void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
 		drawLine(pMinTemp, pMaxTemp);
 	}
 }
+/*--------------------------------[ 画圆柱体 ]--------------------------------
+**------------------------------------------------------------------------*/
+void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
+	// 计算 Rotate Matrix
+	Mat<double> direction, rotateAxis, rotateMat(4), tmp(3, 1);
+	direction.add(st, ed.negative(direction));
+	{double t[] = { 0, 0, 1 }; tmp.getData(t); }
+	rotateAxis.crossProduct(direction, tmp);
+	double rotateAngle = -acos(tmp.dot(direction, tmp) / direction.norm());
+	{
+		rotate(rotateAxis, rotateAngle, tmp.zero(3, 1), rotateMat);
+		tmp = rotateMat; rotateMat.E(3);
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 3; j++)
+				rotateMat(i, j) = tmp(i, j);
+	}
+	// 画圆柱体
+	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
+	for (int i = 0; i <= 360 / delta; i++) {
+		{double t[] = { r * cos(i * delta * 2.0 * PI / 360), r * sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
+		deltaVector.mult(rotateMat, deltaVector);
+		stPoint.add(st, deltaVector);
+		edPoint.add(ed, deltaVector);
+		if (i != 0) {
+			drawLine(stPoint, preStPoint); drawLine(st, stPoint);
+			drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
+			drawLine(stPoint, edPoint);
+		}
+		preStPoint = stPoint;
+		preEdPoint = edPoint;
+	}
+}
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
 		参数方程,点集:
@@ -227,9 +266,8 @@ void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void Graphics3D::drawSphere(Mat<double>& center, double r) {
+void Graphics3D::drawSphere(Mat<double>& center, double r, int delta) {
 	// 经纬度法
-	const int delta = 5;
 	Mat<double> point(3, 1);
 	for (int i = 0; i < 360 / delta; i++) {
 		double theta = (i * delta) * 2.0 * PI / 360;
@@ -240,6 +278,23 @@ void Graphics3D::drawSphere(Mat<double>& center, double r) {
 			point[2] = r * sin(phi) + center[2];
 			drawPoint(point);
 		}
+	}
+}
+/*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
+*	[Referance]:
+		[1] Thanks and copyright for https://github.com/SebLague/Boids
+**---------------------------------------------------------------------------------------------------------*/
+void Graphics3D::drawSphere2(Mat<double>& center, double r, int n) {
+	// 均匀球面点
+	Mat<double> point(3, 1);
+	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
+	double angleIncrement = PI * 2 * goldenRatio;
+	for (int i = 0; i < 300; i++) {
+		double t = (double)i / n, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;
+		point[0] = center[0] + r * sin(inclination) * cos(azimuth);
+		point[1] = center[1] + r * sin(inclination) * sin(azimuth);
+		point[2] = center[2] + r * cos(inclination);
+		drawPoint(point);
 	}
 }
 /*--------------------------------[ 画椭球 ]--------------------------------

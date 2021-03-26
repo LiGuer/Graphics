@@ -35,7 +35,7 @@ void Graphics::clear(ARGB color)
 	}
 }
 /*----------------[ SET/READ POINT ]---------------- 
-*	AlphaBlend 算法,	8位AARGB色彩
+*	AlphaBlend 算法,	8位ARGB色彩
 ** ---------------------------------------- */
 void Graphics::setPoint(INT32S x, INT32S y,ARGB color) {
 	INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
