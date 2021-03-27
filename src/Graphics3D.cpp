@@ -109,8 +109,9 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	}
 }
 /*--------------------------------[ 画折线 ]--------------------------------*/
-void Graphics3D::drawPolyline(Mat<double> *p, int n) {
+void Graphics3D::drawPolyline(Mat<double> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
+	if (close) drawLine(p[0], p[n - 1]);
 }
 /*--------------------------------[ 画等高线 ]--------------------------------*/
 void Graphics3D::contour(Mat<double>& map, const int N) {
@@ -161,10 +162,15 @@ void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* di
 		{ double t[] = { sp[1],ep[0] }; pt.getData(t); }
 		drawLine(sp, pt); drawLine(pt, ep);
 	}
+	else {
+		// 计算 Rotate Matrix
+	}
 }
 void Graphics3D::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
 	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
 }
+/*--------------------------------[ 画多边形 ]--------------------------------*/
+void Graphics3D::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true); }
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
 		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
@@ -181,6 +187,8 @@ void Graphics3D::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
+	// 计算 Rotate Matrix
+	//画圆
 }
 /*--------------------------------[ 画椭圆 ]--------------------------------
 *	[约束方程]:
@@ -198,10 +206,6 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) 
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
 void Graphics3D::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
-}
-/*--------------------------------[ 画多边形 ]--------------------------------*/
-void Graphics3D::drawPolygon(Mat<double> p[],int n) {
-	for (int i = 0; i < n; i++) drawLine(p[i], p[(i + 1) % n]);
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
 void Graphics3D::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
@@ -222,10 +226,10 @@ void Graphics3D::drawSurface(Mat<double> z, double xs, double xe, double ys, dou
 	}
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
-void Graphics3D::drawTetrahedron(Mat<double> p[]) {
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < i; j++)
-			drawLine(p[i], p[j]);
+void Graphics3D::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
+	drawLine(p1, p2); drawLine(p1, p3); drawLine(p1, p4);
+	drawLine(p2, p3); drawLine(p2, p4);
+	drawLine(p3, p4);
 }
 /*--------------------------------[ 画矩体 ]--------------------------------
 *	矩体共十二条边，从对角点引出6条: 
@@ -236,7 +240,7 @@ void Graphics3D::drawTetrahedron(Mat<double> p[]) {
 		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
-void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
+void Graphics3D::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
 	Mat<double> pMinTemp, pMaxTemp;
 	for (int i = 0; i < 3; i++) {
 		pMinTemp = pMin; pMaxTemp = pMax;
@@ -252,18 +256,16 @@ void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
 **------------------------------------------------------------------------*/
 void Graphics3D::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat(4), tmp(3, 1);
-	direction.add(st, ed.negative(direction));
-	{double t[] = { 0, 0, 1 }; tmp.getData(t); }
-	rotateAxis.crossProduct(direction, tmp);
-	double rotateAngle = -acos(tmp.dot(direction, tmp) / direction.norm());
-	{
-		rotate(rotateAxis, rotateAngle, tmp.zero(3, 1), rotateMat);
-		tmp = rotateMat; rotateMat.E(3);
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				rotateMat(i, j) = tmp(i, j);
-	}
+	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
+	direction.add(ed, st.negative(direction));
+	if (direction[0] != 0 || direction[1] != 0) {
+		rotate(
+			rotateAxis.crossProduct(direction, zAxis),
+			-acos(tmp.dot(direction, tmp) / direction.norm()),
+			tmp.zero(3, 1), rotateMat
+		);
+		rotateMat.cut(0, 2, 0, 2, rotateMat);
+	} else rotateMat.E(3);
 	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
 	for (int i = 0; i <= 360 / delta; i++) {

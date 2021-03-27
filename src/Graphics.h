@@ -49,7 +49,7 @@ public:
 	void init(INT32S width = 100, INT32S height = 100);						//初始化
 	void clear(ARGB color);	 												//清屏
 	void setPoint(INT32S x, INT32S y, ARGB color);							//底层画点
-	ARGB  readPoint(INT32S x, INT32S y); 									//读点 
+	ARGB readPoint(INT32S x, INT32S y); 									//读点 
 	void readImg(const char* filename);										//读图
 	void writeImg(const char* filename);									//存图
 	bool judgeOutRange(INT32S x0, INT32S y0);								//判断过界
