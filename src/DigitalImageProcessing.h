@@ -175,34 +175,6 @@ namespace DigitalImageProcessing {
 	Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
 		for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
 	}
-	/*--------------------------------[ Perlin Noise ]--------------------------------
-	Function to linearly interpolate between a0 and a1 , Weight w should be in the range [0.0, 1.0]
-	--------------------------------------------------------------------------------*/
-	double PerlinNoise(double x, double y, Mat<double>& randomGridGradient) {
-		// 对四个格点
-		int x0[] = { x, x + 1, x, x + 1 }, y0[] = { y, y, y + 1, y + 1 };
-		double n[4];
-		for (int i = 0; i < 4; i++) {
-			//[1] 格点随机梯度矢量
-			double random = randomGridGradient(x0[i], y0[i]);
-			//[2] (x,y)与格点距离,梯度点积
-			double dx = x - x0[i], dy = y - y0[i];
-			n[i] = dx * cos(random) + dy * sin(random);
-		}
-		//[3] 插值
-		double sx = x - (int)x, sy = y - (int)y;
-		double ix0 = (n[1] - n[0]) * (3.0 - sx * 2.0) * sx * sx + n[0];
-		double ix1 = (n[3] - n[2]) * (3.0 - sx * 2.0) * sx * sx + n[2];
-		return (ix1 - ix0) * (3.0 - sy * 2.0) * sy * sy + ix0;
-	}
-	Mat<double>& PerlinNoise(Mat<double>& output, int frequency) {
-		Mat<double> randomGridGradient;
-		randomGridGradient.rands(frequency + 1, frequency + 1, 0, 256);
-		for (int y = 0; y < output.rows; y++)
-			for (int x = 0; x < output.cols; x++)
-				output(x, y) = PerlinNoise((double)x / output.cols * frequency, (double)y / output.rows * frequency, randomGridGradient);
-		return output;
-	}
 }
 /*//Example
 int main() {

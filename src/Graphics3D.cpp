@@ -261,7 +261,7 @@ void Graphics3D::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
 			rotateAxis.crossProduct(direction, zAxis),
-			-acos(tmp.dot(direction, tmp) / direction.norm()),
+			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3, 1), rotateMat
 		);
 		rotateMat.cut(0, 2, 0, 2, rotateMat);
@@ -450,25 +450,16 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// rotate
-	rotateAxis.normalization();
-	Mat<double> q(4, 1);
-	q[0] = cos(theta / 2);
-	for (int i = 1; i < 4; i++) q[i] = rotateAxis[i - 1] * sin(theta / 2);
-	Mat<double> rotateMat(4, 4);
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
-	for (int i = 1; i < 4; i++)rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
+	tmp.mult(sin(theta / 2), rotateAxis.normalization());
+	Mat<double> q(4, 1), rotateMat(4); 
+	{ double t[] = { cos(theta / 2), tmp[0], tmp[1], tmp[2] }; q.getData(t); }
+	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
+	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
 	Mat<double> rotateMatR(rotateMat);
-	for (int i = 1; i < 4; i++) {
-		rotateMat(0, i) = -rotateMat(0, i); rotateMatR(i, 0) = -rotateMatR(i, 0);
-	}
+	for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
 	rotateMat.mult(rotateMat, rotateMatR);
-	rotateMatR = rotateMat;
-	rotateMat.E(4);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			rotateMat(i, j) = rotateMatR(i + 1, j + 1);
+	tmp = rotateMat; rotateMat.E(4);
+	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) rotateMat(i, j) = tmp(i + 1, j + 1);
 	transMat.mult(rotateMat, transMat);
 	translation(center, transMat);
 }

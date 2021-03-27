@@ -70,5 +70,4 @@ public:
 	/*---------------- SET ----------------*/
 	void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//判断坐标范围
 };
-
 #endif
