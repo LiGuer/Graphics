@@ -10,29 +10,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#include "Graphics3D.h"
-Mat<double> Graphics3D::TransformMat;											//变换矩阵
+#include "GraphicsND.h"
+Mat<double> GraphicsND::TransformMat;											//变换矩阵
 /******************************************************************************
 
 *                    底层函数
 
 ******************************************************************************/
 /*--------------------------------[ 初始化 ]--------------------------------*/
-void Graphics3D::init(int width, int height) {
+void GraphicsND::init(int width, int height) {
 	g.init(width, height);
 	Z_index.zero(height, width);
 	for (int i = 0; i < Z_index.rows * Z_index.cols; i++)Z_index.data[i] = -0x7FFFFFFF;
 	TransformMat.E(4);
 }
 /*--------------------------------[ value2pix ]--------------------------------*/
-void Graphics3D::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
+void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
 	Mat<double> point(4, 1);
 	{double t[] = { x0, y0, z0, 1 }; point.getData(t); }
 	point.mult(TransformMat, point);
 	x = point[0]; y = point[1]; z = point[2];
 }
-void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
-	value2pix(p0[0], p0[1], p0.rows < 3 ? 0 : p0[2], x, y, z);
+void GraphicsND::value2pix(Mat<double>& p0, Mat<int>& pAns) {
+	pAns.zero(p0.rows, 1);
+	Mat<double> point(4, 1);
+	{double t[] = { p0[0], p0[1], p0.rows < 3 ? 0 : p0[2], 1 }; point.getData(t); }
+	point.mult(TransformMat, point);
+	for (int i = 0; i < pAns.rows; i++)pAns[i] = point[i];
+}
+/*--------------------------------[ value2pix ]--------------------------------*/
+bool GraphicsND::setPix(int x,int y, int z) {
+	if (g.judgeOutRange(y, x) || z < Z_index(y, x))return false;
+	g.drawPoint(y, x); Z_index(y, x) = z; return true;
 }
 /******************************************************************************
 
@@ -40,20 +49,18 @@ void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
 
 ******************************************************************************/
 /*--------------------------------[ 画点 ]--------------------------------*/
-void Graphics3D::drawPoint(double x0, double y0, double z0) {
+void GraphicsND::drawPoint(double x0, double y0, double z0) {
 	int x, y, z;
 	value2pix(x0, y0, z0, x, y, z);
-	if (g.judgeOutRange(y, x) || z < Z_index(y, x))return;
-	g.drawPoint(y, x); Z_index(y, x) = z;
+	setPix(x, y, z);
 }
-void Graphics3D::drawPoint(Mat<double>& p0) {
-	int x, y, z;
-	value2pix(p0, x, y, z);
-	if (g.judgeOutRange(y, x) || z < Z_index(y, x))return;
-	g.drawPoint(y, x); Z_index(y, x) = z;
+void GraphicsND::drawPoint(Mat<double>& p0) {
+	Mat<int> p;
+	value2pix(p0, p);
+	setPix(p[0], p[1], p[2]);
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
-void Graphics3D::drawLine(double sx0, double ex0, double sy0, double ey0, double sz0, double ez0) {
+void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double sz0, double ez0) {
 	int sx, sy, sz, ex, ey, ez;
 	value2pix(sx0, sy0, sz0, sx, sy, sz); value2pix(ex0, ey0, ez0, ex, ey, ez);
 	int err[3] = { 0 }, inc[3] = { 0 };
@@ -69,26 +76,20 @@ void Graphics3D::drawLine(double sx0, double ex0, double sy0, double ey0, double
 	distance = delta[2] > distance ? delta[2] : distance;//总步数
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
-		//唯一输出：画点
-
-		if (!g.judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])) {
-			g.drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2];
-		}
+		setPix(index[0], index[1], index[2]);					//唯一输出：画点
 		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
 			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
 	}
 }
-void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
-	int sx, sy, sz, ex, ey, ez;
-	value2pix(sp, sx, sy, sz); value2pix(ep, ex, ey, ez);
-
-	int err[3] = { 0 }, inc[3] = { 0 };
-	int delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
-	int index[3] = { sx, sy, sz };
+void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
+	Mat<int> sp, ep;
+	value2pix(sp0, sp); value2pix(ep0, ep);
+	Mat<int> err(sp.rows, 1), inc(sp.rows, 1), delta, index(sp), tmp;
+	delta.add(ep, sp.negative(tmp));
 	//设置xyz单步方向	
-	for (int dim = 0; dim < 3; dim++) {
+	for (int dim = 0; dim < sp.rows; dim++) {
 		if (delta[dim] > 0)inc[dim] = 1; 								//向右
 		else if (delta[dim] == 0)inc[dim] = 0;							//垂直
 		else { inc[dim] = -1; delta[dim] = -delta[dim]; }				//向左
@@ -97,24 +98,20 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	distance = delta[2] > distance ? delta[2] : distance;//总步数
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
-		//唯一输出：画点
-
-		if (!g.judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])){ 
-			g.drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2]; 
-		}
-		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
+		setPix(index[0], index[1], index[2]);							//唯一输出：画点
+		for (int dim = 0; dim < sp.rows; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
 			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
 	}
 }
 /*--------------------------------[ 画折线 ]--------------------------------*/
-void Graphics3D::drawPolyline(Mat<double> *p, int n, bool close) {
+void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
 /*--------------------------------[ 画等高线 ]--------------------------------*/
-void Graphics3D::contour(Mat<double>& map, const int N) {
+void GraphicsND::contour(Mat<double>& map, const int N) {
 	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
 	double max = map.max(), min = map.min();			//get the max & min of the map
 	double delta = (max - min) / N, layer = min;
@@ -137,7 +134,7 @@ void Graphics3D::contour(Mat<double>& map, const int N) {
 		}
 	}
 }
-void Graphics3D::contourface(Mat<double>& map, const int N) {
+void GraphicsND::contourface(Mat<double>& map, const int N) {
 	double max = map.max(), min = map.min();			//get the max & min of the map
 	double delta = (max - min) / N, layer = min;
 	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
@@ -150,11 +147,11 @@ void Graphics3D::contourface(Mat<double>& map, const int N) {
 	}
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
-void Graphics3D::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3) {
+void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3) {
 	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p1);
 }
 /*--------------------------------[ 画矩形 ]--------------------------------*/
-void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
+void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
 	if (direct == NULL) {
 		Mat<double> pt(2, 1);
 		{ double t[] = { sp[0],ep[1] }; pt.getData(t); }
@@ -166,11 +163,11 @@ void Graphics3D::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* di
 		// 计算 Rotate Matrix
 	}
 }
-void Graphics3D::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
+void GraphicsND::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
 	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
 }
 /*--------------------------------[ 画多边形 ]--------------------------------*/
-void Graphics3D::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true); }
+void GraphicsND::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true); }
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
 		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
@@ -186,7 +183,7 @@ void Graphics3D::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true);
 		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
-void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
+void GraphicsND::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
 	// 计算 Rotate Matrix
 	//画圆
 }
@@ -205,10 +202,10 @@ void Graphics3D::drawCircle(Mat<double>& center, double r, Mat<double>* direct) 
 		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
-void Graphics3D::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
+void GraphicsND::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
-void Graphics3D::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
+void GraphicsND::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
 	Mat<double> p(3, 1), pl(3, 1), pu(3, 1);
 	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
 	for (int y = 0; y < z.cols; y++) {
@@ -226,7 +223,7 @@ void Graphics3D::drawSurface(Mat<double> z, double xs, double xe, double ys, dou
 	}
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
-void Graphics3D::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
+void GraphicsND::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
 	drawLine(p1, p2); drawLine(p1, p3); drawLine(p1, p4);
 	drawLine(p2, p3); drawLine(p2, p4);
 	drawLine(p3, p4);
@@ -240,7 +237,7 @@ void Graphics3D::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& 
 		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
-void Graphics3D::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
+void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
 	Mat<double> pMinTemp, pMaxTemp;
 	for (int i = 0; i < 3; i++) {
 		pMinTemp = pMin; pMaxTemp = pMax;
@@ -254,7 +251,7 @@ void Graphics3D::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
 }
 /*--------------------------------[ 画圆台 ]--------------------------------
 **------------------------------------------------------------------------*/
-void Graphics3D::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta) {
+void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta) {
 	// 计算 Rotate Matrix
 	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
 	direction.add(ed, st.negative(direction));
@@ -283,7 +280,7 @@ void Graphics3D::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	}
 }
 /*--------------------------------[ 画圆柱 ]--------------------------------*/
-void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
+void GraphicsND::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
 	drawFrustum(st, ed, r, r, delta);
 }
 /*--------------------------------[ 画球 ]--------------------------------
@@ -296,7 +293,7 @@ void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void Graphics3D::drawSphere(Mat<double>& center, double r, int delta) {
+void GraphicsND::drawSphere(Mat<double>& center, double r, int delta) {
 	// 经纬度法
 	Mat<double> point(3, 1);
 	for (int i = 0; i < 360 / delta; i++) {
@@ -314,7 +311,7 @@ void Graphics3D::drawSphere(Mat<double>& center, double r, int delta) {
 *	[Referance]:
 		[1] Thanks and copyright for https://github.com/SebLague/Boids
 **---------------------------------------------------------------------------------------------------------*/
-void Graphics3D::drawSphere2(Mat<double>& center, double r, int n) {
+void GraphicsND::drawSphere2(Mat<double>& center, double r, int n) {
 	// 均匀球面点
 	Mat<double> point(3, 1);
 	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
@@ -337,7 +334,7 @@ void Graphics3D::drawSphere2(Mat<double>& center, double r, int n) {
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
+void GraphicsND::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 	const int delta = 5;
 	Mat<double> point(3, 1);
 	for (int i = 0; i < 360 / delta; i++) {
@@ -351,8 +348,14 @@ void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 		}
 	}
 }
+/*--------------------------------[ 画坐标轴 ]--------------------------------*/
+void GraphicsND::drawAxis() {
+	drawLine(0, 10000);//x
+	drawLine(0, 0, 0, 10000);//y
+	drawLine(0, 0, 0, 0, 0, 10000);//z
+}
 /*--------------------------------[ 网格 ]--------------------------------*/
-void Graphics3D::grid() {
+void GraphicsND::grid() {
 	//int x0 = value2pix(0, 0), y0 = value2pix(0, 1);		//原点像素坐标
 	//double size[2] = { pSizeMax[0] - pSizeMin[0],pSizeMax[1] - pSizeMin[1] };
 	int x0, y0;
@@ -390,7 +393,7 @@ void Graphics3D::grid() {
 	g.drawChar(x0 - 40, y0 + 15, '0');
 }
 /*---------------- 色谱 ----------------*/
-Graphics::ARGB Graphics3D::colorlist(double index, int model)
+Graphics::ARGB GraphicsND::colorlist(double index, int model)
 {
 	double A = 0, R = 0, G = 0, B = 0, a = index, b = 1 - a;
 	switch (model)
@@ -422,7 +425,7 @@ Graphics::ARGB Graphics3D::colorlist(double index, int model)
 |z'|   | 0  0  1  dz| |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::translation(Mat<double>& delta, Mat<double>& transMat) {
+void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 	int n = delta.rows;
 	Mat<double> translationMat(n + 1);
 	for (int i = 0; i < n; i++)translationMat(i, n) = delta[i];
@@ -446,7 +449,7 @@ void Graphics3D::translation(Mat<double>& delta, Mat<double>& transMat) {
 				|c -d  a  b|
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
-void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
+void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// rotate
@@ -469,7 +472,7 @@ void Graphics3D::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 |z'|   | 0  0  sz 0 | |z|
 [1 ]   [ 0  0  0  1 ] [1]
 **-----------------------------------------------------------------------*/
-void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat) {
+void GraphicsND::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat) {
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// scaling
@@ -484,7 +487,7 @@ void Graphics3D::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& t
 *                    Set
 
 ******************************************************************************/
-void Graphics3D::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
+void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 	Mat<double> center, scale, zero(pMin.rows, 1);
 	center.add(pMax, pMin.negative(center));
 	scale = center;
