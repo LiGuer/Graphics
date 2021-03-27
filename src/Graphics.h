@@ -43,6 +43,7 @@ public:
 	ARGB PaintColor = 0xFFFFFF;												//画笔颜色
 	INT32S PaintSize = 0, FontSize=16;										//画笔大小//字符大小
 	/*-------------------------------- 底层函数 --------------------------------*/
+	Graphics() { ; }
 	Graphics(INT32S width, INT32S height) { init(width, height); }
 	~Graphics() { }															//析构函数
 	void init(INT32S width = 100, INT32S height = 100);						//初始化

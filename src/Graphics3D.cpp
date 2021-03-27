@@ -17,28 +17,22 @@ Mat<double> Graphics3D::TransformMat;											//变换矩阵
 *                    底层函数
 
 ******************************************************************************/
-/*--------------------------------[ 构造函数 ]--------------------------------*/
-Graphics3D::Graphics3D(int WindowSize_Width, int WindowSize_height) {
-	init(WindowSize_Width, WindowSize_height);
-}
-/*--------------------------------[ 析构函数 ]--------------------------------*/
-Graphics3D::~Graphics3D() {
-	if (g != NULL)free(g);
-}
 /*--------------------------------[ 初始化 ]--------------------------------*/
-void Graphics3D::init(int WindowSize_Width, int WindowSize_Height) {
-	if (g != NULL)free(g);
-	g = new Graphics(WindowSize_Width, WindowSize_Height);
+void Graphics3D::init(int width, int height) {
+	g.init(width, height);
+	Z_index.zero(height, width);
+	for (int i = 0; i < Z_index.rows * Z_index.cols; i++)Z_index.data[i] = -0x7FFFFFFF;
 	TransformMat.E(4);
-	Z_index.zero(WindowSize_Height, WindowSize_Width);
-	for (int i = 0; i < WindowSize_Width * WindowSize_Height; i++)Z_index[i] = -0x7FFFFFFF;
 }
-/*--------------------------------[ value2xy ]--------------------------------*/
-void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
+/*--------------------------------[ value2pix ]--------------------------------*/
+void Graphics3D::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
 	Mat<double> point(4, 1);
-	{double t[] = { p0[0],p0[1],p0.rows < 3 ? 0 : p0[2],1 }; point.getData(t); }
+	{double t[] = { x0, y0, z0, 1 }; point.getData(t); }
 	point.mult(TransformMat, point);
-	x = (int)point[0]; y = (int)point[1]; z = (int)point[2];
+	x = point[0]; y = point[1]; z = point[2];
+}
+void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
+	value2pix(p0[0], p0[1], p0.rows < 3 ? 0 : p0[2], x, y, z);
 }
 /******************************************************************************
 
@@ -46,22 +40,23 @@ void Graphics3D::value2pix(Mat<double>& p0, int& x, int& y, int& z) {
 
 ******************************************************************************/
 /*--------------------------------[ 画点 ]--------------------------------*/
-void Graphics3D::drawPoint(double x0, double y0) {
-	Mat<double> p(2, 1); p[0] = x0; p[1] = y0;
-	drawPoint(p);
+void Graphics3D::drawPoint(double x0, double y0, double z0) {
+	int x, y, z;
+	value2pix(x0, y0, z0, x, y, z);
+	if (g.judgeOutRange(y, x) || z < Z_index(y, x))return;
+	g.drawPoint(y, x); Z_index(y, x) = z;
 }
 void Graphics3D::drawPoint(Mat<double>& p0) {
 	int x, y, z;
 	value2pix(p0, x, y, z);
-	if (g->judgeOutRange(y, x) || z < Z_index(y, x))return;
-	g->drawPoint(y, x); Z_index(y, x) = z;
+	if (g.judgeOutRange(y, x) || z < Z_index(y, x))return;
+	g.drawPoint(y, x); Z_index(y, x) = z;
 }
 /*--------------------------------[ 画直线 ]--------------------------------*/
-void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
+void Graphics3D::drawLine(double sx0, double ex0, double sy0, double ey0, double sz0, double ez0) {
 	int sx, sy, sz, ex, ey, ez;
-	value2pix(sp, sx, sy, sz); value2pix(ep, ex, ey, ez);
-
-	int err[3] = { 0 }, inc[2] = { 3 };
+	value2pix(sx0, sy0, sz0, sx, sy, sz); value2pix(ex0, ey0, ez0, ex, ey, ez);
+	int err[3] = { 0 }, inc[3] = { 0 };
 	int delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
 	int index[3] = { sx, sy, sz };
 	//设置xyz单步方向	
@@ -75,8 +70,37 @@ void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
 		//唯一输出：画点
-		if (!g->judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])){ 
-			g->drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2]; 
+
+		if (!g.judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])) {
+			g.drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2];
+		}
+		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
+			err[dim] += delta[dim];
+			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+		}
+	}
+}
+void Graphics3D::drawLine(Mat<double>& sp, Mat<double>& ep) {
+	int sx, sy, sz, ex, ey, ez;
+	value2pix(sp, sx, sy, sz); value2pix(ep, ex, ey, ez);
+
+	int err[3] = { 0 }, inc[3] = { 0 };
+	int delta[3] = { ex - sx, ey - sy, ez - sz };						//计算坐标增量
+	int index[3] = { sx, sy, sz };
+	//设置xyz单步方向	
+	for (int dim = 0; dim < 3; dim++) {
+		if (delta[dim] > 0)inc[dim] = 1; 								//向右
+		else if (delta[dim] == 0)inc[dim] = 0;							//垂直
+		else { inc[dim] = -1; delta[dim] = -delta[dim]; }				//向左
+	}
+	int distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
+	distance = delta[2] > distance ? delta[2] : distance;//总步数
+	//画线
+	for (int i = 0; i <= distance + 1; i++) {
+		//唯一输出：画点
+
+		if (!g.judgeOutRange(index[1], index[0]) && index[2] >= Z_index(index[1], index[0])){ 
+			g.drawPoint(index[1], index[0]); Z_index(index[1], index[0]) = index[2]; 
 		}
 		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
@@ -119,7 +143,7 @@ void Graphics3D::contourface(Mat<double>& map, const int N) {
 		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
 			for (int x = 0; x < map.cols - 1; x++) {
 				if (map.data[y * map.cols + x] >= layer)
-					g->setPoint(x, y, colorlist((double)i/N, 1));
+					g.setPoint(x, y, colorlist((double)i/N, 1));
 			}
 		}
 	}
@@ -224,9 +248,9 @@ void Graphics3D::drawCuboid(Mat<double> pMin, Mat<double> pMax) {
 		drawLine(pMinTemp, pMaxTemp);
 	}
 }
-/*--------------------------------[ 画圆柱体 ]--------------------------------
+/*--------------------------------[ 画圆台 ]--------------------------------
 **------------------------------------------------------------------------*/
-void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
+void Graphics3D::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta) {
 	// 计算 Rotate Matrix
 	Mat<double> direction, rotateAxis, rotateMat(4), tmp(3, 1);
 	direction.add(st, ed.negative(direction));
@@ -240,13 +264,13 @@ void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 			for (int j = 0; j < 3; j++)
 				rotateMat(i, j) = tmp(i, j);
 	}
-	// 画圆柱体
+	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
 	for (int i = 0; i <= 360 / delta; i++) {
-		{double t[] = { r * cos(i * delta * 2.0 * PI / 360), r * sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
+		{double t[] = { cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
 		deltaVector.mult(rotateMat, deltaVector);
-		stPoint.add(st, deltaVector);
-		edPoint.add(ed, deltaVector);
+		stPoint.add(st, stPoint.mult(Rst, deltaVector));
+		edPoint.add(ed, edPoint.mult(Red, deltaVector));
 		if (i != 0) {
 			drawLine(stPoint, preStPoint); drawLine(st, stPoint);
 			drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
@@ -255,6 +279,10 @@ void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 		preStPoint = stPoint;
 		preEdPoint = edPoint;
 	}
+}
+/*--------------------------------[ 画圆柱 ]--------------------------------*/
+void Graphics3D::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
+	drawFrustum(st, ed, r, r, delta);
 }
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
@@ -321,14 +349,6 @@ void Graphics3D::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 		}
 	}
 }
-/*--------------------------------[ 三角填充 ]--------------------------------*/
-void Graphics3D::fillTriangle(Mat<double> p0[]) {
-
-}
-/*--------------------------------[ 多边形填充 ]--------------------------------*/
-void Graphics3D::fillPolygon(Mat<double> p0[],int n) {
-
-}
 /*--------------------------------[ 网格 ]--------------------------------*/
 void Graphics3D::grid() {
 	//int x0 = value2pix(0, 0), y0 = value2pix(0, 1);		//原点像素坐标
@@ -336,8 +356,8 @@ void Graphics3D::grid() {
 	int x0, y0;
 	double size[2];
 	/*------ 网格 ------*/
-	g->PaintColor = 0x00ccff;
-	g->PaintSize = 1;
+	g.PaintColor = 0x00ccff;
+	g.PaintSize = 1;
 	/*------ 计算间隔值 ------*/
 	size[0] /= 10; size[1] /= 10;
 	double delta[2] = { 1,1 };
@@ -352,20 +372,20 @@ void Graphics3D::grid() {
 		}
 		delta[dim] *= (int)size[dim];
 	}
-	//g->drawGrid(x0, y0, 0, 0, -value2pix(delta[0], 0), -value2pix(delta[1], 1));
-	//g->drawGrid(x0, y0, g->gWidth, 0, value2pix(delta[0], 0), -value2pix(delta[1], 1));
-	//g->drawGrid(x0, y0, 0, g->gHeight, -value2pix(delta[0], 0), value2pix(delta[1], 1));
-	//g->drawGrid(x0, y0, g->gWidth, g->gHeight, value2pix(delta[0], 0), value2pix(delta[1], 1));
+	//g.drawGrid(x0, y0, 0, 0, -value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	//g.drawGrid(x0, y0, g.gWidth, 0, value2pix(delta[0], 0), -value2pix(delta[1], 1));
+	//g.drawGrid(x0, y0, 0, g.gHeight, -value2pix(delta[0], 0), value2pix(delta[1], 1));
+	//g.drawGrid(x0, y0, g.gWidth, g.gHeight, value2pix(delta[0], 0), value2pix(delta[1], 1));
 	/*------ 坐标轴 ------*/
-	g->PaintColor = 0xffffff;
-	g->PaintSize = 3;
-	//g->drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
-	//g->drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
+	g.PaintColor = 0xffffff;
+	g.PaintSize = 3;
+	//g.drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
+	//g.drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
 	/*------ 轴标号 ------*/
-	g->PaintSize = 1;
-	g->FontSize = 50;
-	g->PaintColor = 0xffffff;
-	g->drawChar(x0 - 40, y0 + 15, '0');
+	g.PaintSize = 1;
+	g.FontSize = 50;
+	g.PaintColor = 0xffffff;
+	g.drawChar(x0 - 40, y0 + 15, '0');
 }
 /*---------------- 色谱 ----------------*/
 Graphics::ARGB Graphics3D::colorlist(double index, int model)
@@ -478,8 +498,8 @@ void Graphics3D::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 	center.mult(1.0 / 2, center);
 	translation(center);
 	for (int i = 0; i < scale.rows; i++) {
-		if (i == 1)scale[i] = g->Canvas.rows / scale[i];
-		else scale[i] = g->Canvas.cols / scale[i];
+		if (i == 1)scale[i] = g.Canvas.rows / scale[i];
+		else scale[i] = g.Canvas.cols / scale[i];
 	}
 	scaling(scale, center);
 }
