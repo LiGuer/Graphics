@@ -127,15 +127,17 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 	int distanceMaxCur = distance[0] > distance[1] ? 0 : 1;
 	for (int i = 0; i <= distance[distanceMaxCur] + 1; i++) {
 		if (FACE) {
+			g.PaintColor = FaceColor;
 			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, indexTmp(index[0]);
 			deltaTmp.add(index[1], index[0].negative(tmp));
 			for (int dim = 0; dim < Dim; dim++) {								//设置xyz单步方向	
 				incTmp[dim] = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;					//向左
 			}
-			int distanceTmp = deltaTmp.max();										//总步数
+			int distanceTmp = deltaTmp.max();									//总步数
 			for (int i = 0; i <= distanceTmp + 1; i++) {						//画线
 				setPix(indexTmp[0], indexTmp[1], indexTmp[2]);					//唯一输出：画点
+				//setPix(indexTmp[0] + 1, indexTmp[1], indexTmp[2]);				//唯一输出：画点
 				for (int dim = 0; dim < Dim; dim++) {							//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
 					if (errTmp[dim] > distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
@@ -143,10 +145,9 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 			}
 		}
 		if (LINE) {
-			unsigned int t = g.PaintColor; g.PaintColor = 0;
+			g.PaintColor = LineColor;
 			setPix(index[0][0], index[0][1], index[0][2]);
 			setPix(index[1][0], index[1][1], index[1][2]);
-			g.PaintColor = t;
 		}
 		for (int dim = 0; dim < Dim; dim++) {						//xyz走一步
 			err[0][dim] += delta[0][dim];
@@ -303,7 +304,7 @@ void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
 }
 /*--------------------------------[ 画圆台 ]--------------------------------
 **------------------------------------------------------------------------*/
-void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta) {
+void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, bool FACE, bool LINE) {
 	// 计算 Rotate Matrix
 	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
 	direction.add(ed, st.negative(direction));
@@ -323,9 +324,17 @@ void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 		stPoint.add(st, stPoint.mult(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
 		if (i != 0) {
-			drawLine(stPoint, preStPoint); drawLine(st, stPoint);
-			drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
-			drawLine(stPoint, edPoint);
+			if (FACE) {
+				g.PaintColor = FaceColor;
+				drawTriangle(stPoint, preStPoint, edPoint, true, false);
+				drawTriangle(preStPoint, preEdPoint, edPoint, true, false);
+			}
+			if (LINE) {
+				g.PaintColor = LineColor;
+				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
+				drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
+				drawLine(stPoint, edPoint);
+			}
 		}
 		preStPoint = stPoint;
 		preEdPoint = edPoint;

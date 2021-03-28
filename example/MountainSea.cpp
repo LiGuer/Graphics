@@ -4,36 +4,6 @@
 #include "LiGu_AlgorithmLib/Mat.h"
 #define PI 3.141592653589
 FILE* fin;
-/*-------------------------------- Gauss 滤波 --------------------------------
-//input：  输入原图//dst：  模糊图像//size： 核的大小//sigma：正态分布标准差
---------------------------------------------------------------------------------*/
-void GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
-	if (size <= 0 || sigma == 0)return;
-	//二维Gauss核生成
-	Mat<double> kernel(size, size);
-	double sum = 0;
-	for (int y = 0; y < size; y++) {
-		for (int x = 0; x < size; x++) {
-			kernel(x, y) = (1 / (2 * PI * sigma * sigma))
-				* exp(-((x - size / 2) * (x - size / 2) + (y - size / 2) * (y - size / 2)) / (2 * sigma * sigma));
-			sum += kernel(x, y);
-		}
-	}
-	kernel.mult(1 / sum, kernel);
-	//Gauss卷积
-	output.zero(input.rows, input.cols);
-	for (int y = 0; y < input.rows; y++) {
-		for (int x = 0; x < input.cols; x++) {
-			for (int j = 0; j < size; j++) {
-				for (int i = 0; i < size; i++) {
-					int xt = x + i - size / 2, yt = y + j - size / 2;
-					if (xt < 0 || xt >= input.cols || yt < 0 || yt >= input.rows)continue;
-					output(x, y) += input(xt, yt) * kernel(i, j);
-				}
-			}
-		}
-	}
-}
 /*-------------------------------- Perlin Noise --------------------------------
 Function to linearly interpolate between a0 and a1 , Weight w should be in the range [0.0, 1.0]
 --------------------------------------------------------------------------------*/

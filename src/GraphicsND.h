@@ -22,6 +22,7 @@ public:
 	Mat<int> Z_Buffer;
 	Mat<double> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<double> TransformMat;										//变换矩阵
+	unsigned int LineColor, FaceColor;
 	/*---------------- 底层 ----------------*/
 	GraphicsND() { ; }
 	GraphicsND(int width , int height) { init(width, height); }				//构造函数
@@ -52,7 +53,7 @@ public:
 	// 3-D
 	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4);//画四面体
 	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax);							//画矩体
-	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5);//画圆台
+	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, bool FACE = false, bool LINE = true);//画圆台
 	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5);//画圆柱
 	void drawSphere(Mat<double>& center, double r, int delta = 5);					//画球
 	void drawSphere2(Mat<double>& center, double r, int n = 300);
