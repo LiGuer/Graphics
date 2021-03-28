@@ -123,31 +123,19 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 		2. 各方向均可绘制
 ** ---------------------------------------- */
 void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
-	INT32S err[2] = { 0 }, inc[2] = { 0 };
-	INT32S delta[2] = { x2 - x1, y2 - y1 };						//计算坐标增量
-	INT32S x = x1, y = y1;
+	INT32S err[2] = { 0 }, inc[2] = { 0 }, delta[2] = { x2 - x1, y2 - y1 }, index[2] = { x1 ,y1 }; //计算坐标增量
 	//设置x单步方向	
-	if (delta[0] > 0)inc[0] = 1; 								//向右
-	else if (delta[0] == 0)inc[0] = 0;							//垂直
-	else { inc[0] = -1; delta[0] = -delta[0]; }					//向左
-	//设置y单步方向	
-	if (delta[1] > 0)inc[1] = 1;								//向上
-	else if (delta[1] == 0)inc[1] = 0;							//水平
-	else { inc[1] = -1; delta[1] = -delta[1]; }					//向下
-
-	INT32S distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
+	for (int dim = 0; dim < 2; dim++) {
+		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
+		delta[dim] *= inc[dim] == -1 ? -1 : 1;							//向左
+	}
+	INT32S distance = delta[0] > delta[1] ? delta[0] : delta[1];		//总步数
 	//画线
 	for (INT32S i = 0; i <= distance + 1; i++) {				
-		drawPoint(x, y);										//唯一输出：画点
-		err[0] += delta[0];
-		err[1] += delta[1];
-		if (err[0] > distance) {
-			err[0] -= distance;
-			x += inc[0];										//x走一步
-		}
-		if (err[1] > distance) {
-			err[1] -= distance;
-			y += inc[1];										//y走一步
+		drawPoint(index[0], index[1]);									//唯一输出：画点
+		for (int dim = 0; dim < 2; dim++) {
+			err[dim] += delta[dim];
+			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
 	}
 }

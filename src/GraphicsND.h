@@ -13,13 +13,13 @@ limitations under the License.
 #ifndef GRAPHICS_ND_H
 #define GRAPHICS_ND_H
 #include "Graphics.h"
-const double PI = 3.141592653598;
+#define PI 3.141592653589
 class GraphicsND
 {
 public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																//核心图形学类
-	Mat<int> Z_index;
+	Mat<int> Z_Buffer;
 	Mat<double> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<double> TransformMat;										//变换矩阵
 	/*---------------- 底层 ----------------*/
@@ -39,7 +39,7 @@ public:
 	void drawLine(Mat<double>& sp0, Mat<double>& ep0);						//画直线 (anyD)
 	void drawPolyline(Mat<double>* p, int n, bool close = false);			//画折线
 	// 2-D
-	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3);			//画三角形
+	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE = false, bool LINE = true);			//画三角形
 	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL);//画矩形
 	void drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4);//画矩形
 	void drawPolygon(Mat<double> p[], int n);										//画多边形
@@ -62,8 +62,8 @@ public:
 	void drawString(Mat<double>& p0, const char* str, int n);				//显示字符串
 	void drawNum(Mat<double>& p0, double num);								//显示数字
 	// Other
-	void grid();															//显示网格
-	void drawAxis();															//显示网格
+	void drawGrid();															//画网格
+	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);//画坐标轴
 	Graphics::ARGB colorlist(double index, int model);						//色谱
 	/*---------------- Transformation ----------------*/
 	void translation(Mat<double>& delta, Mat<double>& transMat = TransformMat);	//平移
