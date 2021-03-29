@@ -22,15 +22,16 @@ public:
 	Mat<int> Z_Buffer;
 	Mat<double> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<double> TransformMat;										//变换矩阵
-	unsigned int LineColor, FaceColor;
+	unsigned int FaceColor;
 	/*---------------- 底层 ----------------*/
 	GraphicsND() { ; }
 	GraphicsND(int width , int height) { init(width, height); }				//构造函数
 	~GraphicsND() { ; }														//析构函数
 	void init(int width, int height);										//初始化
+	void clear(Graphics::ARGB color);
 	void value2pix(int x0, int y0, int z0, int& x, int& y, int& z);			//点To像素 (<=3D)
 	void value2pix(Mat<double>& p0, Mat<int>& pAns);						//点To像素 (anyD)
-	bool setPix(int x, int y, int z = 0);									//写像素 (正投影)
+	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影)
 	void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//设置坐标范围
 	/*---------------- DRAW ----------------*/
 	// 0-D
@@ -51,8 +52,8 @@ public:
 	void drawSurface(Mat<double> z, double xs, double xe, double ys, double ye);													//画曲面
 	void drawBezierFace(Mat<double> p[], int n);																					//画贝塞尔曲面
 	// 3-D
-	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4);										//画四面体
-	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax);																			//画矩体
+	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, bool FACE = false, bool LINE = true);	//画四面体
+	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE = false, bool LINE = true);										//画矩体
 	void drawPolyhedron(Mat<double>* p, int n, bool FACE = false, bool LINE = true);												//画多面体
 	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, bool FACE = false, bool LINE = true);//画圆台
 	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, bool FACE = false, bool LINE = true);			//画圆柱

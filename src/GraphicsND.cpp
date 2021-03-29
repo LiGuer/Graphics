@@ -20,9 +20,14 @@ Mat<double> GraphicsND::TransformMat;											//变换矩阵
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void GraphicsND::init(int width, int height) {
 	g.init(width, height);
-	Z_Buffer.zero(height, width);
+	Z_Buffer.zero(g.Canvas.rows, g.Canvas.cols);
 	for (int i = 0; i < Z_Buffer.rows * Z_Buffer.cols; i++)Z_Buffer.data[i] = -0x7FFFFFFF;
 	TransformMat.E(4);
+}
+void GraphicsND::clear(Graphics::ARGB color) {
+	g.clear(color);
+	Z_Buffer.zero(g.Canvas.rows, g.Canvas.cols);
+	for (int i = 0; i < Z_Buffer.rows * Z_Buffer.cols; i++)Z_Buffer.data[i] = -0x7FFFFFFF;
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
@@ -39,9 +44,15 @@ void GraphicsND::value2pix(Mat<double>& p0, Mat<int>& pAns) {
 	for (int i = 0; i < pAns.rows; i++)pAns[i] = point[i];
 }
 /*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
-bool GraphicsND::setPix(int x,int y, int z) {
+bool GraphicsND::setPix(int x,int y, int z, int size) {
+	if (size == -1) {
 		if (g.judgeOutRange(y, x) || z < Z_Buffer(y, x))return false;
 		g.drawPoint(y, x); Z_Buffer(y, x) = z; return true;
+	}
+	else if (size == 0) {
+		if (g.judgeOutRange(y, x) || z < Z_Buffer(y, x))return false;
+		g.setPoint(y, x, FaceColor); Z_Buffer(y, x) = z; return true;
+	}
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
 void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
@@ -82,12 +93,12 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
 		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//向左
 	}
-	int distance = delta[0] > delta[1] ? delta[0] : delta[1];//总步数
-	distance = delta[2] > distance ? delta[2] : distance;//总步数
+	int distance = delta[0] > delta[1] ? delta[0] : delta[1];			//总步数
+	distance = delta[2] > distance ? delta[2] : distance;				//总步数
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
-		setPix(index[0], index[1], index[2]);					//唯一输出：画点
-		for (int dim = 0; dim < 3; dim++) {						//xyz走一步
+		setPix(index[0], index[1], index[2]);							//唯一输出：画点
+		for (int dim = 0; dim < 3; dim++) {								//xyz走一步
 			err[dim] += delta[dim];
 			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
@@ -119,28 +130,39 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE, bool LINE) {
-	Mat<int> pt[3], tmp;
-	value2pix(p1, pt[0]); value2pix(p2, pt[1]); value2pix(p3, pt[2]);
-	int Dim = p1.rows;
-	//调整顺序
-	int pUindex = 1;
-	for (int i = 1; i < 3; i++) pUindex = pt[i][0] < pt[pUindex][0] ? i : pUindex;
-	tmp = pt[0]; pt[0] = pt[pUindex]; pt[pUindex] = tmp;
-	//设置xyz单步方向	
-	Mat<int> err[2], inc[2], delta[2], index[2];
-	int distance[2];
-	for (int k = 0; k < 2; k++) {
-		err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); index[k] = pt[0];
-		for (int dim = 0; dim < Dim; dim++) {
-			inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
-			delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
-		} distance[k] = delta[k].max();											//总步数
-	}
-	//画线
-	int distanceMaxCur = distance[0] > distance[1] ? 0 : 1;
-	for (int i = 0; i <= distance[distanceMaxCur] + 1; i++) {
-		if (FACE) {
-			g.PaintColor = FaceColor;
+	if (FACE) {
+		Mat<int> pt[3], tmp;
+		value2pix(p1, pt[0]); value2pix(p2, pt[1]); value2pix(p3, pt[2]);
+		int Dim = p1.rows;
+		//调整顺序
+		int pXminIndex = 0;
+		for (int i = 1; i < 3; i++) pXminIndex = pt[i][0] < pt[pXminIndex][0] ? i : pXminIndex;
+		if (pXminIndex != 0) { tmp = pt[0]; pt[0] = pt[pXminIndex]; pt[pXminIndex] = tmp; }
+		//设置xyz单步方向	
+		Mat<int> err[2], inc[2], delta[2], index[2];
+		for (int k = 0; k < 2; k++) {
+			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); index[k] = pt[0];
+			for (int dim = 1; dim < Dim; dim++) {
+				inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
+				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
+			}
+		}
+		//画线
+		int dXMaxCur = delta[0][0] > delta[1][0] ? 0 : 1;
+		bool flag = true;															//三角形转折点检测开关(不然会二次检测)
+		for (int i = 0; i <= delta[dXMaxCur][0] + 1; i++) {
+			//三角形转折点检测
+			if (i == delta[1 - dXMaxCur][0] && flag) {
+				flag = false;														//关闭检测
+				int kt = 1 - dXMaxCur;
+				delta[kt].add(pt[dXMaxCur + 1], pt[kt + 1].negative(tmp));
+				if (delta[kt][0] == 0) break;
+				index[kt] = pt[kt + 1];
+				for (int dim = 1; dim < Dim; dim++) {
+					inc[kt][dim] = delta[kt][dim] == 0 ? 0 : (delta[kt][dim] > 0 ? 1 : -1);	//符号函数(向右,垂直,向左)
+					delta[kt][dim] *= delta[kt][dim] < 0 ? -1 : 1;					//向左
+				}
+			}
 			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, indexTmp(index[0]);
 			deltaTmp.add(index[1], index[0].negative(tmp));
 			for (int dim = 0; dim < Dim; dim++) {								//设置xyz单步方向	
@@ -149,36 +171,22 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 			}
 			int distanceTmp = deltaTmp.max();									//总步数
 			for (int i = 0; i <= distanceTmp + 1; i++) {						//画线
-				setPix(indexTmp[0], indexTmp[1], indexTmp[2]);					//唯一输出：画点
-				setPix(indexTmp[0], indexTmp[1] + 1, indexTmp[2] - 1);				//唯一输出：画点(反走样)
+				setPix(indexTmp[0], indexTmp[1], indexTmp[2], 0);				//唯一输出：画点
 				for (int dim = 0; dim < Dim; dim++) {							//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
 					if (errTmp[dim] > distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
 				}
 			}
-		}
-		if (LINE) {
-			g.PaintColor = LineColor;
-			setPix(index[0][0], index[0][1], index[0][2]);
-			setPix(index[1][0], index[1][1], index[1][2]);
-		}
-		for (int dim = 0; dim < Dim; dim++) {						//xyz走一步
-			err[0][dim] += delta[0][dim];
-			err[1][dim] += delta[1][dim];
-			if (err[0][dim] > distance[0]) { err[0][dim] -= distance[0]; index[0][dim] += inc[0][dim]; }
-			if (err[1][dim] > distance[1]) { err[1][dim] -= distance[1]; index[1][dim] += inc[1][dim]; }
-		}
-		// 到达节点
-		if (i == distance[1 - distanceMaxCur]) {
-			int kt = 1 - distanceMaxCur;
-			delta[kt].add(pt[distanceMaxCur + 1], pt[kt + 1].negative(tmp));
-			index[kt] = pt[kt + 1];
-			for (int dim = 0; dim < Dim; dim++) {
-				inc[kt][dim] = delta[kt][dim] == 0 ? 0 : (delta[kt][dim] > 0 ? 1 : -1);	//符号函数(向右,垂直,向左)
-				delta[kt][dim] *= delta[kt][dim] < 0 ? -1 : 1;					//向左
-			}distance[kt] = delta[kt].max();											//总步数
+			for (int k = 0; k < 2; k++) {
+				index[k][0]++;
+				for (int dim = 1; dim < Dim; dim++) {								//xyz走一步
+					err[k][dim] += delta[k][dim];
+					if (err[k][dim] >= delta[k][0]) { index[k][dim] += err[k][dim] / delta[k][0] * inc[k][dim]; err[k][dim] = err[k][dim] % delta[k][0]; }
+				}
+			}
 		}
 	}
+	if (LINE) { drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p1); }
 }
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct, bool FACE, bool LINE) {
@@ -198,7 +206,6 @@ void GraphicsND::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>
 		drawTriangle(p1, p2, p3, true, false); drawTriangle(p1, p3, p4, FACE, false);
 	}
 	if (LINE) {
-		g.PaintColor = LineColor;
 		drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
 	}
 }
@@ -211,7 +218,7 @@ void GraphicsND::drawPolygon(Mat<double> p[], int n, bool FACE, bool LINE) {
 			}
 		}
 	}
-	if (LINE) { g.PaintColor = LineColor; drawPolyline(p, n, true); }
+	if (LINE) drawPolyline(p, n, true);
 }
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
@@ -268,10 +275,15 @@ void GraphicsND::drawSurface(Mat<double> z, double xs, double xe, double ys, dou
 	}
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
-void GraphicsND::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
-	drawLine(p1, p2); drawLine(p1, p3); drawLine(p1, p4);
-	drawLine(p2, p3); drawLine(p2, p4);
-	drawLine(p3, p4);
+void GraphicsND::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, bool FACE, bool LINE) {
+	if (FACE) {
+		drawTriangle(p1, p2, p3); drawTriangle(p2, p3, p4); drawTriangle(p3, p4, p1); drawTriangle(p4, p1, p2);
+	}
+	if (LINE) {
+		drawLine(p1, p2); drawLine(p1, p3); drawLine(p1, p4);
+		drawLine(p2, p3); drawLine(p2, p4);
+		drawLine(p3, p4);
+	}
 }
 /*--------------------------------[ 画矩体 ]--------------------------------
 *	矩体共十二条边，从对角点引出6条: 
@@ -282,16 +294,23 @@ void GraphicsND::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& 
 		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
-void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax) {
-	Mat<double> pMinTemp, pMaxTemp;
+void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE, bool LINE) {
+	Mat<double> pMinTmp[3], pMaxTmp[3];
 	for (int i = 0; i < 3; i++) {
-		pMinTemp = pMin; pMaxTemp = pMax;
-		pMinTemp[i] = pMax[i]; pMaxTemp[(i + 1) % 3] = pMin[(i + 1) % 3];
-		drawLine(pMin, pMinTemp);
-		drawLine(pMax, pMaxTemp);
-		drawLine(pMinTemp, pMaxTemp);
-		pMaxTemp[(i + 1) % 3] = pMax[(i + 1) % 3]; pMaxTemp[(i + 2) % 3] = pMin[(i + 2) % 3];
-		drawLine(pMinTemp, pMaxTemp);
+		pMinTmp[i] = pMin; pMinTmp[i][i] = pMax[i];
+		pMaxTmp[i] = pMax; pMaxTmp[i][i] = pMin[i];
+	}
+	if (FACE) {
+		for (int i = 0; i < 3; i++) {
+			drawQuadrilateral(pMin, pMinTmp[i], pMaxTmp[(i + 2) % 3], pMinTmp[(i + 1) % 3], true, false);
+			drawQuadrilateral(pMax, pMaxTmp[i], pMinTmp[(i + 2) % 3], pMaxTmp[(i + 1) % 3], true, false);
+		}
+	}
+	if (LINE) {
+		for (int i = 0; i < 3; i++) {
+			drawLine(pMin, pMinTmp[i]); drawLine(pMax, pMaxTmp[i]);
+			drawLine(pMinTmp[i], pMaxTmp[(i + 1) % 3]); drawLine(pMinTmp[i], pMaxTmp[(i + 2) % 3]);
+		}
 	}
 }
 /*--------------------------------[ 画圆台 ]--------------------------------
@@ -317,12 +336,10 @@ void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
 		if (i != 0) {
 			if (FACE) {
-				g.PaintColor = FaceColor;
 				drawTriangle(stPoint, preStPoint, edPoint, true, false);
 				drawTriangle(preStPoint, preEdPoint, edPoint, true, false);
 			}
 			if (LINE) {
-				g.PaintColor = LineColor;
 				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
 				drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
 				drawLine(stPoint, edPoint);
@@ -357,6 +374,12 @@ void GraphicsND::drawSphere(Mat<double>& center, double r, int delta, bool FACE,
 			point[1] = r * cos(phi) * sin(theta) + center[1];
 			point[2] = r * sin(phi) + center[2];
 			drawPoint(point);
+			if (FACE) {
+
+			}
+			if (LINE) {
+
+			}
 		}
 	}
 }
