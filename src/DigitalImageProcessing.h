@@ -17,7 +17,7 @@ limitations under the License.
 #include "../LiGu_AlgorithmLib/Mat.h"
 #include "../LiGu_AlgorithmLib/BasicMachineLearning.h"
 #include "../opencv2-include/opencv2/opencv.hpp"
-#pragma comment(lib,"../opencv2-include/opencv_world430.lib")
+#pragma comment(lib,"opencv2-include/opencv_world430.lib")
 
 namespace DigitalImageProcessing {
 #define PI 3.141592653589
@@ -121,7 +121,7 @@ namespace DigitalImageProcessing {
 	* [输入]: input: 输入原图 dst: 模糊图像  size: 核的大小  sigma: 正态分布标准差
 	--------------------------------------------------------------------------------*/
 	Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
-		if (size <= 0 || sigma == 0)return;
+		if (size <= 0 || sigma == 0)return output;
 		//二维Gauss核生成
 		Mat<double> kernel(size, size);
 		double sum = 0;

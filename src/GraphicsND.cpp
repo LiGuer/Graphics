@@ -24,7 +24,7 @@ void GraphicsND::init(int width, int height) {
 	for (int i = 0; i < Z_Buffer.rows * Z_Buffer.cols; i++)Z_Buffer.data[i] = -0x7FFFFFFF;
 	TransformMat.E(4);
 }
-/*--------------------------------[ value2pix ]--------------------------------*/
+/*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
 	Mat<double> point(4, 1);
 	{double t[] = { x0, y0, z0, 1 }; point.getData(t); }
@@ -38,10 +38,23 @@ void GraphicsND::value2pix(Mat<double>& p0, Mat<int>& pAns) {
 	point.mult(TransformMat, point);
 	for (int i = 0; i < pAns.rows; i++)pAns[i] = point[i];
 }
-/*--------------------------------[ setPix ]--------------------------------*/
+/*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z) {
 		if (g.judgeOutRange(y, x) || z < Z_Buffer(y, x))return false;
 		g.drawPoint(y, x); Z_Buffer(y, x) = z; return true;
+}
+/*--------------------------------[ 设置坐标范围 ]--------------------------------*/
+void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
+	Mat<double> center, scale, zero(pMin.rows, 1);
+	center.add(pMax, pMin.negative(center));
+	scale = center;
+	center.mult(1.0 / 2, center);
+	translation(center);
+	for (int i = 0; i < scale.rows; i++) {
+		if (i == 1)scale[i] = g.Canvas.rows / scale[i];
+		else scale[i] = g.Canvas.cols / scale[i];
+	}
+	scaling(scale, center);
 }
 /******************************************************************************
 
@@ -87,8 +100,8 @@ void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 	delta.add(ep, sp.negative(tmp));
 	//设置xyz单步方向	
 	for (int dim = 0; dim < sp.rows; dim++) {
-		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
-		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//向左
+		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右1,垂直0,向左-1)
+		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//绝对值
 	} int distance = delta.max();										//总步数
 	//画线
 	for (int i = 0; i <= distance + 1; i++) {
@@ -137,7 +150,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 			int distanceTmp = deltaTmp.max();									//总步数
 			for (int i = 0; i <= distanceTmp + 1; i++) {						//画线
 				setPix(indexTmp[0], indexTmp[1], indexTmp[2]);					//唯一输出：画点
-				//setPix(indexTmp[0] + 1, indexTmp[1], indexTmp[2]);				//唯一输出：画点
+				setPix(indexTmp[0], indexTmp[1] + 1, indexTmp[2] - 1);				//唯一输出：画点(反走样)
 				for (int dim = 0; dim < Dim; dim++) {							//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
 					if (errTmp[dim] > distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
@@ -168,7 +181,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 	}
 }
 /*--------------------------------[ 画矩形 ]--------------------------------*/
-void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
+void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct, bool FACE, bool LINE) {
 	if (direct == NULL) {
 		Mat<double> pt(2, 1);
 		{ double t[] = { sp[0],ep[1] }; pt.getData(t); }
@@ -180,11 +193,26 @@ void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* di
 		// 计算 Rotate Matrix
 	}
 }
-void GraphicsND::drawRectangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4) {
-	drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
+void GraphicsND::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, bool FACE, bool LINE) {
+	if (FACE) {
+		drawTriangle(p1, p2, p3, true, false); drawTriangle(p1, p3, p4, FACE, false);
+	}
+	if (LINE) {
+		g.PaintColor = LineColor;
+		drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
+	}
 }
 /*--------------------------------[ 画多边形 ]--------------------------------*/
-void GraphicsND::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true); }
+void GraphicsND::drawPolygon(Mat<double> p[], int n, bool FACE, bool LINE) { 
+	if (FACE) {
+		for (int k = 1; k <= (n + 2) / 3; k++) {
+			for (int i = 0; i <= n - 2 * k; i += 2 * k) {
+				drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n], FACE, false);
+			}
+		}
+	}
+	if (LINE) { g.PaintColor = LineColor; drawPolyline(p, n, true); }
+}
 /*--------------------------------[ 画圆 ]--------------------------------
 *	[约束方程]:
 		平面点法式: A(x-x0) + B(y-y0) + C(z-z0) = 0    n=(A,B,C)
@@ -200,7 +228,7 @@ void GraphicsND::drawPolygon(Mat<double> p[], int n) { drawPolyline(p, n, true);
 		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
+void GraphicsND::drawCircle(Mat<double>& center, double r, Mat<double>* direct, bool FACE, bool LINE) {
 	// 计算 Rotate Matrix
 	//画圆
 }
@@ -235,42 +263,6 @@ void GraphicsND::drawSurface(Mat<double> z, double xs, double xe, double ys, dou
 			if (y > 0) { 
 				double t[] = { xs + x * dx,ys + (y - 1) * dy,z(x,y - 1) }; 
 				pu.getData(t); drawLine(pu, p);
-			}
-		}
-	}
-}
-/*--------------------------------[ 画等高线 ]--------------------------------*/
-void GraphicsND::contour(Mat<double>& map, const int N) {
-	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
-	double max = map.max(), min = map.min();			//get the max & min of the map
-	double delta = (max - min) / N, layer = min;
-	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
-		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
-			for (int x = 0; x < map.cols - 1; x++) {
-				int flag = map.data[y * map.cols + x] >= layer ? 1 : 0;
-				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
-					int xt = x + x_step[k], yt = y + y_step[k];
-					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
-					if (flagtemp != flag) { flag = 2; break; }
-				}
-				if (flag == 2) {
-					for (int k = 0; k < 3; k++) {
-						int xt = x + x_step[k], yt = y + y_step[k];
-						if (map.data[yt * map.cols + xt] >= layer) drawPoint(xt, yt);
-					}
-				}
-			}
-		}
-	}
-}
-void GraphicsND::contourface(Mat<double>& map, const int N) {
-	double max = map.max(), min = map.min();			//get the max & min of the map
-	double delta = (max - min) / N, layer = min;
-	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
-		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
-			for (int x = 0; x < map.cols - 1; x++) {
-				if (map.data[y * map.cols + x] >= layer)
-					g.setPoint(x, y, colorlist((double)i / N, 1));
 			}
 		}
 	}
@@ -341,8 +333,8 @@ void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	}
 }
 /*--------------------------------[ 画圆柱 ]--------------------------------*/
-void GraphicsND::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta) {
-	drawFrustum(st, ed, r, r, delta);
+void GraphicsND::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta, bool FACE, bool LINE) {
+	drawFrustum(st, ed, r, r, delta, FACE, LINE);
 }
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
@@ -354,7 +346,7 @@ void GraphicsND::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawSphere(Mat<double>& center, double r, int delta) {
+void GraphicsND::drawSphere(Mat<double>& center, double r, int delta, bool FACE, bool LINE) {
 	// 经纬度法
 	Mat<double> point(3, 1);
 	for (int i = 0; i < 360 / delta; i++) {
@@ -466,6 +458,42 @@ void GraphicsND::drawGrid() {
 	g.PaintColor = 0xffffff;
 	g.drawChar(x0 - 40, y0 + 15, '0');
 }
+/*--------------------------------[ 画等高线 ]--------------------------------*/
+void GraphicsND::contour(Mat<double>& map, const int N) {
+	int x_step[] = { 1,0,1 }, y_step[] = { 0,1,1 };
+	double max = map.max(), min = map.min();			//get the max & min of the map
+	double delta = (max - min) / N, layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				int flag = map.data[y * map.cols + x] >= layer ? 1 : 0;
+				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
+					int xt = x + x_step[k], yt = y + y_step[k];
+					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
+					if (flagtemp != flag) { flag = 2; break; }
+				}
+				if (flag == 2) {
+					for (int k = 0; k < 3; k++) {
+						int xt = x + x_step[k], yt = y + y_step[k];
+						if (map.data[yt * map.cols + xt] >= layer) drawPoint(xt, yt);
+					}
+				}
+			}
+		}
+	}
+}
+void GraphicsND::contourface(Mat<double>& map, const int N) {
+	double max = map.max(), min = map.min();			//get the max & min of the map
+	double delta = (max - min) / N, layer = min;
+	for (int i = 0; i <= N; i++, layer += delta) {		//for N layer between max & min, get the edge of each layer
+		for (int y = 0; y < map.rows - 1; y++) {		//for every point(x,y) to compute
+			for (int x = 0; x < map.cols - 1; x++) {
+				if (map.data[y * map.cols + x] >= layer)
+					g.setPoint(x, y, colorlist((double)i / N, 1));
+			}
+		}
+	}
+}
 /*---------------- 色谱 ----------------*/
 Graphics::ARGB GraphicsND::colorlist(double index, int model)
 {
@@ -555,21 +583,4 @@ void GraphicsND::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& t
 	for (int i = 0; i < n; i++)scaleMat(i, i) = scale[i];
 	transMat.mult(scaleMat, transMat);
 	translation(center, transMat);
-}
-/******************************************************************************
-
-*                    Set
-
-******************************************************************************/
-void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
-	Mat<double> center, scale, zero(pMin.rows, 1);
-	center.add(pMax, pMin.negative(center));
-	scale = center;
-	center.mult(1.0 / 2, center);
-	translation(center);
-	for (int i = 0; i < scale.rows; i++) {
-		if (i == 1)scale[i] = g.Canvas.rows / scale[i];
-		else scale[i] = g.Canvas.cols / scale[i];
-	}
-	scaling(scale, center);
 }
