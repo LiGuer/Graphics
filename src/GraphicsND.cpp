@@ -54,6 +54,16 @@ bool GraphicsND::setPix(int x,int y, int z, int size) {
 		g.setPoint(y, x, FaceColor); Z_Buffer(y, x) = z; return true;
 	}
 }
+bool GraphicsND::setPix(Mat<int>& p0, int size) {
+	if (size == -1) {
+		if (g.judgeOutRange(p0[1], p0[0]) || p0[2] < Z_Buffer(p0[1], p0[0]))return false;
+		g.drawPoint(p0[1], p0[0]); Z_Buffer(p0[1], p0[0]) = p0[2]; return true;
+	}
+	else if (size == 0) {
+		if (g.judgeOutRange(p0[1], p0[0]) || p0[2] < Z_Buffer(p0[1], p0[0]))return false;
+		g.setPoint(p0[1], p0[0], FaceColor); Z_Buffer(p0[1], p0[0]) = p0[2]; return true;
+	}
+}
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
 void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 	Mat<double> center, scale, zero(pMin.rows, 1);
@@ -72,7 +82,11 @@ void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
 *                    Draw
 
 ******************************************************************************/
-/*--------------------------------[ 画点 ]--------------------------------*/
+/*--------------------------------[ 画点 ]--------------------------------
+*	[过程]:
+		[1] 原坐标转换至世界参考系的像素坐标
+		[2] 绘制像素
+------------------------------------------------------------------------*/
 void GraphicsND::drawPoint(double x0, double y0, double z0) {
 	int x, y, z;
 	value2pix(x0, y0, z0, x, y, z);
@@ -81,33 +95,53 @@ void GraphicsND::drawPoint(double x0, double y0, double z0) {
 void GraphicsND::drawPoint(Mat<double>& p0) {
 	Mat<int> p;
 	value2pix(p0, p);
-	setPix(p[0], p[1], p[2]);
+	setPix(p);
 }
-/*--------------------------------[ 画直线 ]--------------------------------*/
+/*--------------------------------[ 画直线 ]--------------------------------
+*	[算法]: Bresenham
+*	[特点]:
+		1. 化[浮点运算]为[整数运算]：err[]
+		2. 各方向均可绘制
+*	[原理]:
+		设维度边长最大方向 M  (因为设维度长最大方向为扫描方向，才能保证线像素全部填充)
+		Δx = (x_max - x_min) / (M_max - M_min) = x_delta / M_delta
+		x = x + Δx 
+		∵ 离散化只有整数
+		若 x = x + 1, 则 1 = n·Δx = n·x_delta / M_delta => n·x_delta = M_delta
+		即 x_err 加 x_delta， 直至大于等于 M_delta, 此时 x = x + 1
+*	[过程]:
+		[1] 原坐标转换至世界参考系的像素坐标
+		[2] 计算每个维度的 x_delta, 找到维度长最大方向 M_delta
+			通过x_inc 解决(向右,垂直,向左)的方向性问题
+		[3] 以 M 维度, 从M_min 至 M_max, 逐像素扫描 (M_i++)
+			[4] 画点
+			[5] 累计 x_err, 进位 x
+---------------------------------------------------------------------------*/
 void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double sz0, double ez0) {
+	//[1]
 	int sx, sy, sz, ex, ey, ez;
 	value2pix(sx0, sy0, sz0, sx, sy, sz); value2pix(ex0, ey0, ez0, ex, ey, ez);
-	int err[3] = { 0 }, inc[3] = { 0 }, delta[3] = { ex - sx, ey - sy, ez - sz }, index[3] = { sx, sy, sz };
-	//设置xyz单步方向	
+	int err[3] = { 0 }, inc[3] = { 0 }, delta[3] = { ex - sx, ey - sy, ez - sz }, point[3] = { sx, sy, sz };
+	//[2]
 	for (int dim = 0; dim < 3; dim++) {
 		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
 		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//向左
 	}
 	int distance = delta[0] > delta[1] ? delta[0] : delta[1];			//总步数
 	distance = delta[2] > distance ? delta[2] : distance;				//总步数
-	//画线
+	//[3]
 	for (int i = 0; i <= distance; i++) {
-		setPix(index[0], index[1], index[2]);							//唯一输出：画点
+		setPix(point[0], point[1], point[2]);							//唯一输出：画点
 		for (int dim = 0; dim < 3; dim++) {								//xyz走一步
 			err[dim] += delta[dim];
-			if (err[dim] >= distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+			if (err[dim] >= distance) { err[dim] -= distance; point[dim] += inc[dim]; }
 		}
 	}
 }
 void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 	Mat<int> sp, ep;
 	value2pix(sp0, sp); value2pix(ep0, ep);
-	Mat<int> err(sp.rows, 1), inc(sp.rows, 1), delta, index(sp), tmp;
+	Mat<int> err(sp.rows, 1), inc(sp.rows, 1), delta, point(sp), tmp;
 	delta.add(ep, sp.negative(tmp));
 	//设置xyz单步方向	
 	for (int dim = 0; dim < sp.rows; dim++) {
@@ -116,10 +150,10 @@ void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 	} int distance = delta.max();										//总步数
 	//画线
 	for (int i = 0; i <= distance; i++) {
-		setPix(index[0], index[1], index[2]);							//唯一输出：画点
+		setPix(point);													//唯一输出：画点
 		for (int dim = 0; dim < sp.rows; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
-			if (err[dim] >= distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+			if (err[dim] >= distance) { err[dim] -= distance; point[dim] += inc[dim]; }
 		}
 	}
 }
@@ -128,75 +162,100 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
-/*--------------------------------[ 画网格 ]--------------------------------*/
+/*--------------------------------[ 画网格 ]--------------------------------
+*	[过程]:
+		[1] 计算每一个格点的坐标
+		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
+---------------------------------------------------------------------------*/
 void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
-	for (double x = min[0]; x <= max[0]; x += delta[0]) {
-		for (double y = min[1]; y <= max[1]; y += delta[1]) {
-			for (double z = min[2]; z <= max[2]; z += delta[2]) {
-				if (!LINE)drawPoint(x, y, z);
-				if (LINE) {
-					drawLine(min[0], max[0], y, y, z, z);
-					drawLine(x, x, min[1], max[1], z, z);
-					drawLine(x, x, y, y, min[2], max[2]);
-				}
+	int times = 1, cur;
+	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
+	
+	Mat<double> point(min),st, ed; point[0] -= delta[0];
+	for (int i = 0; i < times; i++) {
+		//[1]
+		cur = 0; point[cur] += delta[cur];
+		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
+		//[2]
+		if (!LINE)drawPoint(point);
+		if (LINE) {
+			st = point; ed = point;
+			for (int dim = 0; dim < min.rows; dim++) {
+				st[dim] = min[dim]; ed[dim] = max[dim];
+				drawLine(st, ed);
+				st[dim] = point[dim]; ed[dim] = point[dim];
 			}
 		}
 	}
 }
-/*--------------------------------[ 画三角形 ]--------------------------------*/
+/*--------------------------------[ 画三角形 ]--------------------------------
+*	[算法]: Bresenham
+*	[原理]:
+		从 x 最小的顶点 p_x_min 开始,
+		以 x 维度为基准, 逐渐跟踪以 p_x_min 为顶点两条边，绘制该两点连接的线
+		(绘制线 x 坐标实在相同, 从而避免走样)
+		若到达三角形第三顶点，则短边转换至该点方程
+*	[过程]:
+		[1] 原坐标转换至世界参考系的像素坐标
+		[2] 查找 x 最小的顶点 p_x_min
+		[3] 类似直线算法, 以 x 方向为基准, 跟踪以 p_x_min 为顶点两条边
+			[4] 若到达三角形第三顶点，则短边转换至该点方程
+			[5] 画线
+-----------------------------------------------------------------------------*/
 void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE, bool LINE) {
 	if (FACE) {
+		//[1]
 		Mat<int> pt[3], tmp;
 		value2pix(p1, pt[0]); value2pix(p2, pt[1]); value2pix(p3, pt[2]);
 		int Dim = p1.rows;
-		//调整顺序
+		//[2]
 		int pXminIndex = 0;
 		for (int i = 1; i < 3; i++) pXminIndex = pt[i][0] < pt[pXminIndex][0] ? i : pXminIndex;
 		if (pXminIndex != 0) { tmp = pt[0]; pt[0] = pt[pXminIndex]; pt[pXminIndex] = tmp; }
-		//设置xyz单步方向	
-		Mat<int> err[2], inc[2], delta[2], index[2];
+		//[3]
+		Mat<int> err[2], inc[2], delta[2], point[2];
 		for (int k = 0; k < 2; k++) {
-			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); index[k] = pt[0];
+			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); point[k] = pt[0];
 			for (int dim = 0; dim < Dim; dim++) {
 				inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
 			}
 		}
-		//画线
 		int dXMaxCur = delta[0][0] > delta[1][0] ? 0 : 1;
 		bool flag = true;															//三角形转折点检测开关(不然会二次检测)
 		for (int i = 0; i <= delta[dXMaxCur][0]; i++) {
-			//三角形转折点检测
+			//[4]三角形转折点检测
 			if (i == delta[1 - dXMaxCur][0] && flag) {
 				flag = false;														//关闭检测
 				int kt = 1 - dXMaxCur;
 				delta[kt].add(pt[dXMaxCur + 1], pt[kt + 1].negative(tmp));
 				if (delta[kt][0] == 0) break;
-				index[kt] = pt[kt + 1];
+				point[kt] = pt[kt + 1];
 				for (int dim = 1; dim < Dim; dim++) {
 					inc[kt][dim] = delta[kt][dim] == 0 ? 0 : (delta[kt][dim] > 0 ? 1 : -1);	//符号函数(向右,垂直,向左)
 					delta[kt][dim] *= delta[kt][dim] < 0 ? -1 : 1;					//向左
 				}
 			}
-			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, indexTmp(index[0]);
-			deltaTmp.add(index[1], index[0].negative(tmp));
-			for (int dim = 0; dim < Dim; dim++) {								//设置xyz单步方向	
+			//[5]画线
+			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, pointTmp(point[0]);
+			deltaTmp.add(point[1], point[0].negative(tmp));
+			for (int dim = 0; dim < Dim; dim++) {									//设置xyz单步方向	
 				incTmp[dim] = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
-				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;					//向左
+				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;						//向左
 			}
-			int distanceTmp = deltaTmp.max();									//总步数
-			for (int i = 0; i <= distanceTmp; i++) {							//画线
-				setPix(indexTmp[0], indexTmp[1], indexTmp[2] - 1, 0);			//唯一输出：画点 (Z-1:反走样)
-				for (int dim = 0; dim < Dim; dim++) {							//xyz走一步
+			int distanceTmp = deltaTmp.max();										//总步数
+			for (int i = 0; i <= distanceTmp; i++) {								//画线
+				pointTmp[2]--; setPix(pointTmp, 0);	pointTmp[2]++;					//唯一输出：画点 (Z-1:反走样)
+				for (int dim = 0; dim < Dim; dim++) {								//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
-					if (errTmp[dim] >= distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
+					if (errTmp[dim] >= distanceTmp) { errTmp[dim] -= distanceTmp; pointTmp[dim] += incTmp[dim]; }
 				}
 			}
 			for (int k = 0; k < 2; k++) {
-				index[k][0]++;
+				point[k][0]++;
 				for (int dim = 1; dim < Dim; dim++) {								//xyz走一步
 					err[k][dim] += delta[k][dim];
-					if (err[k][dim] >= delta[k][0]) { index[k][dim] += err[k][dim] / delta[k][0] * inc[k][dim]; err[k][dim] = err[k][dim] % delta[k][0]; }
+					if (err[k][dim] >= delta[k][0]) { point[k][dim] += err[k][dim] / delta[k][0] * inc[k][dim]; err[k][dim] = err[k][dim] % delta[k][0]; }
 				}
 			}
 		}
@@ -224,7 +283,18 @@ void GraphicsND::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>
 		drawLine(p1, p2); drawLine(p2, p3); drawLine(p3, p4); drawLine(p4, p1);
 	}
 }
-/*--------------------------------[ 画多边形 ]--------------------------------*/
+/*--------------------------------[ 画多边形 ]--------------------------------
+* [算法]:
+		绘制轮数k = 上取整(边数 / 3)
+		三角形绘制顶点: i, i + k, i + 2k
+* [例子]:
+	偶数边:
+	四边形: [1] 1 2 3, 3 4 1
+	六边形: [1] 1 2 3, 3 4 5, 5 6 1 [2] 1 3 5
+	奇数边:
+	五边形:	[1] 1 2 3, 3 4 5 [2] 1 3 5
+		  
+-----------------------------------------------------------------------------*/
 void GraphicsND::drawPolygon(Mat<double> p[], int n, bool FACE, bool LINE) { 
 	if (FACE) {
 		for (int k = 1; k <= (n + 2) / 3; k++) {
@@ -329,6 +399,9 @@ void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE, boo
 	}
 }
 /*--------------------------------[ 画圆台 ]--------------------------------
+* [过程]:
+		[1] 计算旋转矩阵
+		[2] 根据旋转矩阵, 计算绘制点坐标, 完成绘制
 **------------------------------------------------------------------------*/
 void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, bool FACE, bool LINE) {
 	// 计算 Rotate Matrix

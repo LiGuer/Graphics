@@ -31,7 +31,8 @@ public:
 	void clear(Graphics::ARGB color);
 	void value2pix(int x0, int y0, int z0, int& x, int& y, int& z);			//点To像素 (<=3D)
 	void value2pix(Mat<double>& p0, Mat<int>& pAns);						//点To像素 (anyD)
-	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影)
+	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影) (<=3D)
+	bool setPix(Mat<int>& p0, int size = -1);								//写像素 (正投影) (anyD)
 	void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//设置坐标范围
 	/*---------------- DRAW ----------------*/
 	// 0-D
