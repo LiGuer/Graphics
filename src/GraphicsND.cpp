@@ -96,11 +96,11 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 	int distance = delta[0] > delta[1] ? delta[0] : delta[1];			//总步数
 	distance = delta[2] > distance ? delta[2] : distance;				//总步数
 	//画线
-	for (int i = 0; i <= distance + 1; i++) {
+	for (int i = 0; i <= distance; i++) {
 		setPix(index[0], index[1], index[2]);							//唯一输出：画点
 		for (int dim = 0; dim < 3; dim++) {								//xyz走一步
 			err[dim] += delta[dim];
-			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+			if (err[dim] >= distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
 	}
 }
@@ -115,11 +115,11 @@ void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//绝对值
 	} int distance = delta.max();										//总步数
 	//画线
-	for (int i = 0; i <= distance + 1; i++) {
+	for (int i = 0; i <= distance; i++) {
 		setPix(index[0], index[1], index[2]);							//唯一输出：画点
 		for (int dim = 0; dim < sp.rows; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
-			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+			if (err[dim] >= distance) { err[dim] -= distance; index[dim] += inc[dim]; }
 		}
 	}
 }
@@ -142,7 +142,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 		Mat<int> err[2], inc[2], delta[2], index[2];
 		for (int k = 0; k < 2; k++) {
 			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); index[k] = pt[0];
-			for (int dim = 1; dim < Dim; dim++) {
+			for (int dim = 0; dim < Dim; dim++) {
 				inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
 			}
@@ -150,7 +150,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 		//画线
 		int dXMaxCur = delta[0][0] > delta[1][0] ? 0 : 1;
 		bool flag = true;															//三角形转折点检测开关(不然会二次检测)
-		for (int i = 0; i <= delta[dXMaxCur][0] + 1; i++) {
+		for (int i = 0; i <= delta[dXMaxCur][0]; i++) {
 			//三角形转折点检测
 			if (i == delta[1 - dXMaxCur][0] && flag) {
 				flag = false;														//关闭检测
@@ -170,11 +170,11 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;					//向左
 			}
 			int distanceTmp = deltaTmp.max();									//总步数
-			for (int i = 0; i <= distanceTmp + 1; i++) {						//画线
-				setPix(indexTmp[0], indexTmp[1], indexTmp[2], 0);				//唯一输出：画点
+			for (int i = 0; i <= distanceTmp; i++) {							//画线
+				setPix(indexTmp[0], indexTmp[1], indexTmp[2] - 1, 0);			//唯一输出：画点 (Z-1:反走样)
 				for (int dim = 0; dim < Dim; dim++) {							//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
-					if (errTmp[dim] > distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
+					if (errTmp[dim] >= distanceTmp) { errTmp[dim] -= distanceTmp; indexTmp[dim] += incTmp[dim]; }
 				}
 			}
 			for (int k = 0; k < 2; k++) {
