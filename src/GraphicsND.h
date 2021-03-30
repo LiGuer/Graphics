@@ -42,6 +42,7 @@ public:
 	void drawLine(Mat<double>& sp0, Mat<double>& ep0);						//画直线 (anyD)
 	void drawPolyline(Mat<double>* p, int n, bool close = false);			//画折线
 	void drawBezierLine(Mat<double> p[], int n);							//画贝塞尔曲线
+	void drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE = true);										//画网格
 	// 2-D
 	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE = false, bool LINE = true);						//画三角形
 	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL, bool FACE = false, bool LINE = true);			//画矩形
@@ -67,7 +68,6 @@ public:
 	void drawString(Mat<double>& p0, const char* str, int n);				//显示字符串
 	void drawNum(Mat<double>& p0, double num);								//显示数字
 	// Other
-	void drawGrid();																												//画网格
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);										//画坐标轴
 	void contour(Mat<double>& map, const int N);																					//画等高线
 	void contourface(Mat<double>& map, const int N);																				//画等高面

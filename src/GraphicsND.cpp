@@ -128,6 +128,21 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
+/*--------------------------------[ 画网格 ]--------------------------------*/
+void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
+	for (double x = min[0]; x <= max[0]; x += delta[0]) {
+		for (double y = min[1]; y <= max[1]; y += delta[1]) {
+			for (double z = min[2]; z <= max[2]; z += delta[2]) {
+				if (!LINE)drawPoint(x, y, z);
+				if (LINE) {
+					drawLine(min[0], max[0], y, y, z, z);
+					drawLine(x, x, min[1], max[1], z, z);
+					drawLine(x, x, y, y, min[2], max[2]);
+				}
+			}
+		}
+	}
+}
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE, bool LINE) {
 	if (FACE) {
@@ -442,44 +457,6 @@ void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	{double t[] = { 0,0,Zmax }; st.getData(t); }
 	{double t[] = { 0,0,Zmax + vectorLength }; ed.getData(t); }
 	if (Zmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
-}
-/*--------------------------------[ 网格 ]--------------------------------*/
-void GraphicsND::drawGrid() {
-	//int x0 = value2pix(0, 0), y0 = value2pix(0, 1);		//原点像素坐标
-	//double size[2] = { pSizeMax[0] - pSizeMin[0],pSizeMax[1] - pSizeMin[1] };
-	int x0, y0;
-	double size[2];
-	/*------ 网格 ------*/
-	g.PaintColor = 0x00ccff;
-	g.PaintSize = 1;
-	/*------ 计算间隔值 ------*/
-	size[0] /= 10; size[1] /= 10;
-	double delta[2] = { 1,1 };
-	for (int dim = 0; dim < 2; dim++) {
-		while ((int)size[dim] == 0) {
-			size[dim] *= 10;
-			delta[dim] /= 10;
-		}
-		while ((int)size[dim] >= 10) {
-			size[dim] /= 10;
-			delta[dim] *= 10;
-		}
-		delta[dim] *= (int)size[dim];
-	}
-	//g.drawGrid(x0, y0, 0, 0, -value2pix(delta[0], 0), -value2pix(delta[1], 1));
-	//g.drawGrid(x0, y0, g.gWidth, 0, value2pix(delta[0], 0), -value2pix(delta[1], 1));
-	//g.drawGrid(x0, y0, 0, g.gHeight, -value2pix(delta[0], 0), value2pix(delta[1], 1));
-	//g.drawGrid(x0, y0, g.gWidth, g.gHeight, value2pix(delta[0], 0), value2pix(delta[1], 1));
-	/*------ 坐标轴 ------*/
-	g.PaintColor = 0xffffff;
-	g.PaintSize = 3;
-	//g.drawLine(x0, coor2pix(pSizeMin[1], 1), x0, coor2pix(pSizeMax[1], 1));
-	//g.drawLine(coor2pix(pSizeMin[0], 0), y0, coor2pix(pSizeMax[0], 0), y0);
-	/*------ 轴标号 ------*/
-	g.PaintSize = 1;
-	g.FontSize = 50;
-	g.PaintColor = 0xffffff;
-	g.drawChar(x0 - 40, y0 + 15, '0');
 }
 /*--------------------------------[ 画等高线 ]--------------------------------*/
 void GraphicsND::contour(Mat<double>& map, const int N) {
