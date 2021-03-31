@@ -19,16 +19,16 @@ class GraphicsND
 public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																//核心图形学类
-	Mat<int> Z_Buffer;
+	Mat<Mat<int>> Z_Buffer;
 	Mat<double> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<double> TransformMat;										//变换矩阵
 	unsigned int FaceColor;
 	/*---------------- 底层 ----------------*/
 	GraphicsND() { ; }
-	GraphicsND(int width , int height) { init(width, height); }				//构造函数
+	GraphicsND(int width , int height, int Dim = 3) { init(width, height , Dim); }//构造函数
 	~GraphicsND() { ; }														//析构函数
-	void init(int width, int height);										//初始化
-	void clear(Graphics::ARGB color);
+	void init(int width, int height, int Dim = 3);							//初始化
+	void clear(Graphics::ARGB color);										//清屏
 	void value2pix(int x0, int y0, int z0, int& x, int& y, int& z);			//点To像素 (<=3D)
 	void value2pix(Mat<double>& p0, Mat<int>& pAns);						//点To像素 (anyD)
 	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影) (<=3D)

@@ -18,51 +18,49 @@ Mat<double> GraphicsND::TransformMat;											//变换矩阵
 
 ******************************************************************************/
 /*--------------------------------[ 初始化 ]--------------------------------*/
-void GraphicsND::init(int width, int height) {
-	g.init(width, height);
-	Z_Buffer.zero(g.Canvas.rows, g.Canvas.cols);
-	for (int i = 0; i < Z_Buffer.rows * Z_Buffer.cols; i++)Z_Buffer.data[i] = -0x7FFFFFFF;
-	TransformMat.E(4);
+void GraphicsND::init(int width, int height, int Dim) { 
+	g.init(width, height);  clear(0);
+	Z_Buffer.zero(Dim - 2, 1);
+	for (int i = 0; i < Z_Buffer.rows; i++) 
+		Z_Buffer[i].zero(g.Canvas.rows, g.Canvas.cols);
 }
 void GraphicsND::clear(Graphics::ARGB color) {
 	g.clear(color);
-	Z_Buffer.zero(g.Canvas.rows, g.Canvas.cols);
-	for (int i = 0; i < Z_Buffer.rows * Z_Buffer.cols; i++)Z_Buffer.data[i] = -0x7FFFFFFF;
+	for (int i = 0; i < Z_Buffer.rows; i++)
+		for (int j = 0; j < Z_Buffer[i].rows * Z_Buffer[i].cols; j++)
+			Z_Buffer[i].data[j] = -0x7FFFFFFF;
+	TransformMat.E(Z_Buffer.rows + 2 + 1);
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
-	Mat<double> point(4, 1);
-	{double t[] = { x0, y0, z0, 1 }; point.getData(t); }
+	Mat<double> point(TransformMat.rows, 1);
+	point[0] = 1; point[1] = x0; point[2] = y0; point[3] = z0;
 	point.mult(TransformMat, point);
-	x = point[0]; y = point[1]; z = point[2];
+	x = point[1]; y = point[2]; z = point[3];
 }
 void GraphicsND::value2pix(Mat<double>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows, 1);
-	Mat<double> point(4, 1);
-	{double t[] = { p0[0], p0[1], p0.rows < 3 ? 0 : p0[2], 1 }; point.getData(t); }
+	Mat<double> point(TransformMat.rows, 1);
+	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
 	point.mult(TransformMat, point);
-	for (int i = 0; i < pAns.rows; i++)pAns[i] = point[i];
+	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
 }
 /*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z, int size) {
-	if (size == -1) {
-		if (g.judgeOutRange(y, x) || z < Z_Buffer(y, x))return false;
-		g.drawPoint(y, x); Z_Buffer(y, x) = z; return true;
-	}
-	else if (size == 0) {
-		if (g.judgeOutRange(y, x) || z < Z_Buffer(y, x))return false;
-		g.setPoint(y, x, FaceColor); Z_Buffer(y, x) = z; return true;
-	}
+	if (g.judgeOutRange(y, x) || z < Z_Buffer[0](y, x))return false;
+	if (size == -1) g.drawPoint(y, x);
+	else if (size == 0) g.setPoint(y, x, FaceColor); 
+	Z_Buffer(y, x) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size) {
-	if (size == -1) {
-		if (g.judgeOutRange(p0[1], p0[0]) || p0[2] < Z_Buffer(p0[1], p0[0]))return false;
-		g.drawPoint(p0[1], p0[0]); Z_Buffer(p0[1], p0[0]) = p0[2]; return true;
-	}
-	else if (size == 0) {
-		if (g.judgeOutRange(p0[1], p0[0]) || p0[2] < Z_Buffer(p0[1], p0[0]))return false;
-		g.setPoint(p0[1], p0[0], FaceColor); Z_Buffer(p0[1], p0[0]) = p0[2]; return true;
-	}
+	if (g.judgeOutRange(p0[1], p0[0])) return false;
+	for (int i = 2; i < p0.rows; i++)
+		if (p0[i] < Z_Buffer[i - 2](p0[1], p0[0])) 
+			return false;
+	if (size == -1)  g.drawPoint(p0[1], p0[0]); 
+	else if (size == 0)  g.setPoint(p0[1], p0[0], FaceColor);
+	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](p0[1], p0[0]) = p0[i];
+	return true;
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
 void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
@@ -595,20 +593,19 @@ Graphics::ARGB GraphicsND::colorlist(double index, int model)
 
 ******************************************************************************/
 /*--------------------------------[ 平移 ]--------------------------------
-[x'] = [ 1  0  0  dx] [x]
-|y'|   | 0  1  0  dy| |y|
-|z'|   | 0  0  1  dz| |z|
-[1 ]   [ 0  0  0  1 ] [1]
+[1 ]   [ 1  0  0  0 ] [1]
+[x'] = [dx  1  0  0 ] [x]
+|y'|   |dy  0  1  0 | |y|
+|z'|   |dz  0  0  1 | |z|
 **-----------------------------------------------------------------------*/
 void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
-	int n = delta.rows;
-	Mat<double> translationMat(n + 1);
-	for (int i = 0; i < n; i++)translationMat(i, n) = delta[i];
+	Mat<double> translationMat(transMat.rows);
+	for (int i = 1; i <= delta.rows; i++) translationMat(i, 0) = delta[i];
 	transMat.mult(translationMat, transMat);
 }
 /*--------------------------------[ 三维旋转·四元数 ]--------------------------------
 *	[公式]: v' = q v q`¹
-		q = [cos(θ/2), u s in(θ/2)]
+		q = [cos(θ/2), u sin(θ/2)]
 		v=>[0,v]经旋转轴u旋转Ѳ角后得到v'
 	多次旋转:
 		v' = q1q2 v q2`¹q1`¹ = (q1q2) v (q1q2)`¹
@@ -625,35 +622,35 @@ void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
 void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
+	if (rotateAxis.rows > 3) return;					//##高维旋转矩阵 未完成
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
-	// rotate
-	tmp.mult(sin(theta / 2), rotateAxis.normalization());
-	Mat<double> q(4, 1), rotateMat(4); 
-	{ double t[] = { cos(theta / 2), tmp[0], tmp[1], tmp[2] }; q.getData(t); }
+	// q
+	Mat<double> q(transMat.rows, 1), rotateMat(transMat.rows);
+	rotateAxis.normalization();
+	q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
+	// rotate mat
 	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
 	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
 	Mat<double> rotateMatR(rotateMat);
 	for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
 	rotateMat.mult(rotateMat, rotateMatR);
-	tmp = rotateMat; rotateMat.E(4);
-	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) rotateMat(i, j) = tmp(i + 1, j + 1);
+	// rotate
 	transMat.mult(rotateMat, transMat);
 	translation(center, transMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------
-[x'] = [ sx 0  0  0 ] [x]
-|y'|   | 0  sy 0  0 | |y|
-|z'|   | 0  0  sz 0 | |z|
-[1 ]   [ 0  0  0  1 ] [1]
+[1 ]   [ 1  0  0  0 ] [1]
+[x'] = [ 0 sx  0  0 ] [x]
+|y'|   | 0  0 sy  0 | |y|
+|z'|   | 0  0  0 sz | |z|
 **-----------------------------------------------------------------------*/
 void GraphicsND::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat) {
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// scaling
-	int n = scale.rows;
-	Mat<double> scaleMat(n + 1);
-	for (int i = 0; i < n; i++)scaleMat(i, i) = scale[i];
+	Mat<double> scaleMat(transMat.rows);
+	for (int i = 1; i <= scale.rows; i++)scaleMat(i, i) = scale[i];
 	transMat.mult(scaleMat, transMat);
 	translation(center, transMat);
 }
