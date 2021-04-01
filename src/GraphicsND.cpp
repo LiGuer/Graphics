@@ -19,10 +19,11 @@ Mat<double> GraphicsND::TransformMat;											//变换矩阵
 ******************************************************************************/
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void GraphicsND::init(int width, int height, int Dim) { 
-	g.init(width, height);  clear(0);
+	g.init(width, height);  
 	Z_Buffer.zero(Dim - 2, 1);
 	for (int i = 0; i < Z_Buffer.rows; i++) 
 		Z_Buffer[i].zero(g.Canvas.rows, g.Canvas.cols);
+	clear(0);
 }
 void GraphicsND::clear(Graphics::ARGB color) {
 	g.clear(color);
@@ -50,7 +51,7 @@ bool GraphicsND::setPix(int x,int y, int z, int size) {
 	if (g.judgeOutRange(y, x) || z < Z_Buffer[0](y, x))return false;
 	if (size == -1) g.drawPoint(y, x);
 	else if (size == 0) g.setPoint(y, x, FaceColor); 
-	Z_Buffer(y, x) = z; return true;
+	Z_Buffer[0](y, x) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size) {
 	if (g.judgeOutRange(p0[1], p0[0])) return false;
@@ -410,8 +411,8 @@ void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 			rotateAxis.crossProduct(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3, 1), rotateMat
-		);
-		rotateMat.cut(0, 2, 0, 2, rotateMat);
+		); 
+		rotateMat.cut(1, 3, 1, 3, rotateMat);
 	} else rotateMat.E(3);
 	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
@@ -600,7 +601,7 @@ Graphics::ARGB GraphicsND::colorlist(double index, int model)
 **-----------------------------------------------------------------------*/
 void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 	Mat<double> translationMat(transMat.rows);
-	for (int i = 1; i <= delta.rows; i++) translationMat(i, 0) = delta[i];
+	for (int i = 0; i < delta.rows; i++) translationMat(i + 1, 0) = delta[i];
 	transMat.mult(translationMat, transMat);
 }
 /*--------------------------------[ 三维旋转·四元数 ]--------------------------------
@@ -622,7 +623,7 @@ void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
 void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
-	if (rotateAxis.rows > 3) return;					//##高维旋转矩阵 未完成
+	if (transMat.rows > 4)return;									//##高维旋转矩阵 未完成
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// q
@@ -650,7 +651,7 @@ void GraphicsND::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& t
 	translation(center.negative(tmp), transMat);
 	// scaling
 	Mat<double> scaleMat(transMat.rows);
-	for (int i = 1; i <= scale.rows; i++)scaleMat(i, i) = scale[i];
+	for (int i = 0; i < scale.rows; i++)scaleMat(i + 1, i + 1) = scale[i];
 	transMat.mult(scaleMat, transMat);
 	translation(center, transMat);
 }
