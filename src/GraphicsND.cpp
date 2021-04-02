@@ -64,17 +64,15 @@ bool GraphicsND::setPix(Mat<int>& p0, int size) {
 	return true;
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
-void GraphicsND::setAxisLim(Mat<double> pMin, Mat<double> pMax) {
-	Mat<double> center, scale, zero(pMin.rows, 1);
-	center.add(pMax, pMin.negative(center));
-	scale = center;
-	center.mult(1.0 / 2, center);
-	translation(center);
+void GraphicsND::setAxisLim(Mat<double>& pMin, Mat<double>& pMax) {
+	Mat<double> scale, tmp;
+	scale.add(pMax, pMin.negative(scale));
 	for (int i = 0; i < scale.rows; i++) {
 		if (i == 1)scale[i] = g.Canvas.rows / scale[i];
 		else scale[i] = g.Canvas.cols / scale[i];
 	}
-	scaling(scale, center);
+	translation(pMin.negative(tmp));
+	scaling(scale, tmp.zero(pMin.rows, 1));
 }
 /******************************************************************************
 
@@ -161,30 +159,14 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
-/*--------------------------------[ 画网格 ]--------------------------------
-*	[过程]:
-		[1] 计算每一个格点的坐标
-		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
----------------------------------------------------------------------------*/
-void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
-	int times = 1, cur;
-	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
-	
-	Mat<double> point(min),st, ed; point[0] -= delta[0];
-	for (int i = 0; i < times; i++) {
-		//[1]
-		cur = 0; point[cur] += delta[cur];
-		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
-		//[2]
-		if (!LINE)drawPoint(point);
-		if (LINE) {
-			st = point; ed = point;
-			for (int dim = 0; dim < min.rows; dim++) {
-				st[dim] = min[dim]; ed[dim] = max[dim];
-				drawLine(st, ed);
-				st[dim] = point[dim]; ed[dim] = point[dim];
-			}
-		}
+void GraphicsND::drawPolyline(Mat<double>& y, double xmin, double xmax) {
+	Mat<double> point(2, 1), prePoint(2, 1);
+	{double t[] = { xmin, y[0] }; point.getData(t); prePoint.getData(t); }
+	double delta = (xmax - xmin) / (y.cols - 1);
+	for (int i = 1; i < y.cols; i++) {
+		point[0] += delta; point[1] = y[i];
+		drawLine(prePoint, point);
+		prePoint = point;
 	}
 }
 /*--------------------------------[ 画三角形 ]--------------------------------
@@ -511,6 +493,60 @@ void GraphicsND::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 		}
 	}
 }
+/*--------------------------------[ 画网格 ]--------------------------------
+*	[过程]:
+		[1] 计算每一个格点的坐标
+		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
+---------------------------------------------------------------------------*/
+void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
+	int times = 1, cur;
+	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
+
+	Mat<double> point(min), st, ed; point[0] -= delta[0];
+	for (int i = 0; i < times; i++) {
+		//[1]
+		cur = 0; point[cur] += delta[cur];
+		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
+		//[2]
+		if (!LINE)drawPoint(point);
+		if (LINE) {
+			st = point; ed = point;
+			for (int dim = 0; dim < min.rows; dim++) {
+				st[dim] = min[dim]; ed[dim] = max[dim];
+				drawLine(st, ed);
+				st[dim] = point[dim]; ed[dim] = point[dim];
+			}
+		}
+	}
+}
+/*--------------------------------[ 画立方体 any-D ]--------------------------------
+*	[算法]: 利用二进制表示各顶点的坐标位置，
+			最小顶点为全0，最大顶点为全1
+			0: 该维度坐标值 == 最小顶点对应值
+			1: 该维度坐标值 == 最大顶点对应值
+*	[流程]:
+		[1] 以二进制顺序遍历所有顶点
+			[2] 连接该点和所有比该点编码多1的点
+---------------------------------------------------------------------------*/
+void GraphicsND::drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE, bool LINE) {
+	unsigned int Dim = pMin.rows, maxCode = 0;
+	Mat<double> st, ed;
+	for (int i = 0; i < Dim; i++) maxCode += 1 << i;
+	for (unsigned int code = 0; code < maxCode; code++) {
+		st = pMin;
+		for (int i = 0; i < Dim; i++)
+			if (code & (1 << i))
+				st[i] = pMax[i];
+		ed = st;
+		for (int i = 0; i < Dim; i++) {
+			if (ed[i] == pMin[i]) {
+				ed[i] = pMax[i];
+				drawLine(st, ed);
+				ed[i] = pMin[i];
+			}
+		}
+	}
+}
 /*--------------------------------[ 画坐标轴 ]--------------------------------*/
 void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	// 轴
@@ -604,7 +640,7 @@ void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 	for (int i = 0; i < delta.rows; i++) translationMat(i + 1, 0) = delta[i];
 	transMat.mult(translationMat, transMat);
 }
-/*--------------------------------[ 三维旋转·四元数 ]--------------------------------
+/*--------------------------------[ 旋转 ]--------------------------------
 *	[公式]: v' = q v q`¹
 		q = [cos(θ/2), u sin(θ/2)]
 		v=>[0,v]经旋转轴u旋转Ѳ角后得到v'
@@ -623,19 +659,38 @@ void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
 void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
-	if (transMat.rows > 4)return;									//##高维旋转矩阵 未完成
-	Mat<double> tmp;
+	Mat<double> tmp, rotateMat(transMat.rows);
 	translation(center.negative(tmp), transMat);
 	// q
-	Mat<double> q(transMat.rows, 1), rotateMat(transMat.rows);
-	rotateAxis.normalization();
-	q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
-	// rotate mat
-	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
-	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
-	Mat<double> rotateMatR(rotateMat);
-	for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
-	rotateMat.mult(rotateMat, rotateMatR);
+	if (transMat.rows - 1 == 2) { //二维 S02
+		double t[] = {
+			1, 0, 0,
+			0, cos(theta), -sin(theta),
+			0, sin(theta),  cos(theta),
+		}; rotateMat.getData(t);
+	}
+	if (transMat.rows - 1 == 3) { //三维 S03·四元数
+		Mat<double> q(transMat.rows, 1);
+		rotateAxis.normalization();
+		q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
+		// rotate mat
+		for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
+		for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
+		Mat<double> rotateMatR(rotateMat);
+		for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
+		rotateMat.mult(rotateMat, rotateMatR);
+	}
+	if (transMat.rows - 1 == 4) { //四维 S04·四元数
+		double c1 = cos(rotateAxis[0]), s1 = sin(rotateAxis[0]);
+		double c2 = cos(rotateAxis[1]), s2 = sin(rotateAxis[1]);
+		double t[] = {
+			1,0,0,0,0,
+			0,c1,-s1, c2,-s2,
+			0,s1, c1, s1, c1,
+			0,c2,-s1, c2,-s2,
+			0,s2, c1, s2, c2
+		}; rotateMat.getData(t);
+	}
 	// rotate
 	transMat.mult(rotateMat, transMat);
 	translation(center, transMat);

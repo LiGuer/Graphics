@@ -33,7 +33,7 @@ public:
 	void value2pix(Mat<double>& p0, Mat<int>& pAns);						//点To像素 (anyD)
 	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影) (<=3D)
 	bool setPix(Mat<int>& p0, int size = -1);								//写像素 (正投影) (anyD)
-	void setAxisLim(Mat<double> pMin, Mat<double> pMax);					//设置坐标范围
+	void setAxisLim(Mat<double>& pMin, Mat<double>& pMax);					//设置坐标范围
 	/*---------------- DRAW ----------------*/
 	// 0-D
 	void drawPoint(double x0 = 0, double y0 = 0, double z0 = 0);			//画点 (<=3D)
@@ -42,8 +42,8 @@ public:
 	void drawLine(double sx0 = 0, double ex0 = 0, double sy0 = 0, double ey0 = 0, double sz0 = 0, double ez0 = 0);					//画直线 (<=3D)
 	void drawLine(Mat<double>& sp0, Mat<double>& ep0);						//画直线 (anyD)
 	void drawPolyline(Mat<double>* p, int n, bool close = false);			//画折线
+	void drawPolyline(Mat<double>& y, double xmin, double xmax);					//画折线
 	void drawBezierLine(Mat<double> p[], int n);							//画贝塞尔曲线
-	void drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE = true);										//画网格
 	// 2-D
 	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE = false, bool LINE = true);						//画三角形
 	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL, bool FACE = false, bool LINE = true);			//画矩形
@@ -68,6 +68,9 @@ public:
 	void drawChar(Mat<double>& p0, char charac);							//显示字符
 	void drawString(Mat<double>& p0, const char* str, int n);				//显示字符串
 	void drawNum(Mat<double>& p0, double num);								//显示数字
+	// any-D
+	void drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE = false, bool LINE = true);
+	void drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE = true);										//画网格
 	// Other
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);										//画坐标轴
 	void contour(Mat<double>& map, const int N);																					//画等高线
@@ -75,7 +78,7 @@ public:
 	Graphics::ARGB colorlist(double index, int model);																				//色谱
 	/*---------------- Transformation ----------------*/
 	void translation(Mat<double>& delta, Mat<double>& transMat = TransformMat);														//平移
-	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat = TransformMat);					//三维旋转-四元数
+	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat = TransformMat);					//旋转
 	void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = TransformMat);									//缩放
 };
 #endif
