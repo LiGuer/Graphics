@@ -493,31 +493,9 @@ void GraphicsND::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 		}
 	}
 }
-/*--------------------------------[ 画网格 ]--------------------------------
-*	[过程]:
-		[1] 计算每一个格点的坐标
-		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
----------------------------------------------------------------------------*/
-void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
-	int times = 1, cur;
-	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
+/*--------------------------------[ 画线 any-D ]--------------------------------*/
+void GraphicsND::drawSuperLine(Mat<double>* p0, int N, bool FACE, bool LINE) {
 
-	Mat<double> point(min), st, ed; point[0] -= delta[0];
-	for (int i = 0; i < times; i++) {
-		//[1]
-		cur = 0; point[cur] += delta[cur];
-		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
-		//[2]
-		if (!LINE)drawPoint(point);
-		if (LINE) {
-			st = point; ed = point;
-			for (int dim = 0; dim < min.rows; dim++) {
-				st[dim] = min[dim]; ed[dim] = max[dim];
-				drawLine(st, ed);
-				st[dim] = point[dim]; ed[dim] = point[dim];
-			}
-		}
-	}
 }
 /*--------------------------------[ 画立方体 any-D ]--------------------------------
 *	[算法]: 利用二进制表示各顶点的坐标位置，
@@ -543,6 +521,57 @@ void GraphicsND::drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE
 				ed[i] = pMax[i];
 				drawLine(st, ed);
 				ed[i] = pMin[i];
+			}
+		}
+	}
+}
+/*--------------------------------[ 画球 any-D ]--------------------------------
+*	[定义]: 球: 距离圆心距离为R的点的集合. Σdim_i² = R²
+*	[算法]: 计算正象限的点坐标，然后通过取负绘制其他象限.
+---------------------------------------------------------------------------*/
+void GraphicsND::drawSuperSphere(Mat<double>& center, double r, bool FACE, bool LINE) {
+	unsigned int Dim = center.rows, maxCode = 0, times = 1, cur;
+	double delta = 0.1, tmp;
+	Mat<double> point(Dim, 1), tmpMat;
+	for (int dim = 0; dim < Dim; dim++) { times *= 1.0 / delta + 1; maxCode += 1 << dim; }
+	for (int i = 0; i < times; i++) {
+		//[1] 计算正象限的点坐标
+		cur = 0; point[cur] += delta;
+		while (point[cur] > 1 && cur + 1 < Dim - 1) { point[cur] = 0; cur++; point[cur] += delta; }
+		tmp = 1; for (int j = 0; j < Dim - 1; j++) tmp -= point[j] * point[j];
+		point[Dim - 1] = sqrt(tmp);
+		//[2] 然后通过取负绘制其他象限
+		for (unsigned int code = 0; code <= maxCode; code++) {
+			tmpMat = point;
+			for (int j = 0; j < Dim; j++)
+				if (code & (1 << j))
+					tmpMat[j] *= -1;
+			drawPoint(tmpMat.add(center, tmpMat.mult(r, tmpMat)));
+		}
+	}
+}
+/*--------------------------------[ 画网格 ]--------------------------------
+*	[过程]:
+		[1] 计算每一个格点的坐标
+		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
+---------------------------------------------------------------------------*/
+void GraphicsND::drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE) {
+	int times = 1, cur;
+	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
+
+	Mat<double> point(min), st, ed; point[0] -= delta[0];
+	for (int i = 0; i < times; i++) {
+		//[1]
+		cur = 0; point[cur] += delta[cur];
+		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
+		//[2]
+		if (!LINE)drawPoint(point);
+		if (LINE) {
+			st = point; ed = point;
+			for (int dim = 0; dim < min.rows; dim++) {
+				st[dim] = min[dim]; ed[dim] = max[dim];
+				drawLine(st, ed);
+				st[dim] = point[dim]; ed[dim] = point[dim];
 			}
 		}
 	}
@@ -680,7 +709,7 @@ void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 		for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
 		rotateMat.mult(rotateMat, rotateMatR);
 	}
-	if (transMat.rows - 1 == 4) { //四维 S04·四元数
+	if (transMat.rows - 1 == 4) { //四维 S04
 		double c1 = cos(rotateAxis[0]), s1 = sin(rotateAxis[0]);
 		double c2 = cos(rotateAxis[1]), s2 = sin(rotateAxis[1]);
 		double t[] = {

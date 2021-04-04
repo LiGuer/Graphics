@@ -69,7 +69,9 @@ public:
 	void drawString(Mat<double>& p0, const char* str, int n);				//显示字符串
 	void drawNum(Mat<double>& p0, double num);								//显示数字
 	// any-D
-	void drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE = false, bool LINE = true);
+	void drawSuperLine(Mat<double>* p0, int N, bool FACE = false, bool LINE = true);												//画线 any-D
+	void drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE = false, bool LINE = true);								//画立方体 any-D
+	void drawSuperSphere(Mat<double>& center, double r, bool FACE = false, bool LINE = true);										//画球体 any-D
 	void drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE = true);										//画网格
 	// Other
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);										//画坐标轴

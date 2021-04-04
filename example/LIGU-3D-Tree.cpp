@@ -1,7 +1,6 @@
 #include "src/GraphicsND.h"
 #include "LiGu_AlgorithmLib/Fractal.h"
 #include "src/DigitalImageProcessing.h"
-#include <Windows.h>
 
 
 int main() {
