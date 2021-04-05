@@ -1,10 +1,11 @@
 # LiGu-Graphics 计算机图形学  
-* <Graphics.h/cpp>          Pix图形学类 (核心类)
-* <GraphicsND.h/cpp>        任意维图形学类 + 科学制图
-* <DigitalImageProcessing.h>数字图像处理
-* <ReadImg.exe>             实时动态显示图片
+* <Graphics.h/cpp>				Pix图形学类 (核心类)
+* <GraphicsND.h/cpp>			任意维图形学类 + 科学制图
+* <DigitalImageProcessing.h>	数字图像处理
+* <RayTracing.h>				光线追踪
+* <ReadImg.exe>				实时动态显示图片
 * ------[ example ]------ 
-* <Boids.h>                 鸟群算法   
+* <Boids.h>						鸟群算法   
 
 ## API
 ### API <Graphics.h>:  

@@ -1,22 +1,22 @@
-#include "RayTracing.h"
-/*--------------------------------[ ³õÊ¼»¯ ]--------------------------------*/
+ï»¿#include "RayTracing.h"
+/*--------------------------------[ åˆå§‹åŒ– ]--------------------------------*/
 void RayTracing::init(int width, int height) {
 	g.init(width, height);
 }
-/*--------------------------------[ äÖÈ¾ ]--------------------------------
-*	[¹ı³Ì]:
-		[1] ¼ÆËãÆÁÄ»Ê¸Á¿¡¢ÆÁÄ»X,YÏòÖá
-		[2] ¶ÔÆÁÄ»Ã¿¸öÏñËØ±éÀú
-			[3] ¼ÆËãÏñËØÊ¸Á¿¡¢¹âÏßÊ¸Á¿¡¢¹âÏß×·×ÙÆğµã
-			[4] ¹âÏß×·×ÙËã·¨
-			[5] »ùÓÚ½á¹û»æÖÆ¸ÃÏñËØÉ«²Ê
+/*--------------------------------[ æ¸²æŸ“ ]--------------------------------
+*	[è¿‡ç¨‹]:
+		[1] è®¡ç®—å±å¹•çŸ¢é‡ã€å±å¹•X,Yå‘è½´
+		[2] å¯¹å±å¹•æ¯ä¸ªåƒç´ éå†
+			[3] è®¡ç®—åƒç´ çŸ¢é‡ã€å…‰çº¿çŸ¢é‡ã€å…‰çº¿è¿½è¸ªèµ·ç‚¹
+			[4] å…‰çº¿è¿½è¸ªç®—æ³•
+			[5] åŸºäºç»“æœç»˜åˆ¶è¯¥åƒç´ è‰²å½©
 -------------------------------------------------------------------------*/
 void RayTracing::paint() {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
-	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//ÆÁÄ»ÖáÓÉÑÛÖ¸ÏòÆÁÄ»ÖĞĞÄ
-	{ double t[] = { 1,-ScreenVec[0] / ScreenVec[1],0 }; ScreenYVec.getData(t).normalization(); }	//ÆÁÄ»YÏòÖáÊ¼ÖÕÓëZÖá´¹Ö±,ÎŞz·ÖÁ¿
-	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//ÆÁÄ»XÏòÖáÓëÆÁÄ»Öá¡¢ÆÁÄ»YÏòÖáÕı½»
+	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//å±å¹•è½´ç”±çœ¼æŒ‡å‘å±å¹•ä¸­å¿ƒ
+	{ double t[] = { 1,ScreenVec[1] == 0 ? 0 : -ScreenVec[0] / ScreenVec[1],0 }; ScreenYVec.getData(t).normalization(); }	//å±å¹•Yå‘è½´å§‹ç»ˆä¸Zè½´å‚ç›´,æ— zåˆ†é‡
+	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//å±å¹•Xå‘è½´ä¸å±å¹•è½´ã€å±å¹•Yå‘è½´æ­£äº¤
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
@@ -32,64 +32,65 @@ void RayTracing::paint() {
 		}
 	}
 }
-/*--------------------------------[ ×·×Ù¹âÏß ]--------------------------------
-*	[¹ı³Ì]:
-		[1] ±éÀúÈı½ÇĞÎ¼¯ºÏÖĞµÄÃ¿Ò»¸öÈı½ÇĞÎ
-			[2]	ÅĞ¶Ï¹âÏßºÍ¸ÃÈı½ÇĞÎÊÇ·ñÏà½»¡¢¹âÏß×ß¹ı¾àÀë¡¢½»µã×ø±ê¡¢¹âÏß¼Ğ½Ç
-			[3] ±£Áô¹âÏß×ß¹ı¾àÀë×î½üµÄÈı½ÇĞÎµÄÏà¹ØÊı¾İ
-		[4] Èç¹û¸Ã¹âÏßµÈ¼¶Ğ¡ÓÚÉè¶¨µÄãĞÖµµÈ¼¶
-			¼ÆËãÈı½ÇĞÎ·´Éä·½Ïò£¬½«·´Éä¹âÏßÎª»ù×¼ÖØĞÂ¼ÆËã
+/*--------------------------------[ è¿½è¸ªå…‰çº¿ ]--------------------------------
+*	[è¿‡ç¨‹]:
+		[1] éå†ä¸‰è§’å½¢é›†åˆä¸­çš„æ¯ä¸€ä¸ªä¸‰è§’å½¢
+			[2]	åˆ¤æ–­å…‰çº¿å’Œè¯¥ä¸‰è§’å½¢æ˜¯å¦ç›¸äº¤ã€å…‰çº¿èµ°è¿‡è·ç¦»ã€äº¤ç‚¹åæ ‡ã€å…‰çº¿å¤¹è§’
+			[3] ä¿ç•™å…‰çº¿èµ°è¿‡è·ç¦»æœ€è¿‘çš„ä¸‰è§’å½¢çš„ç›¸å…³æ•°æ®
+		[4] å¦‚æœè¯¥å…‰çº¿ç­‰çº§å°äºè®¾å®šçš„é˜ˆå€¼ç­‰çº§
+			è®¡ç®—ä¸‰è§’å½¢åå°„æ–¹å‘ï¼Œå°†åå°„å…‰çº¿ä¸ºåŸºå‡†é‡æ–°è®¡ç®—
 -----------------------------------------------------------------------------*/
 unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level) {
-	double minDistance = 0, RayFaceTheta, RayFaceThetaTmp;
-	Mat<double> intersection, FaceVec, FaceVecTmp;
+	double minDistance = DBL_MAX;
+	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
 	Triangle closestTriangle;
 	//[1]
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		//[2][3]
-		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, RayFaceThetaTmp, intersection);
+		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
 		if (distance > 0 && distance < minDistance) {
-			distance < minDistance; closestTriangle = TriangleSet[i]; FaceVec = FaceVecTmp; RayFaceTheta = RayFaceThetaTmp;
+			minDistance = distance; closestTriangle = TriangleSet[i];
+			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
 	unsigned int color = 0;
 	if (closestTriangle.material != NULL && closestTriangle.material->color != 0)
 		return closestTriangle.material->color;
-	if (minDistance > 0 && level < maxRayLevel) {
+	if (minDistance != DBL_MAX && level < maxRayLevel) {
 		Mat<double> Reflect;
 		Reflect.add(Ray, Reflect.add(FaceVec,Ray.negative(Reflect)));
 		color = traceRay(intersection, Reflect, level + 1);
 	}
 	return color;
 }
-/*--------------------------------[ Çó½»µã ]--------------------------------
-*	[Á÷³Ì]:
-		[1] ¼ÆËãÈı½ÇĞÎËùÔÚÃæÊ¸Á¿
-		[2] ¼ÆËãµãÏß¾àÀë¡¢¹âÏßÓëÃæÊ¸Á¿¼Ğ½Ç¡¢¹âÏßÓëÃæÏà½»Ëù×ß¹ıµÄ¾àÀë
-		[3] ¼ÆËã¹âÏßÓëÃæµÄ½»µã
-		[4] ÅĞ¶Ï½»µãÊÇ·ñÔÚÈı½ÇĞÎÄÚ²¿, Èô·ñ·µ»Ø-1
-*	[Ëã·¨]:
-		
+/*--------------------------------[ æ±‚äº¤ç‚¹ ]--------------------------------
+*	[æµç¨‹]:
+		[1] è®¡ç®—ä¸‰è§’å½¢æ‰€åœ¨é¢çŸ¢é‡
+		[2] è®¡ç®—å…‰çº¿é¢äº¤ç‚¹ã€å…‰çº¿é¢ç›¸äº¤æ‰€èµ°è¿‡è·ç¦»
+		[3] åˆ¤æ–­äº¤ç‚¹æ˜¯å¦åœ¨ä¸‰è§’å½¢å†…éƒ¨, è‹¥å¦è¿”å›-1
+*	[ç®—æ³•]:
+		å¹³é¢æ–¹ç¨‹: Af (X - Xf) + BY (Y - Yf) + C (Z - Zf) = 0
+		ç›´çº¿æ–¹ç¨‹: (X - Xl) / Al = (Y - Yl) / Bl = (Z - Zl) / Cl = K
+		ç‚¹é¢è·:	d = |AXp + BYp + CZp + D| / sqrt(AÂ² + BÂ² + CÂ²)
+		çº¿é¢äº¤ç‚¹: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl)
+				  X = K Al + Xl
 ---------------------------------------------------------------------------*/
-double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, double& RayFaceTheta, Mat<double>& intersection) {
+double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection) {
 	//[1]
 	Mat<double> edge[2], tmp;
 	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
 	edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]));
 	FaceVec.crossProduct(edge[0], edge[1]);
 	//[2]
-	double PointFaceDistance = fabs(FaceVec.dot(RaySt)) / (FaceVec.dot(FaceVec));
-	RayFaceTheta = FaceVec.dot(Ray) / (Ray.norm() * FaceVec.norm());
-	double RayFaceDistance = asin(RayFaceTheta) * PointFaceDistance;
+	double K = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
+	intersection.add(tmp.mult(K, Ray), RaySt);
+	double RayFaceDistance = tmp.norm();
 	//[3]
-	intersection.add(RaySt, intersection.mult(RayFaceDistance, Ray.normalization()));
-	//[4]
 	Mat<double> tmpEdge; tmpEdge.add(intersection, triangle.p[0].negative(tmpEdge));
-	double inverDeno = 1 / (edge[0].dot(edge[0]) * edge[1].dot(edge[1]) - edge[0].dot(edge[0]) * edge[0].dot(edge[0]));
+	double inverDeno = 1 / (edge[0].dot(edge[0]) * edge[1].dot(edge[1]) - edge[0].dot(edge[1]) * edge[1].dot(edge[0]));
 	double u = (edge[1].dot(edge[1]) * edge[0].dot(tmpEdge) - edge[0].dot(edge[1]) * edge[1].dot(tmpEdge)) * inverDeno;
-	if (u < 0 || u > 1)  return -1;// if u out of range, return directly
-	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[0].dot(edge[1]) * edge[0].dot(tmpEdge)) * inverDeno;
-	if (v < 0 || v > 1)  return -1;// if v out of range, return directly
-	return u + v <= 1 ? RayFaceDistance : -1;
+	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[1].dot(edge[0]) * edge[0].dot(tmpEdge)) * inverDeno;						
+	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
+	return  RayFaceDistance;
 }

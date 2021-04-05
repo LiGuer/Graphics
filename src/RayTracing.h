@@ -39,7 +39,7 @@ public:
 	/*---------------- DRAW ----------------*/
 	void paint();																		//渲染
 	unsigned int traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level);
-	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, double& RayFaceDistance, Mat<double>& intersection);	//求交点
+	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection);	//求交点
 };
 
 #endif
