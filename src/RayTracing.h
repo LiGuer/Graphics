@@ -27,18 +27,19 @@ public:
 	};
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																	//核心图形学类
-	Mat<double> Eye, gCenter;
+	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
 	int maxRayLevel = 10;
 	std::vector<Triangle> TriangleSet;											//三角形集
+	std::vector<Material> MaterialSet;											//材质集
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
-	RayTracing(int width, int height, int Dim = 3) { init(width, height); }		//构造函数
+	RayTracing(int width, int height) { init(width, height); }					//构造函数
 	~RayTracing() { ; }															//析构函数
 	void init(int width, int height);											//初始化
 	/*---------------- DRAW ----------------*/
 	void paint();																		//渲染
 	unsigned int traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level);
-	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, double& RayFaceDistance, Mat<double>& intersection);	//求交点
+	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, double& RayFaceDistance, Mat<double>& intersection);	//求交点
 };
 
 #endif

@@ -3,42 +3,63 @@
 void RayTracing::init(int width, int height) {
 	g.init(width, height);
 }
-/*--------------------------------[ 渲染 ]--------------------------------*/
+/*--------------------------------[ 渲染 ]--------------------------------
+*	[过程]:
+		[1] 计算屏幕矢量、屏幕X,Y向轴
+		[2] 对屏幕每个像素遍历
+			[3] 计算像素矢量、光线矢量、光线追踪起点
+			[4] 光线追踪算法
+			[5] 基于结果绘制该像素色彩
+-------------------------------------------------------------------------*/
 void RayTracing::paint() {
+	//[1]
+	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
+	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
+	{ double t[] = { 1,-ScreenVec[0] / ScreenVec[1],0 }; ScreenYVec.getData(t).normalization(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	//[2]
 	double minDistance = 0, RayFaceDistance;
-	
-	Mat<double> ScreenVec, PixYVec(3, 1), PixXVec, Ray, RaySt;
-	ScreenVec.add(gCenter, ScreenVec.negative(Eye));
+	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
 	for (int x = 0; x < g.Canvas.rows; x++) {
 		for (int y = 0; y < g.Canvas.cols; y++) {
-			//Compute Ray
-			double t[] = { 1,-ScreenVec[0] / ScreenVec[1],0 };
-			PixYVec.mult(y, PixYVec.getData(t));								//屏幕Y向轴始终与Z轴垂直,无z分量
-			PixXVec.mult(x, PixXVec.crossProduct(ScreenVec, PixYVec).normalization());	//屏幕X向轴与屏幕轴、屏幕Y向轴正交
-			Ray.add(Ray.add(ScreenVec, PixYVec), PixXVec);
-			//Paint
+			//[3]
+			PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
+			Ray.add(ScreenVec, PixVec);
+			RaySt.add(gCenter, PixVec);
+			//[4][5]
 			unsigned int color = traceRay(RaySt, Ray, 0);
 			g.setPoint(x, y, color);
 		}
 	}
 }
-/*--------------------------------[ 追踪光线 ]--------------------------------*/
+/*--------------------------------[ 追踪光线 ]--------------------------------
+*	[过程]:
+		[1] 遍历三角形集合中的每一个三角形
+			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
+			[3] 保留光线走过距离最近的三角形的相关数据
+		[4] 如果该光线等级小于设定的阈值等级
+			计算三角形反射方向，将反射光线为基准重新计算
+-----------------------------------------------------------------------------*/
 unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level) {
-	//Seek Intersecton
 	double minDistance = 0, RayFaceTheta, RayFaceThetaTmp;
-	Mat<double> intersection;
+	Mat<double> intersection, FaceVec, FaceVecTmp;
 	Triangle closestTriangle;
+	//[1]
 	for (int i = 0; i < TriangleSet.size(); i++) {
-		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, RayFaceThetaTmp, intersection);
+		//[2][3]
+		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, RayFaceThetaTmp, intersection);
 		if (distance > 0 && distance < minDistance) {
-			distance < minDistance; closestTriangle = TriangleSet[i]; RayFaceTheta = RayFaceThetaTmp;
+			distance < minDistance; closestTriangle = TriangleSet[i]; FaceVec = FaceVecTmp; RayFaceTheta = RayFaceThetaTmp;
 		}
 	}
-	// 计算三角形反射方向及衰减系数，再将反射光线为基准从新计算
+	//[4]
 	unsigned int color = 0;
-	if (level < maxRayLevel) {
-		Mat<double> RayTmp;
-		color = traceRay(intersection, RayTmp, level + 1);
+	if (closestTriangle.material != NULL && closestTriangle.material->color != 0)
+		return closestTriangle.material->color;
+	if (minDistance > 0 && level < maxRayLevel) {
+		Mat<double> Reflect;
+		Reflect.add(Ray, Reflect.add(FaceVec,Ray.negative(Reflect)));
+		color = traceRay(intersection, Reflect, level + 1);
 	}
 	return color;
 }
@@ -51,15 +72,15 @@ unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int leve
 *	[算法]:
 		
 ---------------------------------------------------------------------------*/
-double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, double& RayFaceTheta, Mat<double>& intersection) {
+double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, double& RayFaceTheta, Mat<double>& intersection) {
 	//[1]
-	Mat<double> edge[2], faceVec, tmp;
+	Mat<double> edge[2], tmp;
 	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
 	edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]));
-	faceVec.crossProduct(edge[0], edge[1]);
+	FaceVec.crossProduct(edge[0], edge[1]);
 	//[2]
-	double PointFaceDistance = fabs(faceVec.dot(RaySt)) / (faceVec.dot(faceVec));
-	RayFaceTheta = faceVec.dot(Ray) / (Ray.norm() * faceVec.norm());
+	double PointFaceDistance = fabs(FaceVec.dot(RaySt)) / (FaceVec.dot(FaceVec));
+	RayFaceTheta = FaceVec.dot(Ray) / (Ray.norm() * FaceVec.norm());
 	double RayFaceDistance = asin(RayFaceTheta) * PointFaceDistance;
 	//[3]
 	intersection.add(RaySt, intersection.mult(RayFaceDistance, Ray.normalization()));
