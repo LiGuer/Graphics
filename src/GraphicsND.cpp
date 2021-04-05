@@ -494,7 +494,7 @@ void GraphicsND::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 	}
 }
 /*--------------------------------[ 画线 any-D ]--------------------------------*/
-void GraphicsND::drawSuperLine(Mat<double>* p0, int N, bool FACE, bool LINE) {
+void GraphicsND::drawSuperLine(Mat<double>* p0, bool FACE, bool LINE) {
 
 }
 /*--------------------------------[ 画立方体 any-D ]--------------------------------

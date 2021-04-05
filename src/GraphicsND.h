@@ -42,7 +42,7 @@ public:
 	void drawLine(double sx0 = 0, double ex0 = 0, double sy0 = 0, double ey0 = 0, double sz0 = 0, double ez0 = 0);					//画直线 (<=3D)
 	void drawLine(Mat<double>& sp0, Mat<double>& ep0);						//画直线 (anyD)
 	void drawPolyline(Mat<double>* p, int n, bool close = false);			//画折线
-	void drawPolyline(Mat<double>& y, double xmin, double xmax);					//画折线
+	void drawPolyline(Mat<double>& y, double xmin, double xmax);			//画折线
 	void drawBezierLine(Mat<double> p[], int n);							//画贝塞尔曲线
 	// 2-D
 	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, bool FACE = false, bool LINE = true);						//画三角形
@@ -69,7 +69,7 @@ public:
 	void drawString(Mat<double>& p0, const char* str, int n);				//显示字符串
 	void drawNum(Mat<double>& p0, double num);								//显示数字
 	// any-D
-	void drawSuperLine(Mat<double>* p0, int N, bool FACE = false, bool LINE = true);												//画线 any-D
+	void drawSuperLine(Mat<double>* p0, bool FACE = false, bool LINE = true);														//画线 any-D
 	void drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE = false, bool LINE = true);								//画立方体 any-D
 	void drawSuperSphere(Mat<double>& center, double r, bool FACE = false, bool LINE = true);										//画球体 any-D
 	void drawGrid(Mat<double>& delta, Mat<double>& max, Mat<double>& min, bool LINE = true);										//画网格

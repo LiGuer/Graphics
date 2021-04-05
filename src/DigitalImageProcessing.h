@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace DigitalImageProcessing {
 #define PI 3.141592653589
+	struct RGB { double R, G, B; };
 	/*--------------------------------[ Í¼ÏñÊäÈë/Êä³ö ]--------------------------------*/
 	Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
 		cv::Mat input = cv::imread(inputImgUrl, cv::IMREAD_COLOR);
