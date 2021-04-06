@@ -27,8 +27,8 @@ void RayTracing::paint() {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
 	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
-	{ double t[] = { 1,ScreenVec[1] == 0 ? 0 : -ScreenVec[0] / ScreenVec[1],0 }; ScreenYVec.getData(t).normalization(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
-	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	{ double t[] = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0],1,0 }; ScreenYVec.getData(t).normalization(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenXVec.crossProduct(ScreenYVec, ScreenVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
@@ -67,12 +67,25 @@ unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int leve
 	}
 	//[4]
 	unsigned int color = 0;
-	if (closestTriangle.material != NULL && closestTriangle.material->color != 0)
-		return closestTriangle.material->color;
 	if (minDistance != DBL_MAX && level < maxRayLevel) {
+		// Reflex Ray
 		Mat<double> Reflect;
 		Reflect.add(Ray, Reflect.add(FaceVec,Ray.negative(Reflect)));
 		color = traceRay(intersection, Reflect, level + 1);
+		// Reflex Rate
+		double k = closestTriangle.material->reflexRate;
+		double kR = k * (unsigned char)(closestTriangle.material->color >> 16) / 255.0;
+		double kG = k * (unsigned char)(closestTriangle.material->color >> 8) / 255.0;
+		double kB = k * (unsigned char)(closestTriangle.material->color) / 255.0;
+		color = (unsigned int)(kR * (unsigned char)(color >> 16)) * 0x10000
+			  + (unsigned int)(kG * (unsigned char)(color >> 8)) * 0x100
+			  + (unsigned int)(kB * (unsigned char)(color));
+	}
+	else {
+		for (int i = 0; i < LightSource.size(); i++) {
+			double LightSourceTheta = Ray.dot(LightSource[i]) / (Ray.norm() * LightSource[i].norm());
+			color = (unsigned int)(LightSourceTheta * 0xFF) * 0x10101 ;
+		}
 	}
 	return color;
 }
@@ -105,4 +118,193 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[1].dot(edge[0]) * edge[0].dot(tmpEdge)) * inverDeno;						
 	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
 	return  RayFaceDistance;
+}
+/*--------------------------------[ 画三角形 ]--------------------------------*/
+void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
+	Triangle triangle;
+	triangle.p[0] = p1;
+	triangle.p[1] = p2;
+	triangle.p[2] = p3;
+	triangle.material = material;
+	TriangleSet.push_back(triangle);
+}
+/*--------------------------------[ 画矩形 ]--------------------------------*/
+void RayTracing::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
+
+}
+/*--------------------------------[ 画四边形 ]--------------------------------*/
+void RayTracing::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
+		drawTriangle(p1, p2, p3, material); 
+		drawTriangle(p1, p4, p3, material);
+}
+/*--------------------------------[ 画多边形 ]--------------------------------
+* [算法]:
+		绘制轮数k = 上取整(边数 / 3)
+		三角形绘制顶点: i, i + k, i + 2k
+* [例子]:
+	偶数边:
+	四边形: [1] 1 2 3, 3 4 1
+	六边形: [1] 1 2 3, 3 4 5, 5 6 1 [2] 1 3 5
+	奇数边:
+	五边形:	[1] 1 2 3, 3 4 5 [2] 1 3 5
+-----------------------------------------------------------------------------*/
+void RayTracing::drawPolygon(Mat<double> p[], int n, Material* material) {
+	for (int k = 1; k <= (n + 2) / 3; k++)
+		for (int i = 0; i <= n - 2 * k; i += 2 * k)
+			drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n], material);
+}
+/*--------------------------------[ 画圆 ]--------------------------------
+**-----------------------------------------------------------------------*/
+void RayTracing::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
+
+}
+/*--------------------------------[ 画椭圆 ]--------------------------------
+**-----------------------------------------------------------------------*/
+void RayTracing::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
+}
+/*--------------------------------[ 画曲面 ]--------------------------------*/
+void RayTracing::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
+	Mat<double> p(3, 1), pl(3, 1), pu(3, 1);
+	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
+	for (int y = 0; y < z.cols; y++) {
+		for (int x = 0; x < z.rows; x++) {
+			{double t[] = { xs + x * dx,ys + y * dy,z(x,y) }; p.getData(t); }
+			if (x > 0) {
+				double t[] = { xs + (x - 1) * dx,ys + y * dy,z(x - 1,y) };
+				//pl.getData(t); drawLine(pl, p);
+			}
+			if (y > 0) {
+				double t[] = { xs + x * dx,ys + (y - 1) * dy,z(x,y - 1) };
+				//pu.getData(t); drawLine(pu, p);
+			}
+		}
+	}
+}
+/*--------------------------------[ 画四面体 ]--------------------------------*/
+void RayTracing::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
+	drawTriangle(p1, p2, p3, material);
+	drawTriangle(p2, p3, p4, material);
+	drawTriangle(p3, p4, p1, material);
+	drawTriangle(p4, p1, p2, material);
+}
+/*--------------------------------[ 画矩体 ]--------------------------------
+*	矩体共十二条边，从对角点引出6条:
+		(x0,y0,z0)&(x1,y0,z0)  (x0,y0,z0)&(x0,y1,z0)  (x0,y0,z0)&(x0,y0,z1)
+		(x1,y1,z1)&(x0,y1,z1)  (x1,y1,z1)&(x1,y0,z1)  (x1,y1,z1)&(x1,y1,z0)
+	另外六条:
+		(x1,y0,z0)&(x0,y1,z0)  (x1,y0,z0)&(x0,y0,z1)
+		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
+		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
+**------------------------------------------------------------------------*/
+void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material) {
+	Mat<double> pMinTmp[3], pMaxTmp[3];
+	for (int i = 0; i < 3; i++) {
+		pMinTmp[i] = pMin; pMinTmp[i][i] = pMax[i];
+		pMaxTmp[i] = pMax; pMaxTmp[i][i] = pMin[i];
+	}
+	for (int i = 0; i < 3; i++) {
+		drawTriangle(pMin, pMinTmp[i], pMaxTmp[(i + 2) % 3], material);
+		drawTriangle(pMax, pMaxTmp[i], pMinTmp[(i + 2) % 3], material);
+		drawTriangle(pMin, pMinTmp[(i + 1) % 3], pMaxTmp[(i + 2) % 3], material);
+		drawTriangle(pMax, pMaxTmp[(i + 1) % 3], pMinTmp[(i + 2) % 3], material);
+	}
+}
+/*--------------------------------[ 画圆台 ]--------------------------------
+* [过程]:
+		[1] 计算旋转矩阵
+		[2] 根据旋转矩阵, 计算绘制点坐标, 完成绘制
+**------------------------------------------------------------------------*/
+void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, Material* material) {
+	// 计算 Rotate Matrix
+	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
+	direction.add(ed, st.negative(direction));
+	if (direction[0] != 0 || direction[1] != 0) {
+		//rotate(
+		//	rotateAxis.crossProduct(direction, zAxis),
+		//	-acos(tmp.dot(direction, zAxis) / direction.norm()),
+		//	tmp.zero(3, 1), rotateMat
+		//);
+		rotateMat.cut(1, 3, 1, 3, rotateMat);
+	}
+	else rotateMat.E(3);
+	// 画圆台
+	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
+	for (int i = 0; i <= 360 / delta; i++) {
+		{double t[] = { cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
+		deltaVector.mult(rotateMat, deltaVector);
+		stPoint.add(st, stPoint.mult(Rst, deltaVector));
+		edPoint.add(ed, edPoint.mult(Red, deltaVector));
+		if (i != 0) {
+			drawTriangle(stPoint, preStPoint, edPoint);
+			drawTriangle(preStPoint, preEdPoint, edPoint);
+		}
+		preStPoint = stPoint;
+		preEdPoint = edPoint;
+	}
+}
+/*--------------------------------[ 画圆柱 ]--------------------------------*/
+void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta, Material* material) {
+	drawFrustum(st, ed, r, r, delta);
+}
+/*--------------------------------[ 画球 ]--------------------------------
+*	[公式]: x² + y² + z² = R²
+		参数方程,点集:
+			x = r cosΦ cosθ    Φ∈[-π/2, π/2]
+			y = r cosΦ sinθ    θ∈[0, 2π]
+			z = r sinΦ
+*	[流程]:
+		[1] 画纬度线
+		[2] 画经度线
+**-----------------------------------------------------------------------*/
+void RayTracing::drawSphere(Mat<double>& center, double r, int delta, Material* material) {
+	// 经纬度法
+	Mat<double> point(3, 1);
+	for (int i = 0; i < 360 / delta; i++) {
+		double theta = (i * delta) * 2.0 * PI / 360;
+		for (int j = -90 / delta; j <= 90 / delta; j++) {
+			double phi = (j * delta) * 2.0 * PI / 360;
+			point[0] = r * cos(phi) * cos(theta) + center[0];
+			point[1] = r * cos(phi) * sin(theta) + center[1];
+			point[2] = r * sin(phi) + center[2];
+		}
+	}
+}
+/*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
+*	[Referance]:
+		[1] Thanks and copyright for https://github.com/SebLague/Boids
+**---------------------------------------------------------------------------------------------------------*/
+void RayTracing::drawSphere2(Mat<double>& center, double r, int n, Material* material) {
+	// 均匀球面点
+	Mat<double> point(3, 1);
+	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
+	double angleIncrement = PI * 2 * goldenRatio;
+	for (int i = 0; i < 300; i++) {
+		double t = (double)i / n, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;
+		point[0] = center[0] + r * sin(inclination) * cos(azimuth);
+		point[1] = center[1] + r * sin(inclination) * sin(azimuth);
+		point[2] = center[2] + r * cos(inclination);
+	}
+}
+/*--------------------------------[ 画椭球 ]--------------------------------
+*	[公式]: (x/rx)² + (y/ry)² + (z/rz)² = 1
+		参数方程,点集:
+			x = rx cosΦ cosθ    Φ∈[-π/2, π/2]
+			y = ry cosΦ sinθ    θ∈[-π, π]
+			z = rz sinΦ
+*	[流程]:
+		[1] 画纬度线
+		[2] 画经度线
+**-----------------------------------------------------------------------*/
+void RayTracing::drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material) {
+	const int delta = 5;
+	Mat<double> point(3, 1);
+	for (int i = 0; i < 360 / delta; i++) {
+		double theta = (i * delta) * 2.0 * PI / 360;
+		for (int j = -90 / delta; j <= 90 / delta; j++) {
+			double phi = (j * delta) * 2.0 * PI / 360;
+			point[0] = r[0] * cos(phi) * cos(theta) + center[0];
+			point[1] = r[1] * cos(phi) * sin(theta) + center[1];
+			point[2] = r[2] * sin(phi) + center[2];
+		}
+	}
 }

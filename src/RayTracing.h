@@ -19,7 +19,7 @@ class RayTracing {
 public:
 	struct Material {															//材质
 		unsigned int color = 0;
-		double reflex, refraction;
+		double reflexRate = 1, refractionRate = 1;
 	};
 	struct Triangle {															//三角形
 		Mat<double> p[3];
@@ -31,6 +31,7 @@ public:
 	int maxRayLevel = 10;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
+	std::vector<Mat<double>> LightSource;										//材质集
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数
@@ -40,6 +41,25 @@ public:
 	void paint();																		//渲染
 	unsigned int traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level);
 	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection);	//求交点
+	//2-D
+	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material = NULL);							//画三角形
+	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL);											//画矩形
+	void drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//画四边形
+	void drawPolygon(Mat<double> p[], int n, Material* material = NULL);														//画多边形
+	void drawCircle(Mat<double>& center, double r, Mat<double>* direct = NULL);						//画圆
+	void drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct = NULL);		//画椭圆
+	void drawSurface(Mat<double> z, double xs, double xe, double ys, double ye);					//画曲面	
+	// 3-D
+	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//画四面体
+	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material = NULL);											//画矩体
+	void drawPolyhedron(Mat<double>* p, int n, Material* material = NULL);														//画多面体
+	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, Material* material = NULL);	//画圆台
+	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, Material* material = NULL);					//画圆柱
+	void drawSphere(Mat<double>& center, double r, int delta = 5, Material* material = NULL);									//画球
+	void drawSphere2(Mat<double>& center, double r, int n = 300, Material* material = NULL);									//画球
+	void drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material = NULL);											//画椭球
+	void drawBody(Mat<double>& center, Mat<double>& r, Material* material = NULL);												//画曲体
+	void drawBezierBody(Mat<double> p[], int n, Material* material = NULL);
 };
 
 #endif
