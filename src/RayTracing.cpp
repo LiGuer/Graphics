@@ -28,7 +28,7 @@ void RayTracing::paint() {
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
 	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
 	{ double t[] = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0],1,0 }; ScreenYVec.getData(t).normalization(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
-	ScreenXVec.crossProduct(ScreenYVec, ScreenVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
@@ -36,11 +36,12 @@ void RayTracing::paint() {
 		for (int y = 0; y < g.Canvas.cols; y++) {
 			//[3]
 			PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
-			Ray.add(ScreenVec, PixVec);
+			Ray.add(ScreenVec, PixVec).normalization();
 			RaySt.add(gCenter, PixVec);
 			//[4][5]
-			unsigned int color = traceRay(RaySt, Ray, 0);
-			g.setPoint(x, y, color);
+			RGB color(0);
+			traceRay(RaySt, Ray, color, 0);
+			g.setPoint(g.Canvas.rows - x, y, color.R * 0x10000 + color.G * 0x100 + color.B);
 		}
 	}
 }
@@ -52,7 +53,7 @@ void RayTracing::paint() {
 		[4] 如果该光线等级小于设定的阈值等级
 			计算三角形反射方向，将反射光线为基准重新计算
 -----------------------------------------------------------------------------*/
-unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level) {
+RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level) {
 	double minDistance = DBL_MAX;
 	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
 	Triangle closestTriangle;
@@ -66,25 +67,27 @@ unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int leve
 		}
 	}
 	//[4]
-	unsigned int color = 0;
 	if (minDistance != DBL_MAX && level < maxRayLevel) {
 		// Reflex Ray
+		double RayFaceCosAngle = FaceVec.dot(Ray);
+		if (RayFaceCosAngle > 0) FaceVec.negative(FaceVec);
 		Mat<double> Reflect;
-		Reflect.add(Ray, Reflect.add(FaceVec,Ray.negative(Reflect)));
-		color = traceRay(intersection, Reflect, level + 1);
+		Reflect.add(Reflect.mult(pow(1 / RayFaceCosAngle, 2), FaceVec), Ray).normalization();
+		traceRay(intersection, Reflect, color, level + 1);
 		// Reflex Rate
 		double k = closestTriangle.material->reflexRate;
-		double kR = k * (unsigned char)(closestTriangle.material->color >> 16) / 255.0;
-		double kG = k * (unsigned char)(closestTriangle.material->color >> 8) / 255.0;
-		double kB = k * (unsigned char)(closestTriangle.material->color) / 255.0;
-		color = (unsigned int)(kR * (unsigned char)(color >> 16)) * 0x10000
-			  + (unsigned int)(kG * (unsigned char)(color >> 8)) * 0x100
-			  + (unsigned int)(kB * (unsigned char)(color));
+		color.R *= k * closestTriangle.material->color.R / 255.0;
+		color.G *= k * closestTriangle.material->color.G / 255.0;
+		color.B *= k * closestTriangle.material->color.B / 255.0;
 	}
 	else {
+		Mat<double> Light;
 		for (int i = 0; i < LightSource.size(); i++) {
-			double LightSourceTheta = Ray.dot(LightSource[i]) / (Ray.norm() * LightSource[i].norm());
-			color = (unsigned int)(LightSourceTheta * 0xFF) * 0x10101 ;
+			Light.add(LightSource[i], Ray.negative(Light));
+			double LightSourceAngle = (Ray.dot(Light) / Light.norm() + 1) / 2;
+			color.R = 0xFF * LightSourceAngle;
+			color.G = 0xFF * LightSourceAngle;
+			color.B = 0xFF * LightSourceAngle;
 		}
 	}
 	return color;
@@ -98,7 +101,7 @@ unsigned int RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, int leve
 		平面方程: Af (X - Xf) + BY (Y - Yf) + C (Z - Zf) = 0
 		直线方程: (X - Xl) / Al = (Y - Yl) / Bl = (Z - Zl) / Cl = K
 		点面距:	d = |AXp + BYp + CZp + D| / sqrt(A² + B² + C²)
-		线面交点: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl)
+		线面交点: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl) 即光线走过线距离
 				  X = K Al + Xl
 ---------------------------------------------------------------------------*/
 double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection) {
@@ -106,11 +109,10 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	Mat<double> edge[2], tmp;
 	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
 	edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]));
-	FaceVec.crossProduct(edge[0], edge[1]);
+	FaceVec.crossProduct(edge[0], edge[1]).normalization();
 	//[2]
-	double K = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
-	intersection.add(tmp.mult(K, Ray), RaySt);
-	double RayFaceDistance = tmp.norm();
+	double RayFaceDistance = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
+	intersection.add(tmp.mult(RayFaceDistance, Ray), RaySt);
 	//[3]
 	Mat<double> tmpEdge; tmpEdge.add(intersection, triangle.p[0].negative(tmpEdge));
 	double inverDeno = 1 / (edge[0].dot(edge[0]) * edge[1].dot(edge[1]) - edge[0].dot(edge[1]) * edge[1].dot(edge[0]));

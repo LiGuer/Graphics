@@ -17,8 +17,20 @@ limitations under the License.
 
 class RayTracing {
 public:
+	struct RGB { 
+		unsigned char R, B, G; 
+		RGB(unsigned int a) { *this = a; }
+		RGB& operator=(const RGB& a) { R = a.R; B = a.B; G = a.G; return *this; }
+		RGB& operator=(unsigned int& a) { 
+			R = a >> 16; 
+			B = a >> 8; 
+			G = a;
+			return *this;
+		}
+
+	};
 	struct Material {															//材质
-		unsigned int color = 0;
+		RGB color = 0;
 		double reflexRate = 1, refractionRate = 1;
 	};
 	struct Triangle {															//三角形
@@ -39,7 +51,7 @@ public:
 	void init(int width, int height);											//初始化
 	/*---------------- DRAW ----------------*/
 	void paint();																		//渲染
-	unsigned int traceRay(Mat<double>& RaySt, Mat<double>& Ray, int level);
+	RGB traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level);
 	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection);	//求交点
 	//2-D
 	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material = NULL);							//画三角形
