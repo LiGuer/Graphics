@@ -18,16 +18,15 @@ limitations under the License.
 class RayTracing {
 public:
 	struct RGB { 
-		unsigned char R, B, G; 
+		unsigned char R, G, B; 
 		RGB(unsigned int a) { *this = a; }
-		RGB& operator=(const RGB& a) { R = a.R; B = a.B; G = a.G; return *this; }
+		RGB& operator=(const RGB& a) { R = a.R; G = a.G; B = a.B; return *this; }
 		RGB& operator=(unsigned int& a) { 
 			R = a >> 16; 
-			B = a >> 8; 
-			G = a;
+			G = a >> 8; 
+			B = a;
 			return *this;
 		}
-
 	};
 	struct Material {															//²ÄÖÊ
 		RGB color = 0;
