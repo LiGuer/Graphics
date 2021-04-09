@@ -39,7 +39,7 @@ void RayTracing::paint() {
 			Ray.add(ScreenVec, PixVec).normalization();
 			RaySt.add(gCenter, PixVec);
 			//[4][5]
-			RGB color(0);
+			RGB color(0xFFFFFF);
 			traceRay(RaySt, Ray, color, 0);
 			g.setPoint(g.Canvas.rows - x, y, color.R * 0x10000 + color.G * 0x100 + color.B);
 		}
@@ -47,11 +47,11 @@ void RayTracing::paint() {
 }
 /*--------------------------------[ 追踪光线 ]--------------------------------
 *	[算法]:
-			设面矢F, 入射光L, 且满足 角<L,F> > 90°
-			[反射光]: Lf = L + F·2 cos<L,F>
+			设面矢F, 入射光L
+			[反射光]: Lf = L - F·2 cos<L,F>
 			[折射光]: 折射率 sin α =  n·sin <L,F>
 					  Lz = L + F·sin(α - <L,F>) / sinα
-					     = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
+					     = n·L + n·F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 *	[过程]:
 		[1] 遍历三角形集合中的每一个三角形
 			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
@@ -67,18 +67,17 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		//[2][3]
 		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
-		if (distance > 0 && distance < minDistance) {
+		if (distance > 1 && distance < minDistance) {		//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 			minDistance = distance; closestTriangle = TriangleSet[i];
 			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
 	if (minDistance != DBL_MAX && level < maxRayLevel) {
-		double RayFaceCosAngle = FaceVec.dot(Ray);
 		if (closestTriangle.material->reflexRate != 0) {
 			// Reflex Ray
 			Mat<double> Reflect;
-			Reflect.add(Reflect.mult(2 * -RayFaceCosAngle, FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
+			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalization();
 			traceRay(intersection, Reflect, color, level + 1);
 			// Reflex Rate
 			double k = closestTriangle.material->reflexRate;
@@ -88,11 +87,10 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 		}
 		if (0&&closestTriangle.material->refractionRate != 0) {
 			// Refraction Ray
-			double k = closestTriangle.material->refractionRate;
-			if (RayFaceCosAngle > 0) FaceVec.negative(FaceVec);
 			Mat<double> Refraction;
 			RGB color_Refraction(0);
-			Refraction.add(Refraction.mult(fabs(RayFaceCosAngle) - sqrt(1 / k * k - 1 + RayFaceCosAngle * RayFaceCosAngle), FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
+			double k = closestTriangle.material->refractionRate;
+			//Refraction.add(Refraction.mult(fabs(RayFaceCosAngle) - sqrt(1 / k * k - 1 + RayFaceCosAngle * RayFaceCosAngle), FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
 			traceRay(intersection, Refraction, color_Refraction, level + 1);
 			// Refraction Rate
 			color.R *= color_Refraction.R / 0xFF * (double)closestTriangle.material->color.R / 0xFF;
@@ -101,7 +99,6 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 		}
 	}
 	else {
-		color = 0xFFFFFF;
 		double LightSourceAngle = 0;
 		Mat<double> Light;
 		for (int i = 0; i < LightSource.size(); i++) {
@@ -109,6 +106,7 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 			double LightSourceAngleTmp = (Ray.dot(Light) / Light.norm() + 1) / 2;
 			LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 		}
+		color = 0xFFFFFF;
 		color *= LightSourceAngle;
 	}
 	return color;
@@ -140,7 +138,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	double u = (edge[1].dot(edge[1]) * edge[0].dot(tmpEdge) - edge[0].dot(edge[1]) * edge[1].dot(tmpEdge)) * inverDeno;
 	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[1].dot(edge[0]) * edge[0].dot(tmpEdge)) * inverDeno;						
 	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
-	return  RayFaceDistance;
+	return RayFaceDistance;
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
