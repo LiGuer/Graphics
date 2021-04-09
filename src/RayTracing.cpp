@@ -46,6 +46,12 @@ void RayTracing::paint() {
 	}
 }
 /*--------------------------------[ 追踪光线 ]--------------------------------
+*	[算法]:
+			设面矢F, 入射光L, 且满足 角<L,F> > 90°
+			[反射光]: Lf = L + F·2 cos<L,F>
+			[折射光]: 折射率 sin α =  n·sin <L,F>
+					  Lz = L + F·sin(α - <L,F>) / sinα
+					     = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 *	[过程]:
 		[1] 遍历三角形集合中的每一个三角形
 			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
@@ -68,27 +74,42 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 	}
 	//[4]
 	if (minDistance != DBL_MAX && level < maxRayLevel) {
-		// Reflex Ray
 		double RayFaceCosAngle = FaceVec.dot(Ray);
-		if (RayFaceCosAngle > 0) FaceVec.negative(FaceVec);
-		Mat<double> Reflect;
-		Reflect.add(Reflect.mult(pow(1 / RayFaceCosAngle, 2), FaceVec), Ray).normalization();
-		traceRay(intersection, Reflect, color, level + 1);
-		// Reflex Rate
-		double k = closestTriangle.material->reflexRate;
-		color.R *= k * closestTriangle.material->color.R / 255.0;
-		color.G *= k * closestTriangle.material->color.G / 255.0;
-		color.B *= k * closestTriangle.material->color.B / 255.0;
+		if (closestTriangle.material->reflexRate != 0) {
+			// Reflex Ray
+			Mat<double> Reflect;
+			Reflect.add(Reflect.mult(2 * -RayFaceCosAngle, FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
+			traceRay(intersection, Reflect, color, level + 1);
+			// Reflex Rate
+			double k = closestTriangle.material->reflexRate;
+			color.R *= k * (double)closestTriangle.material->color.R / 0xFF;
+			color.G *= k * (double)closestTriangle.material->color.G / 0xFF;
+			color.B *= k * (double)closestTriangle.material->color.B / 0xFF;
+		}
+		if (0&&closestTriangle.material->refractionRate != 0) {
+			// Refraction Ray
+			double k = closestTriangle.material->refractionRate;
+			if (RayFaceCosAngle > 0) FaceVec.negative(FaceVec);
+			Mat<double> Refraction;
+			RGB color_Refraction(0);
+			Refraction.add(Refraction.mult(fabs(RayFaceCosAngle) - sqrt(1 / k * k - 1 + RayFaceCosAngle * RayFaceCosAngle), FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
+			traceRay(intersection, Refraction, color_Refraction, level + 1);
+			// Refraction Rate
+			color.R *= color_Refraction.R / 0xFF * (double)closestTriangle.material->color.R / 0xFF;
+			color.G *= color_Refraction.G / 0xFF * (double)closestTriangle.material->color.G / 0xFF;
+			color.B *= color_Refraction.B / 0xFF * (double)closestTriangle.material->color.B / 0xFF;
+		}
 	}
 	else {
+		color = 0xFFFFFF;
+		double LightSourceAngle = 0;
 		Mat<double> Light;
 		for (int i = 0; i < LightSource.size(); i++) {
-			Light.add(LightSource[i], Ray.negative(Light));
-			double LightSourceAngle = (Ray.dot(Light) / Light.norm() + 1) / 2;
-			color.R = 0xFF * LightSourceAngle;
-			color.G = 0xFF * LightSourceAngle;
-			color.B = 0xFF * LightSourceAngle;
+			Light.add(LightSource[i], RaySt.negative(Light));
+			double LightSourceAngleTmp = (Ray.dot(Light) / Light.norm() + 1) / 2;
+			LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 		}
+		color *= LightSourceAngle;
 	}
 	return color;
 }

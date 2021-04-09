@@ -27,6 +27,10 @@ public:
 			B = a;
 			return *this;
 		}
+		RGB& operator*=(double a) {
+			R *= a; G *= a; B *= a;
+			return *this;
+		}
 	};
 	struct Material {															//材质
 		RGB color = 0;
@@ -39,7 +43,7 @@ public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																	//核心图形学类
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
-	int maxRayLevel = 10;
+	int maxRayLevel = 20;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
 	std::vector<Mat<double>> LightSource;										//材质集
