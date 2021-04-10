@@ -33,6 +33,7 @@ void RayTracing::paint() {
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
 	for (int x = 0; x < g.Canvas.rows; x++) {
+		printf("%d\t", x);
 		for (int y = 0; y < g.Canvas.cols; y++) {
 			//[3]
 			PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
@@ -62,40 +63,40 @@ void RayTracing::paint() {
 RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level) {
 	double minDistance = DBL_MAX;
 	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
-	Triangle closestTriangle;
+	Material* intersectMaterial = NULL;
 	//[1]
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		//[2][3]
 		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
 		if (distance > 1 && distance < minDistance) {		//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
-			minDistance = distance; closestTriangle = TriangleSet[i];
+			minDistance = distance; intersectMaterial = TriangleSet[i].material;
 			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
-	if (minDistance != DBL_MAX && level < maxRayLevel) {
-		if (closestTriangle.material->reflexRate != 0) {
+	if (minDistance != DBL_MAX && level < maxRayLevel && intersectMaterial != NULL) {
+		if (intersectMaterial->reflexRate != 0) {
 			// Reflex Ray
 			Mat<double> Reflect;
 			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalization();
 			traceRay(intersection, Reflect, color, level + 1);
 			// Reflex Rate
-			double k = closestTriangle.material->reflexRate;
-			color.R *= k * (double)closestTriangle.material->color.R / 0xFF;
-			color.G *= k * (double)closestTriangle.material->color.G / 0xFF;
-			color.B *= k * (double)closestTriangle.material->color.B / 0xFF;
+			double k = intersectMaterial->reflexRate;
+			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
+			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
+			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
 		}
-		if (0&&closestTriangle.material->refractionRate != 0) {
+		if (0&& intersectMaterial->refractionRate != 0) {
 			// Refraction Ray
 			Mat<double> Refraction;
 			RGB color_Refraction(0);
-			double k = closestTriangle.material->refractionRate;
+			double k = intersectMaterial->refractionRate;
 			//Refraction.add(Refraction.mult(fabs(RayFaceCosAngle) - sqrt(1 / k * k - 1 + RayFaceCosAngle * RayFaceCosAngle), FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
 			traceRay(intersection, Refraction, color_Refraction, level + 1);
 			// Refraction Rate
-			color.R *= color_Refraction.R / 0xFF * (double)closestTriangle.material->color.R / 0xFF;
-			color.G *= color_Refraction.G / 0xFF * (double)closestTriangle.material->color.G / 0xFF;
-			color.B *= color_Refraction.B / 0xFF * (double)closestTriangle.material->color.B / 0xFF;
+			color.R *= color_Refraction.R / 0xFF * (double)intersectMaterial->color.R / 0xFF;
+			color.G *= color_Refraction.G / 0xFF * (double)intersectMaterial->color.G / 0xFF;
+			color.B *= color_Refraction.B / 0xFF * (double)intersectMaterial->color.B / 0xFF;
 		}
 	}
 	else {
@@ -122,8 +123,30 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 		点面距:	d = |AXp + BYp + CZp + D| / sqrt(A² + B² + C²)
 		线面交点: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl) 即光线走过线距离
 				  X = K Al + Xl
+		球方程: (X - Xs)² + (Y - Ys)² + (Z - Zs)² = R²
+		线球交点: K²(Al² + Bl² + Cl²) + 2K(Al ΔX + Bl ΔY + Cl ΔZ) + (ΔX² + ΔY² + ΔZ² - R²) = 0
+				  ΔX = Xl - Xs
+				  Δ = b² - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)² - 4(Al² + Bl² + Cl²)(ΔX² + ΔY² + ΔZ² - R²)
+				  若Δ≥0 有交点.
+				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
 ---------------------------------------------------------------------------*/
 double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection) {
+	// Sphere Seek Intersection
+	if (triangle.p[2][0] == NULL) {
+		// 计算ΔX、Δ
+		double R = triangle.p[1][0], Delta;
+		Mat<double> RayStCenter;
+		RayStCenter.add(RaySt, triangle.p[0].negative(RayStCenter));
+		Delta = 4 * pow(Ray.dot(RayStCenter), 2) - 4 * Ray.dot(Ray) * (RayStCenter.dot(RayStCenter) - R * R);
+		if (Delta < 0) return -1;
+		// 有交点，计算RayFaceDistance、intersection、FaceVec
+		double RayFaceDistance = -2 * Ray.dot(RayStCenter);
+		RayFaceDistance += RayFaceDistance - sqrt(Delta) > 0 ? -sqrt(Delta) : +sqrt(Delta);
+		RayFaceDistance /= 2 * Ray.dot(Ray);
+		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
+		FaceVec.add(intersection, triangle.p[0].negative(FaceVec)).normalization();
+		return RayFaceDistance;
+	}
 	//[1]
 	Mat<double> edge[2], tmp;
 	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
@@ -131,7 +154,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	FaceVec.crossProduct(edge[0], edge[1]).normalization();
 	//[2]
 	double RayFaceDistance = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
-	intersection.add(tmp.mult(RayFaceDistance, Ray), RaySt);
+	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
 	//[3]
 	Mat<double> tmpEdge; tmpEdge.add(intersection, triangle.p[0].negative(tmpEdge));
 	double inverDeno = 1 / (edge[0].dot(edge[0]) * edge[1].dot(edge[1]) - edge[0].dot(edge[1]) * edge[1].dot(edge[0]));
@@ -147,7 +170,7 @@ void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 	triangle.p[1] = p2;
 	triangle.p[2] = p3;
 	triangle.material = material;
-	TriangleSet.push_back(triangle);
+	TriangleSet.push_back(triangle); 
 }
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void RayTracing::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
@@ -277,18 +300,11 @@ void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void RayTracing::drawSphere(Mat<double>& center, double r, int delta, Material* material) {
+void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
 	// 经纬度法
-	Mat<double> point(3, 1);
-	for (int i = 0; i < 360 / delta; i++) {
-		double theta = (i * delta) * 2.0 * PI / 360;
-		for (int j = -90 / delta; j <= 90 / delta; j++) {
-			double phi = (j * delta) * 2.0 * PI / 360;
-			point[0] = r * cos(phi) * cos(theta) + center[0];
-			point[1] = r * cos(phi) * sin(theta) + center[1];
-			point[2] = r * sin(phi) + center[2];
-		}
-	}
+	Mat<double> p1(3, 1), p2 = (3, 1);
+	p1[0] = p1[1] = p1[2] = r; p2[0] = NULL;
+	drawTriangle(center, p1, p2, material); 
 }
 /*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
 *	[Referance]:

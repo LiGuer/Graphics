@@ -121,7 +121,8 @@ void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = Tr
 
 ### API <RayTracing.h>:
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing.png) 
-
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing-Shpere.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing2.png) 
 ## Reference
 * [1].Computer Graphics with OpenGL. Donald Hearn, M. Pauline Baker, Warren R. Carithers
 * [2].正点原子-STM32

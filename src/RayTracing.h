@@ -70,7 +70,7 @@ public:
 	void drawPolyhedron(Mat<double>* p, int n, Material* material = NULL);														//»­¶àÃæÌå
 	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, Material* material = NULL);	//»­Ô²Ì¨
 	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, Material* material = NULL);					//»­Ô²Öù
-	void drawSphere(Mat<double>& center, double r, int delta = 5, Material* material = NULL);									//»­Çò
+	void drawSphere(Mat<double>& center, double r, Material* material = NULL);													//»­Çò
 	void drawSphere2(Mat<double>& center, double r, int n = 300, Material* material = NULL);									//»­Çò
 	void drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material = NULL);											//»­ÍÖÇò
 	void drawBody(Mat<double>& center, Mat<double>& r, Material* material = NULL);												//»­ÇúÌå
