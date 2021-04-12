@@ -79,8 +79,8 @@ public:
 	void contourface(Mat<double>& map, const int N);																				//画等高面
 	Graphics::ARGB colorlist(double index, int model);																				//色谱
 	/*---------------- Transformation ----------------*/
-	void translation(Mat<double>& delta, Mat<double>& transMat = TransformMat);														//平移
-	void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat = TransformMat);					//旋转
-	void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = TransformMat);									//缩放
+	static void translation(Mat<double>& delta, Mat<double>& transMat = TransformMat);														//平移
+	static void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat = TransformMat);					//旋转
+	static void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = TransformMat);									//缩放
 };
 #endif

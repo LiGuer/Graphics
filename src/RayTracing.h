@@ -34,7 +34,7 @@ public:
 	};
 	struct Material {															//²ÄÖÊ
 		RGB color = 0;
-		double reflexRate = 1, refractionRate = 1;
+		double reflexRate = 1, refractionRate = 0;
 	};
 	struct Triangle {															//Èı½ÇĞÎ
 		Mat<double> p[3];

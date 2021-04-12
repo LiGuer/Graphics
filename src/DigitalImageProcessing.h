@@ -1,4 +1,4 @@
-/*
+ï»¿/*
 Copyright 2020 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,164 +18,178 @@ limitations under the License.
 #include "../LiGu_AlgorithmLib/BasicMachineLearning.h"
 #include "../opencv2-include/opencv2/opencv.hpp"
 #pragma comment(lib,"opencv2-include/opencv_world430.lib")
+#define PI 3.141592653589
 
 namespace DigitalImageProcessing {
-#define PI 3.141592653589
-	struct RGB { double R, G, B; };
-	/*--------------------------------[ Í¼ÏñÊäÈë/Êä³ö ]--------------------------------*/
-	Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
-		cv::Mat input = cv::imread(inputImgUrl, cv::IMREAD_COLOR);
-		for (int k = 0; k < 3; k++) data[k].zero(input.rows, input.cols);
 
-		for (int i = 0; i < input.rows * input.cols; i++) {
-			cv::MatIterator_<cv::Vec3b> it = input.begin<cv::Vec3b>() + i;
-			for (int k = 0; k < 3; k++)  data[2 - k][i] = (double)(*it)[k] / 255;
-		}
-		return data;
+struct RGB { double R, G, B; };
+/*************************************************************************************************
+*								å›¾åƒè¾“å…¥/è¾“å‡º
+*	[å®šä¹‰]: Zn+1 = ZnÂ² + C
+			æ‰€æœ‰èƒ½ä½¿Zn+1ä¸å‘æ•£çš„å¤æ•°ç‚¹C, æ‰€æ„æˆçš„é›†åˆ,å³ Mandelbrot Set
+			(ä¸å‘æ•£,ä¸ä¸€å®šæ”¶æ•›,æœ‰å¯èƒ½åœ¨å‡ ä¸ªä¸åŒç‚¹æ¥å›è·³)
+*	[æ€§è´¨]: |Zn|>2ä¸å¯èƒ½æ”¶æ•›, å³Mandelbrot Setåœ¨åŠå¾„ä¸º2çš„åœ†å†….
+*************************************************************************************************/
+Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
+	cv::Mat input = cv::imread(inputImgUrl, cv::IMREAD_COLOR);
+	for (int k = 0; k < 3; k++) data[k].zero(input.rows, input.cols);
+
+	for (int i = 0; i < input.rows * input.cols; i++) {
+		cv::MatIterator_<cv::Vec3b> it = input.begin<cv::Vec3b>() + i;
+		for (int k = 0; k < 3; k++)  data[2 - k][i] = (double)(*it)[k] / 255;
 	}
-	void Output(const char* outputImgUrl, Mat<double>* data) {
-		unsigned char* output = (unsigned char*)calloc(data[0].cols * data[0].rows * 3, sizeof(unsigned char));
-		for (int i = 0; i < data[0].rows * data[0].cols; i++)
+	return data;
+}
+void Output(const char* outputImgUrl, Mat<double>* data) {
+	unsigned char* output = (unsigned char*)calloc(data[0].cols * data[0].rows * 3, sizeof(unsigned char));
+	for (int i = 0; i < data[0].rows * data[0].cols; i++)
+		for (int k = 0; k < 3; k++)
+			output[i * 3 + k] = (data[k])[i] * 255;
+	FILE* fp = fopen(outputImgUrl, "wb");
+	fprintf(fp, "P6\n%d %d\n255\n", data[0].cols, data[0].rows);	// å†™å›¾ç‰‡æ ¼å¼ã€å®½é«˜ã€æœ€å¤§åƒç´ å€¼
+	fwrite(output, 1, data[0].cols * data[0].rows * 3, fp);	// å†™RGBæ•°æ®
+	fclose(fp);
+	free(output);
+}
+void Output(const char* outputImgUrl, Mat<double>& data) {
+	unsigned char* output = (unsigned char*)calloc(data.cols * data.rows, sizeof(unsigned char));
+	for (int i = 0; i < data.rows * data.cols; i++)
 			for (int k = 0; k < 3; k++)
-				output[i * 3 + k] = (data[k])[i] * 255;
-		FILE* fp = fopen(outputImgUrl, "wb");
-		fprintf(fp, "P6\n%d %d\n255\n", data[0].cols, data[0].rows);	// Ğ´Í¼Æ¬¸ñÊ½¡¢¿í¸ß¡¢×î´óÏñËØÖµ
-		fwrite(output, 1, data[0].cols * data[0].rows * 3, fp);	// Ğ´RGBÊı¾İ
-		fclose(fp);
-		free(output);
+				output[i] = data[i] * 255;
+	FILE* fp = fopen(outputImgUrl, "wb");
+	fprintf(fp, "P5\n%d %d\n255\n", data.cols, data.rows);	// å†™å›¾ç‰‡æ ¼å¼ã€å®½é«˜ã€æœ€å¤§åƒç´ å€¼
+	fwrite(output, 1, data.cols * data.rows, fp);	// å†™RGBæ•°æ®
+	fclose(fp);
+	free(output);
+}
+/*************************************************************************************************
+*								äºŒå€¼åŒ–
+*	[ç›®çš„]: åŸºäºé˜ˆå€¼ï¼Œå°†å›¾åƒç®€åŒ–ä¸ºçº¯é»‘ç™½å›¾.
+*	[å…¬å¼]: BinarizationImage = Image > threshold ? 1 : 0;
+*************************************************************************************************/
+Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double threshold = 0.5) {
+	output.zero(input.rows, input.cols);
+	for (int i = 0; i < input.rows * input.cols; i++)
+		output[i] = input[i] > threshold ? 1 : 0;
+	return output;
+}
+/*************************************************************************************************
+*								é¢œè‰²èšç±»
+*	[ç›®çš„]: ç®€åŒ–èšç±»å›¾åƒä¸­çš„è‰²å½©.
+*	[ç®—æ³•]: K-Meanå‡å€¼èšç±»
+*************************************************************************************************/
+Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, int TimesMax = 0x7FFFFFFF) {
+	// Process input & output
+	Mat<double> data(3, input[0].rows * input[0].cols);
+	for (int k = 0; k < 3; k++)
+		for (int i = 0; i < input[0].rows; i++)
+			for (int j = 0; j < input[0].cols; j++)
+				data(k, i * input[0].cols + j) = (input[k])(i, j);
+	for (int k = 0; k < 3; k++) output[k].zero(input[0].rows, input[0].cols);
+	// Color Cluster
+	time_t now; srand((unsigned)time(&now));
+	Mat<double> Center;
+	Mat<int> Cluster, Cluster_Cur;
+	K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
+	for (int i = 0; i < K; i++)
+		for (int j = 0; j < Cluster_Cur[i]; j++)
+			for (int dim = 0; dim < 3; dim++)
+				(output[dim])(Cluster(i, j) / output[0].cols, Cluster(i, j) % output[0].cols) = Center(dim, i);
+	return output;
+}
+/*************************************************************************************************
+*								è¾¹ç¼˜æ£€æµ‹
+*	[ç›®çš„]: æ ‡è¯†æ•°å­—å›¾åƒä¸­äº®åº¦å˜åŒ–æ˜æ˜¾çš„ç‚¹.
+*	[å…¬å¼]: EdgeImage = Conv(Image , SobelKernel)
+*************************************************************************************************/
+Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
+	Mat<double> SobelKernel(3, 3);
+	{
+		double t[] = {
+			-1,0,1,
+			-2,0,2,
+			-1,0,1
+		}; SobelKernel.getData(t);
 	}
-	void Output(const char* outputImgUrl, Mat<double>& data) {
-		unsigned char* output = (unsigned char*)calloc(data.cols * data.rows, sizeof(unsigned char));
-		for (int i = 0; i < data.rows * data.cols; i++)
-				for (int k = 0; k < 3; k++)
-					output[i] = data[i] * 255;
-		FILE* fp = fopen(outputImgUrl, "wb");
-		fprintf(fp, "P5\n%d %d\n255\n", data.cols, data.rows);	// Ğ´Í¼Æ¬¸ñÊ½¡¢¿í¸ß¡¢×î´óÏñËØÖµ
-		fwrite(output, 1, data.cols * data.rows, fp);	// Ğ´RGBÊı¾İ
-		fclose(fp);
-		free(output);
-	}
-	/*--------------------------------[ ¶şÖµ»¯ ]--------------------------------
-	[Ä¿µÄ]: »ùÓÚãĞÖµ£¬½«Í¼Ïñ¼ò»¯Îª´¿ºÚ°×Í¼.
-	[¹«Ê½]: BinarizationImage = Image > threshold ? 1 : 0;
-	---------------------------------------------------------------------------*/
-	Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double threshold = 0.5) {
-		output.zero(input.rows, input.cols);
-		for (int i = 0; i < input.rows * input.cols; i++)
-			output[i] = input[i] > threshold ? 1 : 0;
-		return output;
-	}
-	/*--------------------------------[ ÑÕÉ«¾ÛÀà ]--------------------------------
-	[Ä¿µÄ]: ¼ò»¯¾ÛÀàÍ¼ÏñÖĞµÄÉ«²Ê.
-	[Ëã·¨]: K-Mean¾ùÖµ¾ÛÀà
-	-----------------------------------------------------------------------------*/
-	Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, int TimesMax = 0x7FFFFFFF) {
-		// Process input & output
-		Mat<double> data(3, input[0].rows * input[0].cols);
-		for (int k = 0; k < 3; k++)
-			for (int i = 0; i < input[0].rows; i++)
-				for (int j = 0; j < input[0].cols; j++)
-					data(k, i * input[0].cols + j) = (input[k])(i, j);
-		for (int k = 0; k < 3; k++) output[k].zero(input[0].rows, input[0].cols);
-		// Color Cluster
-		time_t now; srand((unsigned)time(&now));
-		Mat<double> Center;
-		Mat<int> Cluster, Cluster_Cur;
-		K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
-		for (int i = 0; i < K; i++)
-			for (int j = 0; j < Cluster_Cur[i]; j++)
-				for (int dim = 0; dim < 3; dim++)
-					(output[dim])(Cluster(i, j) / output[0].cols, Cluster(i, j) % output[0].cols) = Center(dim, i);
-		return output;
-	}
-	/*--------------------------------[ ±ßÔµ¼ì²â ]--------------------------------
-	[Ä¿µÄ]: ±êÊ¶Êı×ÖÍ¼ÏñÖĞÁÁ¶È±ä»¯Ã÷ÏÔµÄµã.
-	[¹«Ê½]: EdgeImage = Conv(Image , SobelKernel)
-	-----------------------------------------------------------------------------*/
-	Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
-		Mat<double> SobelKernel(3, 3);
-		{
-			double t[] = {
-				-1,0,1,
-				-2,0,2,
-				-1,0,1
-			}; SobelKernel.getData(t);
+	Mat<double> output_x, output_y;
+	output_x.conv(input, SobelKernel, 1);
+	output_y.conv(input, SobelKernel.transposi(output_y), 1);
+	output.zero(input.rows, input.cols);
+	for (int i = 0; i < input.rows * input.cols; i++)
+		output[i] = sqrt(output_x[i] * output_x[i] + output_y[i] * output_y[i]);
+	return output;
+}
+/*************************************************************************************************
+*								å‚…é‡Œå¶å˜æ¢
+*	[ç›®çš„]: è½¬é¢‘åŸŸå›¾åƒ.
+*************************************************************************************************/
+Mat<double>& FourierTransform(Mat<double>& input, Mat<double>& output) {
+	return output;
+}
+Mat<double>& InvFourierTransform(Mat<double>& input, Mat<double>& output) {
+	return output;
+}
+/*************************************************************************************************
+*								Gauss æ»¤æ³¢
+* [è¾“å…¥]: input: è¾“å…¥åŸå›¾ dst: æ¨¡ç³Šå›¾åƒ  size: æ ¸çš„å¤§å°  sigma: æ­£æ€åˆ†å¸ƒæ ‡å‡†å·®
+*************************************************************************************************/
+Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
+	if (size <= 0 || sigma == 0)return output;
+	//äºŒç»´Gaussæ ¸ç”Ÿæˆ
+	Mat<double> kernel(size, size);
+	double sum = 0;
+	for (int y = 0; y < size; y++) {
+		for (int x = 0; x < size; x++) {
+			kernel(x, y) = (1 / (2 * PI * sigma * sigma))
+				* exp(-((x - size / 2) * (x - size / 2) + (y - size / 2) * (y - size / 2)) / (2 * sigma * sigma));
+			sum += kernel(x, y);
 		}
-		Mat<double> output_x, output_y;
-		output_x.conv(input, SobelKernel, 1);
-		output_y.conv(input, SobelKernel.transposi(output_y), 1);
-		output.zero(input.rows, input.cols);
-		for (int i = 0; i < input.rows * input.cols; i++)
-			output[i] = sqrt(output_x[i] * output_x[i] + output_y[i] * output_y[i]);
-		return output;
 	}
-	/*--------------------------------[ ¸µÀïÒ¶±ä»» ]--------------------------------
-	[Ä¿µÄ]: ×ªÆµÓòÍ¼Ïñ.
-	-------------------------------------------------------------------------------*/
-	Mat<double>& FourierTransform(Mat<double>& input, Mat<double>& output) {
-		return output;
-	}
-	Mat<double>& InvFourierTransform(Mat<double>& input, Mat<double>& output) {
-		return output;
-	}
-	/*--------------------------------[ Gauss ÂË²¨ ]--------------------------------
-	* [ÊäÈë]: input: ÊäÈëÔ­Í¼ dst: Ä£ºıÍ¼Ïñ  size: ºËµÄ´óĞ¡  sigma: ÕıÌ¬·Ö²¼±ê×¼²î
-	--------------------------------------------------------------------------------*/
-	Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
-		if (size <= 0 || sigma == 0)return output;
-		//¶şÎ¬GaussºËÉú³É
-		Mat<double> kernel(size, size);
-		double sum = 0;
-		for (int y = 0; y < size; y++) {
-			for (int x = 0; x < size; x++) {
-				kernel(x, y) = (1 / (2 * PI * sigma * sigma))
-					* exp(-((x - size / 2) * (x - size / 2) + (y - size / 2) * (y - size / 2)) / (2 * sigma * sigma));
-				sum += kernel(x, y);
-			}
-		}
-		kernel.mult(1 / sum, kernel);
-		//Gauss¾í»ı
-		output.conv(input, kernel, 1);
-		return output;
-	}
-	/*--------------------------------[ ×ª»Ò¶ÈÍ¼ ]--------------------------------
-	[Ä¿µÄ]: RGBÈıÍ¨µÀºÏ²¢Îª»Ò¶ÈÒ»Í¨µÀ
-	[¹«Ê½]: Gray = 0.3 R + 0.59 G + 0.11 B
-	-----------------------------------------------------------------------------*/
-	Mat<double>& Gray(Mat<double>* input, Mat<double>& output, double Rk = 0.3, double Gk = 0.59, double Bk = 0.11) {
-		output.zero(input[0].rows, input[0].cols);
-		Mat<double> tmp;
-		output.add(output, tmp.mult(Rk / (Rk + Gk + Bk), input[0]));
-		output.add(output, tmp.mult(Gk / (Rk + Gk + Bk), input[1]));
-		output.add(output, tmp.mult(Bk / (Rk + Gk + Bk), input[2]));
-		return output;
-	}
-	/*--------------------------------[ Ö±·½Í¼ ]--------------------------------
-	* [Ä¿µÄ]: Í³¼Æ[0,255]ÁÁ¶ÈµÄÏñËØ¸öÊı·Ö²¼.
-	---------------------------------------------------------------------------*/
-	Mat<int>& Histograms(Mat<double>& input, Mat<double>& output) {
-		output.zero(255, 1);
-		for (int i = 0; i < input.rows; i++)
-			for (int j = 0; j < input.cols; j++)
-				output[(unsigned char)(input(i, j) * 255)]++;
-	}
-	Mat<int>& Histograms(Mat<double>* input, Mat<double>& output) {
-		output.zero(255, 3);
-		for (int k = 0; k < 3; k++)
-			for (int i = 0; i < input->rows; i++)
-				for (int j = 0; j < input->cols; j++)
-					output((unsigned char)(input[k](i, j) * 255), k)++;
-	}
-	/*--------------------------------[ ·´Ïà ]--------------------------------
-	[Ä¿µÄ]: ËùÓĞÑÕÉ«»»³ÉÆä²¹É«
-	[¹«Ê½]: InvImage = 1 - Image
-	-------------------------------------------------------------------------*/
-	Mat<double>& Invert(Mat<double>& input, Mat<double>& output) {
-		output.mult(1, input.negative(output)); return output;
-	}
-	Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
-		for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
-	}
+	kernel.mult(1 / sum, kernel);
+	//Gausså·ç§¯
+	output.conv(input, kernel, 1);
+	return output;
+}
+/*************************************************************************************************
+*								è½¬ç°åº¦å›¾
+*	[ç›®çš„]: RGBä¸‰é€šé“åˆå¹¶ä¸ºç°åº¦ä¸€é€šé“
+*	[å…¬å¼]: Gray = 0.3 R + 0.59 G + 0.11 B
+*************************************************************************************************/
+Mat<double>& Gray(Mat<double>* input, Mat<double>& output, double Rk = 0.3, double Gk = 0.59, double Bk = 0.11) {
+	output.zero(input[0].rows, input[0].cols);
+	Mat<double> tmp;
+	output.add(output, tmp.mult(Rk / (Rk + Gk + Bk), input[0]));
+	output.add(output, tmp.mult(Gk / (Rk + Gk + Bk), input[1]));
+	output.add(output, tmp.mult(Bk / (Rk + Gk + Bk), input[2]));
+	return output;
+}
+/*************************************************************************************************
+*								ç›´æ–¹å›¾
+* [ç›®çš„]: ç»Ÿè®¡[0,255]äº®åº¦çš„åƒç´ ä¸ªæ•°åˆ†å¸ƒ.
+*************************************************************************************************/
+Mat<int>& Histograms(Mat<double>& input, Mat<double>& output) {
+	output.zero(1, 255);
+	for (int i = 0; i < input.rows; i++)
+		for (int j = 0; j < input.cols; j++)
+			output[(unsigned char)(input(i, j) * 255)]++;
+}
+Mat<int>& Histograms(Mat<double>* input, Mat<double>& output) {
+	output.zero(3, 255);
+	for (int k = 0; k < 3; k++)
+		for (int i = 0; i < input->rows; i++)
+			for (int j = 0; j < input->cols; j++)
+				output(k, (unsigned char)(input[k](i, j) * 255))++;
+}
+/*--------------------------------[ åç›¸ ]--------------------------------
+[ç›®çš„]: æ‰€æœ‰é¢œè‰²æ¢æˆå…¶è¡¥è‰²
+[å…¬å¼]: InvImage = 1 - Image
+-------------------------------------------------------------------------*/
+Mat<double>& Invert(Mat<double>& input, Mat<double>& output) {
+	output.mult(1, input.negative(output)); return output;
+}
+Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
+	for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
+}
 }
 /*//Example
 int main() {

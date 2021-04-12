@@ -52,7 +52,7 @@ void RayTracing::paint() {
 			[反射光]: Lf = L - F·2 cos<L,F>
 			[折射光]: 折射率 sin α =  n·sin <L,F>
 					  Lz = L + F·sin(α - <L,F>) / sinα
-					     = n·L + n·F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
+					     = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 *	[过程]:
 		[1] 遍历三角形集合中的每一个三角形
 			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
@@ -86,17 +86,23 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
 			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
 		}
-		if (0&& intersectMaterial->refractionRate != 0) {
+		if (intersectMaterial->refractionRate != 0) {
 			// Refraction Ray
-			Mat<double> Refraction;
-			RGB color_Refraction(0);
-			double k = intersectMaterial->refractionRate;
-			//Refraction.add(Refraction.mult(fabs(RayFaceCosAngle) - sqrt(1 / k * k - 1 + RayFaceCosAngle * RayFaceCosAngle), FaceVec), Ray).normalization();	//if RayFaceCosAngle > 0, FaceVec =- FaceVec
-			traceRay(intersection, Refraction, color_Refraction, level + 1);
-			// Refraction Rate
-			color.R *= color_Refraction.R / 0xFF * (double)intersectMaterial->color.R / 0xFF;
-			color.G *= color_Refraction.G / 0xFF * (double)intersectMaterial->color.G / 0xFF;
-			color.B *= color_Refraction.B / 0xFF * (double)intersectMaterial->color.B / 0xFF;
+			Mat<double> Refraction, tmp;
+			double rate = intersectMaterial->refractionRate;
+			double Cos = FaceVec.dot(Ray);
+			double CosAlpha = 1 - rate * rate * (1 - Cos * Cos);
+			if (CosAlpha >= 0) {
+				CosAlpha = sqrt(CosAlpha);
+				//Refraction.add(Refraction.mult(rate, Refraction.add(Ray, Refraction.mult(-Cos, FaceVec))), tmp.mult(-CosAlpha * (Cos > 0 ? -1 : 1), FaceVec));
+				Refraction.add(Refraction.mult(Cos - (Cos > 0 ? -1 : 1) * CosAlpha / rate, FaceVec), Ray).normalization();
+				intersection.add(tmp.mult(0.1, Refraction), intersection);
+				traceRay(intersection, Refraction, color, level + 1);
+				// Refraction Rate
+				color.R *= (double)intersectMaterial->color.R / 0xFF;
+				color.G *= (double)intersectMaterial->color.G / 0xFF;
+				color.B *= (double)intersectMaterial->color.B / 0xFF;
+			}
 		}
 	}
 	else {
