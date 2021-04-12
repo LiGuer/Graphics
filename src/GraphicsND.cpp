@@ -700,7 +700,7 @@ void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 	}
 	if (transMat.rows - 1 == 3) { //三维 S03·四元数
 		Mat<double> q(transMat.rows, 1);
-		rotateAxis.normalization();
+		rotateAxis.normalized();
 		q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
 		// rotate mat
 		for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];

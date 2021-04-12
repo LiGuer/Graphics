@@ -27,8 +27,8 @@ void RayTracing::paint() {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
 	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
-	{ double t[] = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0],1,0 }; ScreenYVec.getData(t).normalization(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
-	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalization();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	{ double t[] = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0],1,0 }; ScreenYVec.getData(t).normalized(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
@@ -37,7 +37,7 @@ void RayTracing::paint() {
 		for (int y = 0; y < g.Canvas.cols; y++) {
 			//[3]
 			PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
-			Ray.add(ScreenVec, PixVec).normalization();
+			Ray.add(ScreenVec, PixVec).normalized();
 			RaySt.add(gCenter, PixVec);
 			//[4][5]
 			RGB color(0xFFFFFF);
@@ -49,8 +49,10 @@ void RayTracing::paint() {
 /*--------------------------------[ 追踪光线 ]--------------------------------
 *	[算法]:
 			设面矢F, 入射光L
-			[反射光]: Lf = L - F·2 cos<L,F>
-			[折射光]: 折射率 sin α =  n·sin <L,F>
+			[反射光]: 反射定律: 入射角 == 反射角
+					  Lf = L - F·2 cos<L,F>
+			[折射光]: 折射定律: n1·sinθ1 = n2·sinθ2 
+					  => sin α =  n·sin <L,F>  ,  n = n入 / n折
 					  Lz = L + F·sin(α - <L,F>) / sinα
 					     = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 *	[过程]:
@@ -68,34 +70,35 @@ RayTracing::RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& 
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		//[2][3]
 		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
-		if (distance > 1 && distance < minDistance) {		//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
+		if (distance > 0.1 && distance < minDistance) {		//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 			minDistance = distance; intersectMaterial = TriangleSet[i].material;
 			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
 	if (minDistance != DBL_MAX && level < maxRayLevel && intersectMaterial != NULL) {
-		if (intersectMaterial->reflexRate != 0) {
+		if (intersectMaterial->reflectance != 0) {
 			// Reflex Ray
 			Mat<double> Reflect;
-			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalization();
+			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
 			traceRay(intersection, Reflect, color, level + 1);
 			// Reflex Rate
-			double k = intersectMaterial->reflexRate;
+			double k = intersectMaterial->reflectance;
 			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
 			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
 			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
 		}
-		if (intersectMaterial->refractionRate != 0) {
+		if (intersectMaterial->refractiveIndex != 0) {
 			// Refraction Ray
 			Mat<double> Refraction, tmp;
-			double rate = intersectMaterial->refractionRate;
+			double rate = intersectMaterial->refractiveIndex == refractiveIndexBuffer ?
+							refractiveIndexBuffer : refractiveIndexBuffer / intersectMaterial->refractiveIndex;
+			refractiveIndexBuffer = refractiveIndexBuffer == intersectMaterial->refractiveIndex ? 1 : intersectMaterial->refractiveIndex;
 			double Cos = FaceVec.dot(Ray);
 			double CosAlpha = 1 - rate * rate * (1 - Cos * Cos);
 			if (CosAlpha >= 0) {
 				CosAlpha = sqrt(CosAlpha);
-				//Refraction.add(Refraction.mult(rate, Refraction.add(Ray, Refraction.mult(-Cos, FaceVec))), tmp.mult(-CosAlpha * (Cos > 0 ? -1 : 1), FaceVec));
-				Refraction.add(Refraction.mult(Cos - (Cos > 0 ? -1 : 1) * CosAlpha / rate, FaceVec), Ray).normalization();
+				Refraction.add(Refraction.mult(rate, Ray), tmp.mult((Cos > 0 ? 1 : -1)* CosAlpha - rate * Cos, FaceVec)).normalized();
 				intersection.add(tmp.mult(0.1, Refraction), intersection);
 				traceRay(intersection, Refraction, color, level + 1);
 				// Refraction Rate
@@ -150,14 +153,14 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 		RayFaceDistance += RayFaceDistance - sqrt(Delta) > 0 ? -sqrt(Delta) : +sqrt(Delta);
 		RayFaceDistance /= 2 * Ray.dot(Ray);
 		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
-		FaceVec.add(intersection, triangle.p[0].negative(FaceVec)).normalization();
+		FaceVec.add(intersection, triangle.p[0].negative(FaceVec)).normalized();
 		return RayFaceDistance;
 	}
 	//[1]
 	Mat<double> edge[2], tmp;
 	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
 	edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]));
-	FaceVec.crossProduct(edge[0], edge[1]).normalization();
+	FaceVec.crossProduct(edge[0], edge[1]).normalized();
 	//[2]
 	double RayFaceDistance = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
 	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
