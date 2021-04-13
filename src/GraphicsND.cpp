@@ -25,7 +25,7 @@ void GraphicsND::init(int width, int height, int Dim) {
 		Z_Buffer[i].zero(g.Canvas.rows, g.Canvas.cols);
 	clear(0);
 }
-void GraphicsND::clear(Graphics::ARGB color) {
+void GraphicsND::clear(ARGB color) {
 	g.clear(color);
 	for (int i = 0; i < Z_Buffer.rows; i++)
 		for (int j = 0; j < Z_Buffer[i].rows * Z_Buffer[i].cols; j++)
@@ -632,7 +632,7 @@ void GraphicsND::contourface(Mat<double>& map, const int N) {
 	}
 }
 /*---------------- 色谱 ----------------*/
-Graphics::ARGB GraphicsND::colorlist(double index, int model)
+ARGB GraphicsND::colorlist(double index, int model)
 {
 	double A = 0, R = 0, G = 0, B = 0, a = index, b = 1 - a;
 	switch (model)
@@ -650,7 +650,7 @@ Graphics::ARGB GraphicsND::colorlist(double index, int model)
 	}break;
 	}
 	A *= 0xFF, R *= 0xFF, G *= 0xFF, B *= 0xFF;
-	return (Graphics::ARGB)A * 0x1000000 + (Graphics::ARGB)R * 0x10000 + (Graphics::ARGB)G * 0x100 + (Graphics::ARGB)B;
+	return (ARGB)A * 0x1000000 + (ARGB)R * 0x10000 + (ARGB)G * 0x100 + (ARGB)B;
 }
 
 /******************************************************************************

@@ -13,25 +13,12 @@ limitations under the License.
 #ifndef RAY_TRACING_H
 #define RAY_TRACING_H
 #include "Graphics.h"
+#include "RGB.h"
 #define PI 3.141592653589
 
 class RayTracing {
 public:
-	struct RGB { 
-		unsigned char R, G, B; 
-		RGB(unsigned int a) { *this = a; }
-		RGB& operator=(const RGB& a) { R = a.R; G = a.G; B = a.B; return *this; }
-		RGB& operator=(unsigned int& a) { 
-			R = a >> 16; 
-			G = a >> 8; 
-			B = a;
-			return *this;
-		}
-		RGB& operator*=(double a) {
-			R *= a; G *= a; B *= a;
-			return *this;
-		}
-	};
+
 	struct Material {															//²ÄÖÊ
 		RGB color = 0;
 		double reflectance = 1, refractiveIndex = 0;

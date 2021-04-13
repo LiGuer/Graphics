@@ -48,7 +48,7 @@ void Graphics::setPoint(INT32S x, INT32S y,ARGB color) {
 	Canvas(x, y).G = alpha * Canvas(x, y).G + (1 - alpha) * G;
 	Canvas(x, y).B = alpha * Canvas(x, y).B + (1 - alpha) * B;
 }
-Graphics::ARGB Graphics::readPoint(INT32S x, INT32S y) {
+ARGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
 	return Canvas(x, y).R * 0x10000 + Canvas(x, y).G * 0x100 + Canvas(x, y).B;
 }

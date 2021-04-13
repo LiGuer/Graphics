@@ -28,7 +28,7 @@ public:
 	GraphicsND(int width , int height, int Dim = 3) { init(width, height , Dim); }//构造函数
 	~GraphicsND() { ; }														//析构函数
 	void init(int width, int height, int Dim = 3);							//初始化
-	void clear(Graphics::ARGB color);										//清屏
+	void clear(ARGB color);										//清屏
 	void value2pix(int x0, int y0, int z0, int& x, int& y, int& z);			//点To像素 (<=3D)
 	void value2pix(Mat<double>& p0, Mat<int>& pAns);						//点To像素 (anyD)
 	bool setPix(int x, int y, int z = 0, int size = -1);					//写像素 (正投影) (<=3D)
@@ -77,7 +77,7 @@ public:
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);										//画坐标轴
 	void contour(Mat<double>& map, const int N);																					//画等高线
 	void contourface(Mat<double>& map, const int N);																				//画等高面
-	Graphics::ARGB colorlist(double index, int model);																				//色谱
+	ARGB colorlist(double index, int model);																				//色谱
 	/*---------------- Transformation ----------------*/
 	static void translation(Mat<double>& delta, Mat<double>& transMat = TransformMat);														//平移
 	static void rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat = TransformMat);					//旋转
