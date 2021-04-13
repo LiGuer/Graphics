@@ -77,52 +77,65 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 	}
 	//[4]
 	if (minDistance != DBL_MAX && level < maxRayLevel && intersectMaterial != NULL) {
-		if (intersectMaterial->reflectance != 0) {
+		if (intersectMaterial->rediateRate) {
+			return color = intersectMaterial->color;
+		}
+		if (intersectMaterial->diffuseReflect) {
+			// Reflex Ray
+			Mat<double> Reflect;
+			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
+			//
+			double LightSourceAngle = 0;
+			Mat<double> Light;
+			for (int i = 0; i < LightSource.size(); i++) {
+				Light.add(LightSource[i], RaySt.negative(Light)).normalized();
+				double LightSourceAngleTmp = (Ray.dot(Light) + 1) / 2;
+				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
+			}
+			color = 0xFFFFFF;
+			color *= LightSourceAngle;
+			// Reflex Rate
+			double k = intersectMaterial->reflectRate;
+			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
+			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
+			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
+			return color;
+		}
+		if (intersectMaterial->reflectRate != 0) {
 			// Reflex Ray
 			Mat<double> Reflect;
 			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
 			traceRay(intersection, Reflect, color, level + 1);
 			// Reflex Rate
-			double k = intersectMaterial->reflectance;
+			double k = intersectMaterial->reflectRate;
 			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
 			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
 			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
 		}
-		if (intersectMaterial->refractiveIndex != 0) {
-			double refractiveIndexBufferTmp = refractiveIndexBuffer;
+		if (intersectMaterial->refractRate != 0) {
+			double refractRateBufferTmp = refractRateBuffer;
 			// Refract Ray
 			Mat<double> Refract, tmp;
 			RGB colorTmp(0);
-			double rate = intersectMaterial->refractiveIndex == refractiveIndexBuffer ?
-							refractiveIndexBuffer : refractiveIndexBuffer / intersectMaterial->refractiveIndex;
-			refractiveIndexBuffer = refractiveIndexBuffer == intersectMaterial->refractiveIndex ? 1 : intersectMaterial->refractiveIndex;
+			double rate = intersectMaterial->refractRate == refractRateBuffer ?
+							refractRateBuffer : refractRateBuffer / intersectMaterial->refractRate;
+			refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
 			double Cos = FaceVec.dot(Ray), CosAlpha = 1 - rate * rate * (1 - Cos * Cos);
 			if (CosAlpha >= 0) {
 				CosAlpha = sqrt(CosAlpha);
 				Refract.add(Refract.mult(rate, Ray), tmp.mult((Cos > 0 ? 1 : -1)* CosAlpha - rate * Cos, FaceVec)).normalized();
-				intersectionTmp.add(tmp.mult(0.1, Refract), intersection);
+				intersectionTmp.add(intersectionTmp.mult(0.1, Refract), intersection);
 				traceRay(intersectionTmp, Refract, colorTmp, level + 1);
 				//color
 				//###菲涅耳方程 未完成
-				double k = 1 - intersectMaterial->reflectance;
+				double k = 1 - intersectMaterial->reflectRate;
 				colorTmp.R *= k * (double)intersectMaterial->color.R / 0xFF;
 				colorTmp.G *= k * (double)intersectMaterial->color.G / 0xFF;
 				colorTmp.B *= k * (double)intersectMaterial->color.B / 0xFF;
 				ColorBlend_Add(color, colorTmp, color);
 			}
-			refractiveIndexBuffer = refractiveIndexBufferTmp;
+			refractRateBuffer = refractRateBufferTmp;
 		}
-	}
-	else {
-		double LightSourceAngle = 0;
-		Mat<double> Light;
-		for (int i = 0; i < LightSource.size(); i++) {
-			Light.add(LightSource[i], RaySt.negative(Light));
-			double LightSourceAngleTmp = (Ray.dot(Light) / Light.norm() + 1) / 2;
-			LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
-		}
-		color = 0xFFFFFF;
-		color *= LightSourceAngle;
 	}
 	return color;
 }

@@ -18,10 +18,10 @@ limitations under the License.
 
 class RayTracing {
 public:
-
 	struct Material {															//材质
 		RGB color = 0;
-		double reflectance = 1, refractiveIndex = 0;
+		bool rediateRate = 0, diffuseReflect = 0;
+		double reflectRate = 1, refractRate = 0;
 	};
 	struct Triangle {															//三角形
 		Mat<double> p[3];
@@ -30,8 +30,8 @@ public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																	//核心图形学类
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
-	int maxRayLevel = 20;
-	double refractiveIndexBuffer = 1;
+	int maxRayLevel = 10;
+	double refractRateBuffer = 1;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
 	std::vector<Mat<double>> LightSource;										//材质集
