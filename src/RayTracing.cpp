@@ -81,15 +81,12 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 			return color = intersectMaterial->color;
 		}
 		if (intersectMaterial->diffuseReflect) {
-			// Reflex Ray
-			Mat<double> Reflect;
-			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
 			// Light Source
 			double LightSourceAngle = 0;
 			Mat<double> Light;
 			for (int i = 0; i < LightSource.size(); i++) {
 				Light.add(LightSource[i], intersection.negative(Light)).normalized();
-				double LightSourceAngleTmp = (Reflect.dot(Light) + 1) / 2;
+				double LightSourceAngleTmp = ((FaceVec.dot(Ray) > 0 ? -1 : 1)* FaceVec.dot(Light) + 1) / 2;
 				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 			}
 			color = 0xFFFFFF;

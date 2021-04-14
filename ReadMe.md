@@ -2,6 +2,7 @@
 * <Graphics.h/cpp>				Pix图形学类 (核心类)
 * <GraphicsND.h/cpp>			任意维图形学类 + 科学制图
 * <RayTracing.h/cpp>			光线追踪
+* <RGB.h>						像素颜色
 * <DigitalImageProcessing.h>	数字图像处理
 * <Fractal.h>					分形
 * <ComputationalGeometry.h>	计算几何学
@@ -124,6 +125,7 @@ void scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& transMat = Tr
 ### API <RayTracing.h>:
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing-Shpere.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing-Room.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing2.png) 
 ## Reference
 * [1].Computer Graphics with OpenGL. Donald Hearn, M. Pauline Baker, Warren R. Carithers
