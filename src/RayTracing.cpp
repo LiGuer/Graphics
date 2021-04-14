@@ -77,62 +77,42 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 	}
 	//[4]
 	if (minDistance != DBL_MAX && level < maxRayLevel && intersectMaterial != NULL) {
-		if (intersectMaterial->rediateRate) {
+		Mat<double> RayTmp;
+		RGB colorTmp(0);
+		if (intersectMaterial->rediateRate != 0) {					//Light Source
 			return color = intersectMaterial->color;
 		}
-		if (intersectMaterial->diffuseReflect) {
-			// Light Source
+		if (intersectMaterial->diffuseReflect != 0) {				//diffuseReflect
 			double LightSourceAngle = 0;
-			Mat<double> Light;
 			for (int i = 0; i < LightSource.size(); i++) {
-				Light.add(LightSource[i], intersection.negative(Light)).normalized();
-				double LightSourceAngleTmp = ((FaceVec.dot(Ray) > 0 ? -1 : 1)* FaceVec.dot(Light) + 1) / 2;
+				RayTmp.add(LightSource[i], intersection.negative(RayTmp)).normalized();
+				double LightSourceAngleTmp = (FaceVec.dot(Ray) > 0 ? -1 : 1)* FaceVec.dot(RayTmp);
 				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 			}
-			color = 0xFFFFFF;
-			color *= LightSourceAngle;
-			// Reflex Rate
-			double k = intersectMaterial->reflectRate;
-			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
-			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
-			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
-			return color;
+			colorTmp = 0xFFFFFF;
+			colorTmp *= LightSourceAngle;
+			goto TRACERAY_LABLE;
+			//ColorBlend_Add(color, colorTmp, color);
 		}
-		if (intersectMaterial->reflectRate != 0) {
-			// Reflex Ray
-			Mat<double> Reflect;
-			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
-			traceRay(intersection, Reflect, color, level + 1);
-			// Reflex Rate
-			double k = intersectMaterial->reflectRate;
-			color.R *= k * (double)intersectMaterial->color.R / 0xFF;
-			color.G *= k * (double)intersectMaterial->color.G / 0xFF;
-			color.B *= k * (double)intersectMaterial->color.B / 0xFF;
+		if (intersectMaterial->reflectRate != 0) {				//reflect
+			traceRay(intersection, reflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
+			colorTmp *= intersectMaterial->reflectRate;
+			ColorBlend_Add(color, colorTmp, color);
 		}
-		if (intersectMaterial->refractRate != 0) {
-			double refractRateBufferTmp = refractRateBuffer;
-			// Refract Ray
-			Mat<double> Refract, tmp;
-			RGB colorTmp(0);
-			double rate = intersectMaterial->refractRate == refractRateBuffer ?
-							refractRateBuffer : refractRateBuffer / intersectMaterial->refractRate;
-			refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
-			double Cos = FaceVec.dot(Ray), CosAlpha = 1 - rate * rate * (1 - Cos * Cos);
-			if (CosAlpha >= 0) {
-				CosAlpha = sqrt(CosAlpha);
-				Refract.add(Refract.mult(rate, Ray), tmp.mult((Cos > 0 ? 1 : -1)* CosAlpha - rate * Cos, FaceVec)).normalized();
-				intersectionTmp.add(intersectionTmp.mult(0.1, Refract), intersection);
-				traceRay(intersectionTmp, Refract, colorTmp, level + 1);
-				//color
-				//###菲涅耳方程 未完成
-				double k = 1 - intersectMaterial->reflectRate;
-				colorTmp.R *= k * (double)intersectMaterial->color.R / 0xFF;
-				colorTmp.G *= k * (double)intersectMaterial->color.G / 0xFF;
-				colorTmp.B *= k * (double)intersectMaterial->color.B / 0xFF;
-				ColorBlend_Add(color, colorTmp, color);
-			}
+		if (intersectMaterial->refractRate != 0) {				//refract
+			double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
+			refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
+			intersectionTmp.add(intersectionTmp.mult(0.1, RayTmp), intersection);
+			traceRay(intersectionTmp, RayTmp, colorTmp = 0, level + 1);
 			refractRateBuffer = refractRateBufferTmp;
+			colorTmp *= 1 - intersectMaterial->reflectRate;		//###菲涅耳方程 未完成
+			ColorBlend_Add(color, colorTmp, color);
+			
 		}
+		TRACERAY_LABLE:
+		color.R *= (double)intersectMaterial->color.R / 0xFF;
+		color.G *= (double)intersectMaterial->color.G / 0xFF;
+		color.B *= (double)intersectMaterial->color.B / 0xFF;
 	}
 	return color;
 }
@@ -186,6 +166,20 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[1].dot(edge[0]) * edge[0].dot(tmpEdge)) * inverDeno;						
 	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
 	return RayFaceDistance;
+}
+/*--------------------------------[ 反射 ]--------------------------------*/
+Mat<double>& RayTracing::reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
+	return reflectRay.add(reflectRay.mult(-2 * faceVec.dot(incidentRay), faceVec), incidentRay).normalized();
+}
+/*--------------------------------[ 折射 ]--------------------------------*/
+Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut) {
+	double refractRate = rateIn / rateOut;
+	double CosIn = faceVec.dot(incidentRay);
+	double CosOut = 1 - refractRate * refractRate * (1 - CosIn * CosIn);
+	if (CosOut >= 0) reflect(incidentRay, faceVec, refractRay);			//全反射
+	Mat<double> tmp;
+	CosOut = sqrt(CosOut);
+	return refractRay.add(refractRay.mult(refractRate, incidentRay), tmp.mult((CosIn > 0 ? 1 : -1)* CosOut - refractRate * CosIn, faceVec)).normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {

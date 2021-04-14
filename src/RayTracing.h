@@ -45,6 +45,9 @@ public:
 	void paint();																		//渲染
 	RGB traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level);
 	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection);	//求交点
+	//Ray
+	static Mat<double>& reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay);								//反射
+	static Mat<double>& refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut);//折射
 	//2-D
 	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material = NULL);							//画三角形
 	void drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct = NULL);											//画矩形

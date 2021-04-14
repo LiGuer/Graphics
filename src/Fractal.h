@@ -15,7 +15,7 @@ limitations under the License.
 #include <math.h>
 #include <complex>
 #include <vector>
-#include "../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/Mat.h"
 #include "GraphicsND.h"
 #define PI 3.141692653589
 
@@ -27,24 +27,24 @@ namespace Fractal {
 			(不发散,不一定收敛,有可能在几个不同点来回跳)
 *	[性质]: |Zn|>2不可能收敛, 即Mandelbrot Set在半径为2的圆内.
 *************************************************************************************************/
+// 是否属于MandelbrotSet/JuliaSet
+	int isMandelbrotSet(std::complex<double> C, std::complex<double> Z0, int iterateTimes) {
+		std::complex<double> z = Z0;
+		for (int epoch = 0; epoch < iterateTimes; epoch++) {	// 迭代
+			if (abs(z) > 2) return epoch;						// |Zn|>2不可能收敛
+			z = z * z + C;										// Zn+1 = Zn² + C   
+		} return 0;							//属于,输出0; 不属于,输出判断出的当次迭代数
+	}
 void Mandelbrot(std::complex<double> min, std::complex<double> max, int resSize, int iterateTimes, Mat<int> Set) {
 	Set.zero(resSize, resSize);
-	double deltaReal = (max.real - min.real) / resSize;
-	double deltaImag = (max.imag - min.imag) / resSize;
+	double deltaReal = (max.real() - min.real()) / resSize;
+	double deltaImag = (max.imag() - min.imag()) / resSize;
 	for (int i = 0; i < resSize; i++) {
 		for (int j = 0; j < resSize; j++) {
-			double real = min.real + deltaReal * i, imag = min.imag + deltaImag * j;
+			double real = min.real() + deltaReal * i, imag = min.imag() + deltaImag * j;
 			Set(i, j) = isMandelbrotSet(std::complex<double>(real, imag), std::complex<double>(0, 0), iterateTimes);
 		}
 	}
-}
-// 是否属于MandelbrotSet/JuliaSet
-int isMandelbrotSet(std::complex<double> C, std::complex<double> Z0, int iterateTimes) {
-	std::complex<double> z = Z0;
-	for (int epoch = 0; epoch < iterateTimes; epoch++) {	// 迭代
-		if (abs(z) > 2) return epoch;						// |Zn|>2不可能收敛
-		z = z * z + C;										// Zn+1 = Zn² + C   
-	} return 0;							//属于,输出0; 不属于,输出判断出的当次迭代数
 }
 /*************************************************************************************************
 *								Julia集
@@ -54,11 +54,11 @@ int isMandelbrotSet(std::complex<double> C, std::complex<double> Z0, int iterate
 *************************************************************************************************/
 void Julia(std::complex<double> C, std::complex<double> min, std::complex<double> max, int resSize, int iterateTimes, Mat<int> Set) {
 	Set.zero(resSize, resSize);
-	double deltaReal = (max.real - min.real) / resSize;
-	double deltaImag = (max.imag - min.imag) / resSize;
+	double deltaReal = (max.real() - min.real()) / resSize;
+	double deltaImag = (max.imag() - min.imag()) / resSize;
 	for (int i = 0; i < resSize; i++) {
 		for (int j = 0; j < resSize; j++) {
-			double real = min.real + deltaReal * i, imag = min.imag + deltaImag * j;
+			double real = min.real() + deltaReal * i, imag = min.imag() + deltaImag * j;
 			Set(i, j) = isMandelbrotSet(C, std::complex<double>(real, imag), iterateTimes);
 		}
 	}

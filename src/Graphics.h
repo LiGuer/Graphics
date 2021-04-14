@@ -18,7 +18,7 @@ limitations under the License.
 #include <math.h>
 #include <queue>
 #include "font.h"
-#include "../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/Mat.h"
 #include "RGB.h"
 /******************************************************************************
 *                    Graphics 计算机图形学
