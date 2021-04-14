@@ -84,12 +84,12 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 			// Reflex Ray
 			Mat<double> Reflect;
 			Reflect.add(Reflect.mult(-2 * FaceVec.dot(Ray), FaceVec), Ray).normalized();
-			//
+			// Light Source
 			double LightSourceAngle = 0;
 			Mat<double> Light;
 			for (int i = 0; i < LightSource.size(); i++) {
-				Light.add(LightSource[i], RaySt.negative(Light)).normalized();
-				double LightSourceAngleTmp = (Ray.dot(Light) + 1) / 2;
+				Light.add(LightSource[i], intersection.negative(Light)).normalized();
+				double LightSourceAngleTmp = (Reflect.dot(Light) + 1) / 2;
 				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 			}
 			color = 0xFFFFFF;
@@ -290,11 +290,11 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
 	direction.add(ed, st.negative(direction));
 	if (direction[0] != 0 || direction[1] != 0) {
-		//rotate(
-		//	rotateAxis.crossProduct(direction, zAxis),
-		//	-acos(tmp.dot(direction, zAxis) / direction.norm()),
-		//	tmp.zero(3, 1), rotateMat
-		//);
+		GraphicsND::rotate(
+			rotateAxis.crossProduct(direction, zAxis),
+			-acos(tmp.dot(direction, zAxis) / direction.norm()),
+			tmp.zero(3, 1), rotateMat
+		);
 		rotateMat.cut(1, 3, 1, 3, rotateMat);
 	}
 	else rotateMat.E(3);
@@ -306,8 +306,8 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 		stPoint.add(st, stPoint.mult(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
 		if (i != 0) {
-			drawTriangle(stPoint, preStPoint, edPoint);
-			drawTriangle(preStPoint, preEdPoint, edPoint);
+			drawTriangle(stPoint, preStPoint, edPoint, material);
+			drawTriangle(preStPoint, preEdPoint, edPoint, material);
 		}
 		preStPoint = stPoint;
 		preEdPoint = edPoint;
@@ -318,36 +318,11 @@ void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 	drawFrustum(st, ed, r, r, delta);
 }
 /*--------------------------------[ 画球 ]--------------------------------
-*	[公式]: x² + y² + z² = R²
-		参数方程,点集:
-			x = r cosΦ cosθ    Φ∈[-π/2, π/2]
-			y = r cosΦ sinθ    θ∈[0, 2π]
-			z = r sinΦ
-*	[流程]:
-		[1] 画纬度线
-		[2] 画经度线
 **-----------------------------------------------------------------------*/
 void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
-	// 经纬度法
 	Mat<double> p1(3, 1), p2 = (3, 1);
 	p1[0] = p1[1] = p1[2] = r; p2[0] = NULL;
 	drawTriangle(center, p1, p2, material); 
-}
-/*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
-*	[Referance]:
-		[1] Thanks and copyright for https://github.com/SebLague/Boids
-**---------------------------------------------------------------------------------------------------------*/
-void RayTracing::drawSphere2(Mat<double>& center, double r, int n, Material* material) {
-	// 均匀球面点
-	Mat<double> point(3, 1);
-	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
-	double angleIncrement = PI * 2 * goldenRatio;
-	for (int i = 0; i < 300; i++) {
-		double t = (double)i / n, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;
-		point[0] = center[0] + r * sin(inclination) * cos(azimuth);
-		point[1] = center[1] + r * sin(inclination) * sin(azimuth);
-		point[2] = center[2] + r * cos(inclination);
-	}
 }
 /*--------------------------------[ 画椭球 ]--------------------------------
 *	[公式]: (x/rx)² + (y/ry)² + (z/rz)² = 1

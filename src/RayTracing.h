@@ -13,6 +13,7 @@ limitations under the License.
 #ifndef RAY_TRACING_H
 #define RAY_TRACING_H
 #include "Graphics.h"
+#include "GraphicsND.h"
 #include "RGB.h"
 #define PI 3.141592653589
 
@@ -59,7 +60,6 @@ public:
 	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, Material* material = NULL);	//»­Ô²Ì¨
 	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, Material* material = NULL);					//»­Ô²Öù
 	void drawSphere(Mat<double>& center, double r, Material* material = NULL);													//»­Çò
-	void drawSphere2(Mat<double>& center, double r, int n = 300, Material* material = NULL);									//»­Çò
 	void drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material = NULL);											//»­ÍÖÇò
 	void drawBody(Mat<double>& center, Mat<double>& r, Material* material = NULL);												//»­ÇúÌå
 	void drawBezierBody(Mat<double> p[], int n, Material* material = NULL);
