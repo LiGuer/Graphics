@@ -85,31 +85,38 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 		if (intersectMaterial->diffuseReflect != 0) {				//diffuseReflect
 			double LightSourceAngle = 0;
 			for (int i = 0; i < LightSource.size(); i++) {
-				RayTmp.add(LightSource[i], intersection.negative(RayTmp)).normalized();
+				RayTmp.add(LightSource[i], intersection.negative(RayTmp));
+				double lightDistance = RayTmp.norm(); RayTmp.normalized();
+				{
+					bool flag = false; 
+					for (int i = 0; i < TriangleSet.size(); i++) {
+						double distance = seekIntersection(TriangleSet[i], intersection, RayTmp, FaceVecTmp, intersectionTmp);
+						if (distance > 0.5 && distance < lightDistance - 0.5) { flag = true; break; }
+					} if (flag) continue;
+				}
 				double LightSourceAngleTmp = (FaceVec.dot(Ray) > 0 ? -1 : 1)* FaceVec.dot(RayTmp);
 				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
 			}
 			colorTmp = 0xFFFFFF;
-			colorTmp *= LightSourceAngle;
-			goto TRACERAY_LABLE;
-			//ColorBlend_Add(color, colorTmp, color);
+			color = colorTmp *= LightSourceAngle;
+			goto LABEL;
+			//ColorBlend_Add(color, colorTmp *= LightSourceAngle, color);
 		}
-		if (intersectMaterial->reflectRate != 0) {				//reflect
+		if (intersectMaterial->reflectRate != 0) {					//reflect
 			traceRay(intersection, reflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
 			colorTmp *= intersectMaterial->reflectRate;
 			ColorBlend_Add(color, colorTmp, color);
 		}
-		if (intersectMaterial->refractRate != 0) {				//refract
+		if (intersectMaterial->refractRate != 0) {					//refract
 			double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
 			refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
 			intersectionTmp.add(intersectionTmp.mult(0.1, RayTmp), intersection);
 			traceRay(intersectionTmp, RayTmp, colorTmp = 0, level + 1);
 			refractRateBuffer = refractRateBufferTmp;
-			colorTmp *= 1 - intersectMaterial->reflectRate;		//###菲涅耳方程 未完成
-			ColorBlend_Add(color, colorTmp, color);
-			
+			colorTmp *= 1 - intersectMaterial->reflectRate;
+			ColorBlend_Add(color, colorTmp, color);		//###菲涅耳方程 未完成			
 		}
-		TRACERAY_LABLE:
+		LABEL:
 		color.R *= (double)intersectMaterial->color.R / 0xFF;
 		color.G *= (double)intersectMaterial->color.G / 0xFF;
 		color.B *= (double)intersectMaterial->color.B / 0xFF;
