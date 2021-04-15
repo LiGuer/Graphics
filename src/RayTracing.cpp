@@ -33,16 +33,18 @@ void RayTracing::paint() {
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
 	for (int x = 0; x < g.Canvas.rows; x++) {
-		printf("%d\t", x);
 		for (int y = 0; y < g.Canvas.cols; y++) {
-			//[3]
-			PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
-			Ray.add(ScreenVec, PixVec).normalized();
-			RaySt.add(gCenter, PixVec);
-			//[4][5]
-			RGB color(0);
-			traceRay(RaySt, Ray, color, 0);
-			g.setPoint(g.Canvas.rows - x, y, color.R * 0x10000 + color.G * 0x100 + color.B);
+			for (int sample = 0; sample < SamplesNum; sample++) {
+				//[3]
+				PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
+				Ray.add(ScreenVec, PixVec).normalized();
+				RaySt.add(gCenter, PixVec);
+				//[4][5]
+				RGB color(0);
+				traceRay(RaySt, Ray, color, 0);
+				g.setPoint(g.Canvas.rows - x, y, color.R * 0x10000 + color.G * 0x100 + color.B);
+			}
+
 		}
 	}
 }
@@ -63,6 +65,7 @@ void RayTracing::paint() {
 			计算三角形反射方向，将反射光线为基准重新计算
 -----------------------------------------------------------------------------*/
 RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level) {
+	if (level > maxRayLevel) return color = 0;
 	double minDistance = DBL_MAX;
 	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
 	Material* intersectMaterial = NULL;
@@ -70,57 +73,36 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		//[2][3]
 		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
-		if (distance > 0.1 && distance < minDistance) {		//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
+		if (distance > eps && distance < minDistance) {			//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 			minDistance = distance; intersectMaterial = TriangleSet[i].material;
 			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
-	if (minDistance != DBL_MAX && level < maxRayLevel && intersectMaterial != NULL) {
-		Mat<double> RayTmp;
-		RGB colorTmp(0);
-		if (intersectMaterial->rediateRate != 0) {					//Light Source
-			return color = intersectMaterial->color;
-		}
-		if (intersectMaterial->diffuseReflect != 0) {				//diffuseReflect
-			double LightSourceAngle = 0;
-			for (int i = 0; i < LightSource.size(); i++) {
-				RayTmp.add(LightSource[i], intersection.negative(RayTmp));
-				double lightDistance = RayTmp.norm(); RayTmp.normalized();
-				{
-					bool flag = false; 
-					for (int i = 0; i < TriangleSet.size(); i++) {
-						double distance = seekIntersection(TriangleSet[i], intersection, RayTmp, FaceVecTmp, intersectionTmp);
-						if (distance > 0.5 && distance < lightDistance - 0.5) { flag = true; break; }
-					} if (flag) continue;
-				}
-				double LightSourceAngleTmp = (FaceVec.dot(Ray) > 0 ? -1 : 1)* FaceVec.dot(RayTmp);
-				LightSourceAngle = LightSourceAngle > LightSourceAngleTmp ? LightSourceAngle : LightSourceAngleTmp;
-			}
-			colorTmp = 0xFFFFFF;
-			color = colorTmp *= LightSourceAngle;
-			goto LABEL;
-			//ColorBlend_Add(color, colorTmp *= LightSourceAngle, color);
-		}
-		if (intersectMaterial->reflectRate != 0) {					//reflect
-			traceRay(intersection, reflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
-			colorTmp *= intersectMaterial->reflectRate;
-			ColorBlend_Add(color, colorTmp, color);
-		}
-		if (intersectMaterial->refractRate != 0) {					//refract
-			double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
-			refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
-			intersectionTmp.add(intersectionTmp.mult(0.1, RayTmp), intersection);
-			traceRay(intersectionTmp, RayTmp, colorTmp = 0, level + 1);
-			refractRateBuffer = refractRateBufferTmp;
-			colorTmp *= 1 - intersectMaterial->reflectRate;
-			ColorBlend_Add(color, colorTmp, color);		//###菲涅耳方程 未完成			
-		}
-		LABEL:
-		color.R *= (double)intersectMaterial->color.R / 0xFF;
-		color.G *= (double)intersectMaterial->color.G / 0xFF;
-		color.B *= (double)intersectMaterial->color.B / 0xFF;
+	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color = 0;			//Miss intersect
+	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
+	Mat<double> RayTmp;
+	RGB colorTmp(0);
+	if (intersectMaterial->diffuseReflect != 0) {				//Diffuse Reflect
+		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
+		ColorBlend_Add(color, colorTmp, color);
 	}
+	if (intersectMaterial->reflectRate != 0) {					//Reflect
+		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
+		colorTmp *= intersectMaterial->reflectRate;
+		ColorBlend_Add(color, colorTmp, color);
+	}
+	if (intersectMaterial->refractRate != 0) {					//Refract
+		double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
+		refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
+		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, colorTmp = 0, level + 1);
+		refractRateBuffer = refractRateBufferTmp;
+		colorTmp *= 1 - intersectMaterial->reflectRate;
+		ColorBlend_Add(color, colorTmp, color);		//###菲涅耳方程 未完成			
+	}
+	color.R *= (double)intersectMaterial->color.R / 0xFF;
+	color.G *= (double)intersectMaterial->color.G / 0xFF;
+	color.B *= (double)intersectMaterial->color.B / 0xFF;
 	return color;
 }
 /*--------------------------------[ 求交点 ]--------------------------------
@@ -188,6 +170,18 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 	CosOut = sqrt(CosOut);
 	return refractRay.add(refractRay.mult(refractRate, incidentRay), tmp.mult((CosIn > 0 ? 1 : -1)* CosOut - refractRate * CosIn, faceVec)).normalized();
 }
+/*--------------------------------[ 漫反射 ]--------------------------------*/
+Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
+	double r1 = rand() / double(RAND_MAX), r2 = rand() / double(RAND_MAX);
+	Mat<double> tmp1(3, 1), tmp2(3, 1);
+	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
+	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
+	{ double t[] = { faceVec[1] * tmp1[2] - faceVec[2] * tmp1[1],
+					 faceVec[2] * tmp1[0] - faceVec[0] * tmp1[2],
+					 faceVec[0] * tmp1[1] - faceVec[1] * tmp1[0] };
+	tmp2.getData(t); }
+	return reflectRay.add(reflectRay.mult(cos(r1) * sqrt(r2), faceVec), tmp1.add(tmp1.mult(sin(r1) * sqrt(r2), tmp1), tmp2.mult(sqrt(1 - r2), tmp2))).normalized();
+}
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
 	Triangle triangle;
@@ -196,10 +190,6 @@ void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 	triangle.p[2] = p3;
 	triangle.material = material;
 	TriangleSet.push_back(triangle); 
-}
-/*--------------------------------[ 画矩形 ]--------------------------------*/
-void RayTracing::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct) {
-
 }
 /*--------------------------------[ 画四边形 ]--------------------------------*/
 void RayTracing::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
@@ -221,33 +211,6 @@ void RayTracing::drawPolygon(Mat<double> p[], int n, Material* material) {
 	for (int k = 1; k <= (n + 2) / 3; k++)
 		for (int i = 0; i <= n - 2 * k; i += 2 * k)
 			drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n], material);
-}
-/*--------------------------------[ 画圆 ]--------------------------------
-**-----------------------------------------------------------------------*/
-void RayTracing::drawCircle(Mat<double>& center, double r, Mat<double>* direct) {
-
-}
-/*--------------------------------[ 画椭圆 ]--------------------------------
-**-----------------------------------------------------------------------*/
-void RayTracing::drawEllipse(Mat<double>& center, double rx, double ry, Mat<double>* direct) {
-}
-/*--------------------------------[ 画曲面 ]--------------------------------*/
-void RayTracing::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
-	Mat<double> p(3, 1), pl(3, 1), pu(3, 1);
-	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
-	for (int y = 0; y < z.cols; y++) {
-		for (int x = 0; x < z.rows; x++) {
-			{double t[] = { xs + x * dx,ys + y * dy,z(x,y) }; p.getData(t); }
-			if (x > 0) {
-				double t[] = { xs + (x - 1) * dx,ys + y * dy,z(x - 1,y) };
-				//pl.getData(t); drawLine(pl, p);
-			}
-			if (y > 0) {
-				double t[] = { xs + x * dx,ys + (y - 1) * dy,z(x,y - 1) };
-				//pu.getData(t); drawLine(pu, p);
-			}
-		}
-	}
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
 void RayTracing::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
