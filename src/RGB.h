@@ -27,12 +27,14 @@ public:
 #define ARGB  unsigned int
 #define FP64  double
 	/*---------------- 基础参数 ----------------*/
-	INT8U R, G, B;
+	INT8U R = 0, G = 0, B = 0;
 	/*---------------- 基础函数 ----------------*/
+	RGB() { ; }
 	RGB(ARGB a) { *this = a; }														//构造函数
 	RGB& operator=(const RGB& a) { R = a.R; G = a.G; B = a.B; return *this; }
 	RGB& operator=(ARGB& a) { R = a >> 16; G = a >> 8; B = a; return *this; }
 	RGB& operator*=(double a) { R *= a; G *= a; B *= a; return *this; }
+	RGB& operator+=(RGB a) { R += a.R; G += a.G; B += a.B; return *this; }
 	INT8U& operator[](int index) {
 		switch (index) {
 		case 0: return R;

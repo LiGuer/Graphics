@@ -28,11 +28,10 @@ public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																	//核心图形学类
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
-	int SamplesNum = 10, maxRayLevel = 6;
+	int SamplesNum = 1e3, maxRayLevel = 5;
 	double refractRateBuffer = 1, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
-	std::vector<Mat<double>> LightSource;										//材质集
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数

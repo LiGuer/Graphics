@@ -32,19 +32,19 @@ void RayTracing::paint() {
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
-	for (int x = 0; x < g.Canvas.rows; x++) {
-		for (int y = 0; y < g.Canvas.cols; y++) {
-			for (int sample = 0; sample < SamplesNum; sample++) {
-				//[3]
-				PixVec.add(PixXVec.mult(x - g.Canvas.rows / 2, ScreenXVec), PixYVec.mult(y - g.Canvas.cols / 2, ScreenYVec));
-				Ray.add(ScreenVec, PixVec).normalized();
-				RaySt.add(gCenter, PixVec);
-				//[4][5]
-				RGB color(0);
-				traceRay(RaySt, Ray, color, 0);
-				g.setPoint(g.Canvas.rows - x, y, color.R * 0x10000 + color.G * 0x100 + color.B);
-			}
-
+	Mat<Mat<double>> color(g.Canvas.rows, g.Canvas.cols);
+	for (int i = 0; i < color.rows * color.cols; i++)color[i].zero(3, 1);
+	RGB colorTmp;
+	for (int sample = 0; sample < SamplesNum; sample++) {
+		g.writeImg("D:/LiGu.ppm");
+		color *= (double)sample / (sample + 1);
+		for (int x = 0; x < g.Canvas.rows; x++) {
+			for (int y = 0; y < g.Canvas.cols; y++) {
+				PixVec.add(PixXVec.mult(x + rand() / double(RAND_MAX) - g.Canvas.rows / 2 - 0.5, ScreenXVec), PixYVec.mult(y + rand() / double(RAND_MAX) - g.Canvas.cols / 2 - 0.5, ScreenYVec));//[3]
+				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), colorTmp = 0, 0);					//[4][5]
+				for (int k = 0; k < 3; k++) color(x, y)[k] += (double)colorTmp[k] / (sample + 1);
+				g.setPoint(g.Canvas.rows - x, y, (ARGB)color(x, y)[0] * 0x10000 + (ARGB)color(x, y)[1] * 0x100 + (ARGB)color(x, y)[2]);
+			} 
 		}
 	}
 }
@@ -82,23 +82,19 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color = 0;			//Miss intersect
 	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
 	Mat<double> RayTmp;
-	RGB colorTmp(0);
 	if (intersectMaterial->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
-		ColorBlend_Add(color, colorTmp, color);
+		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color = 0, level + 1);
+		color *= intersectMaterial->reflectRate;
 	}
-	if (intersectMaterial->reflectRate != 0) {					//Reflect
-		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), colorTmp = 0, level + 1);
-		colorTmp *= intersectMaterial->reflectRate;
-		ColorBlend_Add(color, colorTmp, color);
-	}
-	if (intersectMaterial->refractRate != 0) {					//Refract
+	else if (intersectMaterial->refractRate != 0) {					//Refract
 		double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
 		refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
-		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, colorTmp = 0, level + 1);
+		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, color = 0, level + 1);
 		refractRateBuffer = refractRateBufferTmp;
-		colorTmp *= 1 - intersectMaterial->reflectRate;
-		ColorBlend_Add(color, colorTmp, color);		//###菲涅耳方程 未完成			
+	}
+	else if (intersectMaterial->reflectRate != 0) {					//Reflect
+		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color = 0, level + 1);
+		color *= intersectMaterial->reflectRate;
 	}
 	color.R *= (double)intersectMaterial->color.R / 0xFF;
 	color.G *= (double)intersectMaterial->color.G / 0xFF;
@@ -172,15 +168,19 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 }
 /*--------------------------------[ 漫反射 ]--------------------------------*/
 Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
-	double r1 = rand() / double(RAND_MAX), r2 = rand() / double(RAND_MAX);
+	double r1 = 2 * PI * rand() / double(RAND_MAX), r2 = rand() / double(RAND_MAX);
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
+	{ double t[] = { tmp1[1] * faceVec[2] - tmp1[2] * faceVec[1],
+					 tmp1[2] * faceVec[0] - tmp1[0] * faceVec[2],
+					 tmp1[0] * faceVec[1] - tmp1[1] * faceVec[0] };
+	tmp1.getData(t).normalized(); }
 	{ double t[] = { faceVec[1] * tmp1[2] - faceVec[2] * tmp1[1],
 					 faceVec[2] * tmp1[0] - faceVec[0] * tmp1[2],
 					 faceVec[0] * tmp1[1] - faceVec[1] * tmp1[0] };
 	tmp2.getData(t); }
-	return reflectRay.add(reflectRay.mult(cos(r1) * sqrt(r2), faceVec), tmp1.add(tmp1.mult(sin(r1) * sqrt(r2), tmp1), tmp2.mult(sqrt(1 - r2), tmp2))).normalized();
+	return reflectRay.add(tmp1.mult(cos(r1) * sqrt(r2), tmp1), reflectRay.add(tmp2.mult(sin(r1) * sqrt(r2), tmp2), reflectRay.mult(sqrt(1 - r2), faceVec))).normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
