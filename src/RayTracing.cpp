@@ -27,9 +27,10 @@ void RayTracing::readImg(const char* fileName) {
 	fscanf(fin, "P6\n%d %d\n255\n", &cols, &rows);					// 读图片格式、宽高、最大像素值
 	init(cols, rows);
 	fread(&ScreenPix[0], 1, rows * cols * 3, fin);							// 读RGB数据
-	for (int i = 0; i < Screen.rows * Screen.cols; i++)
-		for (int k = 0; k < 3; k++)
-			Screen[i][k] = (double)ScreenPix[i][k] / 0xFF;
+	for (int x = 0; x < Screen.rows; x++)
+		for (int y = 0; y < Screen.cols; y++)
+			for (int k = 0; k < 3; k++)
+				Screen(x, y)[k] = (double)ScreenPix(Screen.rows - 1 - x, y)[k] / 0xFF;
 	fclose(fin);
 }
 /*--------------------------------[ 存图 ]--------------------------------*/
@@ -42,9 +43,9 @@ void RayTracing::writeImg(const char* filename) {
 /*--------------------------------[ 画像素 ]--------------------------------*/
 void RayTracing::setPix(int x, int y, Mat<double>& color) {
 	if (x < 0 || x >= ScreenPix.rows || y < 0 || y >= ScreenPix.cols) return;
-	ScreenPix(x, y).R = min((int)(color[0] * 0xFF), 0xFF);
-	ScreenPix(x, y).G = min((int)(color[1] * 0xFF), 0xFF);
-	ScreenPix(x, y).B = min((int)(color[2] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).R = min((int)(color[0] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).G = min((int)(color[1] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).B = min((int)(color[2] * 0xFF), 0xFF);
 }
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
@@ -57,14 +58,14 @@ void RayTracing::setPix(int x, int y, Mat<double>& color) {
 void RayTracing::paint(const char* fileName, int sampleSt) {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
-	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
+	ScreenVec.sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
 	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3, 1);
 	for (int sample = sampleSt; sample < SamplesNum; sample++) {
-		writeImg(fileName); clock_t start = time(NULL);
+		writeImg(fileName); clock_t start = clock();
 		Screen *= (double)sample / (sample + 1);
 		for (int x = 0; x < Screen.rows; x++) {
 			for (int y = 0; y < Screen.cols; y++) {
@@ -74,9 +75,9 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 				);//[3]
 				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), color.zero(), 0);	//[4][5]
 				Screen(x, y).add(Screen(x, y), color *= 1.0 / (sample + 1));
-				setPix(Screen.rows - x, y, Screen(x, y));
+				setPix(x, y, Screen(x, y));
 			} 
-		} printf("%d\ttime:%d sec\n", sample, time(NULL) - start);
+		} printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
 	}
 }
 /*--------------------------------[ 追踪光线 ]--------------------------------
@@ -120,8 +121,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
-	for (int k = 0; k < 3; k++)color[k] *= intersectMaterial->color[k];
-	return color;
+	return color.elementProduct(intersectMaterial->color);
 }
 /*--------------------------------[ 求交点 ]--------------------------------
 *	[流程]:
@@ -145,35 +145,36 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	// Sphere Seek Intersection
 	if (triangle.p[2][0] == NULL) {
 		// 计算ΔX、Δ
-		double R = triangle.p[1][0], Delta;
-		Mat<double> RayStCenter;
-		RayStCenter.add(RaySt, triangle.p[0].negative(RayStCenter));
-		Delta = 4 * pow(Ray.dot(RayStCenter), 2) - 4 * Ray.dot(Ray) * (RayStCenter.dot(RayStCenter) - R * R);
-		if (Delta < 0) return -1;
-		// 有交点，计算RayFaceDistance、intersection、FaceVec
-		double RayFaceDistance = -2 * Ray.dot(RayStCenter);
-		RayFaceDistance += RayFaceDistance - sqrt(Delta) > 0 ? -sqrt(Delta) : +sqrt(Delta);
-		RayFaceDistance /= 2 * Ray.dot(Ray);
+		Mat<double> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
+		double R = triangle.p[1][0], A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
+		double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+		if (Delta < 0) return -1;									//有无交点
+		Delta = sqrt(Delta);
+		double RayFaceDistance = (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
-		FaceVec.add(intersection, triangle.p[0].negative(FaceVec)).normalized();
+		FaceVec.sub(intersection, triangle.p[0]).normalized();
 		return RayFaceDistance;
 	}
-	//[1]
+	//[1][2]
 	Mat<double> edge[2], tmp;
 	FaceVec.crossProduct(
-		edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0])),
-		edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]))
+		edge[0].sub(triangle.p[1], triangle.p[0]),
+		edge[1].sub(triangle.p[2], triangle.p[0])
 	).normalized();
-	//[2]
-	double RayFaceDistance = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
+	double t = FaceVec.dot(Ray);
+	if (t == 0) return -1;											//光线与面是否平行
+	double RayFaceDistance = FaceVec.dot(tmp.sub(triangle.p[0], RaySt)) / t;
 	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
 	//[3]
-	Mat<double> tmpEdge; tmpEdge.add(intersection, triangle.p[0].negative(tmpEdge));
-	double inverDeno = 1 / (edge[0].dot(edge[0]) * edge[1].dot(edge[1]) - edge[0].dot(edge[1]) * edge[1].dot(edge[0]));
-	double u = (edge[1].dot(edge[1]) * edge[0].dot(tmpEdge) - edge[0].dot(edge[1]) * edge[1].dot(tmpEdge)) * inverDeno;
-	double v = (edge[0].dot(edge[0]) * edge[1].dot(tmpEdge) - edge[1].dot(edge[0]) * edge[0].dot(tmpEdge)) * inverDeno;						
-	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
-	return RayFaceDistance;
+	tmp.sub(intersection, triangle.p[0]);
+	double Dot00 = edge[0].dot(edge[0]),
+		   Dot01 = edge[0].dot(edge[1]),
+		   Dot11 = edge[1].dot(edge[1]),
+		   Dot02 = edge[0].dot(tmp),
+		   Dot12 = edge[1].dot(tmp);
+	double u = (Dot11 * Dot02 - Dot01 * Dot12) / (Dot00 * Dot11 - Dot01 * Dot01);
+	double v = (Dot00 * Dot12 - Dot01 * Dot02) / (Dot00 * Dot11 - Dot01 * Dot01);
+	return (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) ? -1 : RayFaceDistance;
 }
 /*--------------------------------[ 反射 ]--------------------------------
 *	[反射定律]: 入射角 == 反射角
@@ -282,7 +283,7 @@ void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* mate
 void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, Material* material) {
 	// 计算 Rotate Matrix
 	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
-	direction.add(ed, st.negative(direction));
+	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
 			rotateAxis.crossProduct(direction, zAxis),
