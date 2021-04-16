@@ -1,110 +1,43 @@
-#include"src/RayTracing.h"
-
+#include "LiGu_Graphics\src\RayTracing.h"
+#include "LiGu_Graphics\src\Fractal.h"
+#pragma GCC optimize(3,"Ofast","inline")
 int main() {
-	RayTracing ray(1000, 1000);
+	RayTracing ray(1000, 768);
 	
-	{ double t[] = { -600,0,0 }; ray.Eye.getData(t); }
-	{ double t[] = { -100,0,0 }; ray.gCenter.getData(t); }
-
+	ray.Eye.getData(-500, 0, -50);
+	ray.gCenter.getData(0, 0, -50);
+	ray.readImg("D:/LIGU.ppm");
 	{
 		RayTracing::Material* material;
 		Mat<double> p1(3, 1), p2(3, 1), p3(3, 1), p4(3, 1), p5(3, 1);
 
-		material = new RayTracing::Material;
-		material->color = 0xFFFFCC; 
-		{ double t[] = { 600,-200,-500+200 }; p1.getData(t); }
-		ray.drawSphere(p1, 200, material);
-
-		material = new RayTracing::Material;
-		material->color = 0xFFFFFF; material->refractRate = 1.6; material->reflectRate = 0.1;
-		{ double t[] = { 200,100,-500+100 }; p1.getData(t); }
-		ray.drawSphere(p1, 100, material);
-
-
-		material = new RayTracing::Material;
-		material->color = 0x00FF00;
-		{ double t[] = { 300,-300,-500 }; p1.getData(t); }
-		{ double t[] = { 400,-200,-400 }; p2.getData(t); }
-		//ray.drawCuboid(p1, p2, material);
-
-		material = new RayTracing::Material;
-		material->color = 0xFFCCCC; material->refractRate = 1.6;  material->reflectRate = 0.3;
-		{ double t[] = { 500,-500,-500 }; p1.getData(t); }
-		{ double t[] = { 600,-400,-400 }; p2.getData(t); }
-		//ray.drawCuboid(p1, p2, material);
-
-
-		material = new RayTracing::Material;
-		material->color = 0xFFCCFF; material->refractRate = 1.6; material->reflectRate = 0;
-		{ double t[] = { 800,500,-500 + 100 }; p1.getData(t); }
-		//ray.drawSphere(p1, 100, material);
-
-
-		material = new RayTracing::Material;
-		material->color = 0x8cfffb; 
-		{ double t[] = { 900,800,-500 + 100 }; p1.getData(t); }
-		//ray.drawSphere(p1, 100, material);
-		
-
-		material = new RayTracing::Material;
-		material->color = 0xFFFFEE; 
-		{ double t[] = { 0,-500,-500 }; p1.getData(t); }
-		{ double t[] = { 0,500,-500 }; p2.getData(t); }
-		{ double t[] = { 1000,500,-500 }; p3.getData(t); }
-		{ double t[] = { 1000,-500,-500 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-
-		material = new RayTracing::Material;
-		material->color = 0xFFFFFF; material->diffuseReflect = 1;
-		{ double t[] = { 0,-500,500 }; p1.getData(t); }
-		{ double t[] = { 0,500,500 }; p2.getData(t); }
-		{ double t[] = { 1000,500,500 }; p3.getData(t); }
-		{ double t[] = { 1000,-500,500 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-		material = new RayTracing::Material;
-		material->color = 0xFF0000; material->diffuseReflect = 1;
-		{ double t[] = { 0,-500,-500 }; p1.getData(t); }
-		{ double t[] = { 0,-500,500 }; p2.getData(t); }
-		{ double t[] = { 1000,-500,500 }; p3.getData(t); }
-		{ double t[] = { 1000,-500,-500 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-		material = new RayTracing::Material;
-		material->color = 0x0000FF; material->diffuseReflect = 1;
-		{ double t[] = { 0,500,-500 }; p1.getData(t); }
-		{ double t[] = { 0,500,500 }; p2.getData(t); }
-		{ double t[] = { 1000,500,500 }; p3.getData(t); }
-		{ double t[] = { 1000,500,-500 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-		material = new RayTracing::Material;
-		material->color = 0x00EE00; material->diffuseReflect = 1;
-		{ double t[] = { 1000,-500,-500 }; p1.getData(t); }
-		{ double t[] = { 1000,500,-500 }; p2.getData(t); }
-		{ double t[] = { 1000,500,500 }; p3.getData(t); }
-		{ double t[] = { 1000,-500,500 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-
-
-		material = new RayTracing::Material;
-		material->color = 0xFFFFFF; material->rediateRate = 1;
-		{ double t[] = { 500 - 100,-100,499 }; p1.getData(t); }
-		{ double t[] = { 500 - 100,100,499 }; p2.getData(t); }
-		{ double t[] = { 500 + 100,100,499 }; p3.getData(t); }
-		{ double t[] = { 500 + 100,-100,499 }; p4.getData(t); }
-		ray.drawQuadrilateral(p1, p2, p3, p4, material);
-
-
-
-		{ double t[] = { 500,0,500 }; p1.getData(t); }
-		ray.LightSource.push_back(p1);
-
+		material = new RayTracing::Material; material->color.getData(1, 1, 1);
+		ray.drawSphere(p1.getData(600, -200, -500 + 200), 200, material);
+		material = new RayTracing::Material; material->color.getData(1, 1, 1); material->refractRate = 1.6; material->reflectRate = 0.1;
+		ray.drawSphere(p1.getData(300, 100, -500 + 100), 100, material);
+		material = new RayTracing::Material; material->color.getData(1, 1, 0); material->diffuseReflect = 1;
+		ray.drawSphere(p1.getData(500, 300, -500 + 100), 100, material);
+		//Box
+		material = new RayTracing::Material; material->color.getData(1,0.68,0.75); material->diffuseReflect = 1;
+		ray.drawSphere(p1.getData(500, +1e5 + 500, 0), 1E5, material);
+		material = new RayTracing::Material; material->color.getData(1, 1, 1); material->diffuseReflect = 1;
+		ray.drawSphere(p1.getData(1e5 + 1000, 0, 0), 1E5, material);
+		material = new RayTracing::Material; material->color.getData(0.65, 0.62, 1); material->diffuseReflect = 1;
+		ray.drawSphere(p1.getData(500, -1e5 - 500, 0), 1E5, material);
+		material = new RayTracing::Material; material->color.getData(1, 1, 1); material->diffuseReflect = 1;
+		ray.drawSphere(p1.getData(500, 0, +1e5 + 500), 1E5, material);
+		ray.drawSphere(p1.getData(500, 0, -1e5 - 500), 1E5, material);
+		material = new RayTracing::Material; material->color.getData(10, 10, 10); material->rediateRate = 1;
+		ray.drawQuadrilateral(
+			p1.getData(500 - 200, -200, 499),
+			p2.getData(500 - 200, 200, 499),
+			p3.getData(500 + 200, 200, 499),
+			p4.getData(500 + 200, -200, 499),
+		material);
 	}
-
-	ray.paint();
-	ray.g.writeImg("D:/LIGU.ppm");
-
+	ray.paint("D:/LIGU.ppm", 25);
 }
+
+
+
+		
