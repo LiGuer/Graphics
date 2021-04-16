@@ -13,22 +13,38 @@ limitations under the License.
 [1] Thanks for Kevin Beason at http://www.kevinbeason.com/smallpt/
 ==============================================================================*/
 #include "RayTracing.h"
+#include <time.h>
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void RayTracing::init(int width, int height) {
-	g.init(width, height);
+	ScreenPix.zero(height, width);
 	Screen.zero(height, width);
 	for (int i = 0; i < Screen.rows * Screen.cols; i++)Screen[i].zero(3, 1);
 }
 /*--------------------------------[ 读图 ]--------------------------------*/
 void RayTracing::readImg(const char* fileName) {
 	FILE* fin = fopen(fileName, "rb");
-	int rows, cols, fp;
-	fscanf(fin, "P6\n%d %d\n255\n", fp, cols, rows);					// 读图片格式、宽高、最大像素值
+	int rows, cols;
+	fscanf(fin, "P6\n%d %d\n255\n", &cols, &rows);					// 读图片格式、宽高、最大像素值
 	init(cols, rows);
-	fread(&g.Canvas, 1, rows * cols * 3, fin);							// 读RGB数据
+	fread(&ScreenPix[0], 1, rows * cols * 3, fin);							// 读RGB数据
 	for (int i = 0; i < Screen.rows * Screen.cols; i++)
 		for (int k = 0; k < 3; k++)
-			Screen[i][k] = (double)g.Canvas[i][k] / 0xFF;
+			Screen[i][k] = (double)ScreenPix[i][k] / 0xFF;
+	fclose(fin);
+}
+/*--------------------------------[ 存图 ]--------------------------------*/
+void RayTracing::writeImg(const char* filename) {
+	FILE* fp = fopen(filename, "wb");
+	fprintf(fp, "P6\n%d %d\n255\n", ScreenPix.cols, ScreenPix.rows);			// 写图片格式、宽高、最大像素值
+	fwrite(ScreenPix.data, 1, ScreenPix.rows * ScreenPix.cols * 3, fp);			// 写RGB数据
+	fclose(fp);
+}
+/*--------------------------------[ 画像素 ]--------------------------------*/
+void RayTracing::setPix(int x, int y, Mat<double>& color) {
+	if (x < 0 || x >= ScreenPix.rows || y < 0 || y >= ScreenPix.cols) return;
+	ScreenPix(x, y).R = min((int)(color[0] * 0xFF), 0xFF);
+	ScreenPix(x, y).G = min((int)(color[1] * 0xFF), 0xFF);
+	ScreenPix(x, y).B = min((int)(color[2] * 0xFF), 0xFF);
 }
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
@@ -46,33 +62,25 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
-	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, colorTmp(3, 1);
+	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3, 1);
 	for (int sample = sampleSt; sample < SamplesNum; sample++) {
-		g.writeImg(fileName);
+		writeImg(fileName); clock_t start = time(NULL);
 		Screen *= (double)sample / (sample + 1);
-		for (int x = 0; x < g.Canvas.rows; x++) {
-			for (int y = 0; y < g.Canvas.cols; y++) {
-				PixVec.add(PixXVec.mult(x + rand() / double(RAND_MAX) - g.Canvas.rows / 2 - 0.5, ScreenXVec), PixYVec.mult(y + rand() / double(RAND_MAX) - g.Canvas.cols / 2 - 0.5, ScreenYVec));//[3]
-				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), colorTmp.zero(), 0);					//[4][5]
-				Screen(x, y).add(Screen(x, y), colorTmp *= 1.0 / (sample + 1));
-				g.setPoint(g.Canvas.rows - x, y,
-					  min((int)(Screen(x, y)[0] * 0xFF), 0xFF) * 0x10000
-					+ min((int)(Screen(x, y)[1] * 0xFF), 0xFF) * 0x100
-					+ min((int)(Screen(x, y)[2] * 0xFF), 0xFF)
-				);
+		for (int x = 0; x < Screen.rows; x++) {
+			for (int y = 0; y < Screen.cols; y++) {
+				PixVec.add(
+					PixXVec.mult(x + rand() / double(RAND_MAX) - Screen.rows / 2 - 0.5, ScreenXVec),
+					PixYVec.mult(y + rand() / double(RAND_MAX) - Screen.cols / 2 - 0.5, ScreenYVec)
+				);//[3]
+				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), color.zero(), 0);	//[4][5]
+				Screen(x, y).add(Screen(x, y), color *= 1.0 / (sample + 1));
+				setPix(Screen.rows - x, y, Screen(x, y));
 			} 
-		}
+		} printf("%d\ttime:%d sec\n", sample, time(NULL) - start);
 	}
 }
 /*--------------------------------[ 追踪光线 ]--------------------------------
 *	[算法]:
-			设面矢F, 入射光L
-			[反射光]: 反射定律: 入射角 == 反射角
-					  Lf = L - F·2 cos<L,F>
-			[折射光]: 折射定律: n1·sinθ1 = n2·sinθ2 
-					  => sin α =  n·sin <L,F>  ,  n = n入 / n折
-					  Lz = L + F·sin(α - <L,F>) / sinα
-					     = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 *	[过程]:
 		[1] 遍历三角形集合中的每一个三角形
 			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
@@ -112,7 +120,6 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
-	Mat<double> tmp;
 	for (int k = 0; k < 3; k++)color[k] *= intersectMaterial->color[k];
 	return color;
 }
@@ -153,9 +160,10 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	}
 	//[1]
 	Mat<double> edge[2], tmp;
-	edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0]));
-	edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]));
-	FaceVec.crossProduct(edge[0], edge[1]).normalized();
+	FaceVec.crossProduct(
+		edge[0].add(triangle.p[1], triangle.p[0].negative(edge[0])),
+		edge[1].add(triangle.p[2], triangle.p[0].negative(edge[1]))
+	).normalized();
 	//[2]
 	double RayFaceDistance = FaceVec.dot(tmp.add(triangle.p[0], RaySt.negative(tmp))) / FaceVec.dot(Ray);
 	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
@@ -167,11 +175,21 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	if (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) return -1;		// if u,v out of range, return directly
 	return RayFaceDistance;
 }
-/*--------------------------------[ 反射 ]--------------------------------*/
+/*--------------------------------[ 反射 ]--------------------------------
+*	[反射定律]: 入射角 == 反射角
+			设面矢F, 入射光L
+			Lf = L - F·2 cos<L,F>
+-------------------------------------------------------------------------*/
 Mat<double>& RayTracing::reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
 	return reflectRay.add(reflectRay.mult(-2 * faceVec.dot(incidentRay), faceVec), incidentRay).normalized();
 }
-/*--------------------------------[ 折射 ]--------------------------------*/
+/*--------------------------------[ 折射 ]--------------------------------
+*	[折射定律]: n1·sinθ1 = n2·sinθ2
+			设面矢F, 入射光L
+			=> sin α =  n·sin <L,F>  ,  n = n入 / n折
+			Lz = L + F·sin(α - <L,F>) / sinα
+			   = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
+-------------------------------------------------------------------------*/
 Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut) {
 	double refractRate = rateIn / rateOut;
 	double CosIn = faceVec.dot(incidentRay);

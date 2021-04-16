@@ -14,10 +14,9 @@ limitations under the License.
 ==============================================================================*/
 #ifndef RAY_TRACING_H
 #define RAY_TRACING_H
-#include "Graphics.h"
-#include "GraphicsND.h"
 #include "RGB.h"
-#include <math.h>
+#include "GraphicsND.h"
+#include <vector>
 #define PI 3.141592653589
 
 class RayTracing {
@@ -29,10 +28,10 @@ public:
 	};
 	struct Triangle { Mat<double> p[3];	Material* material = NULL; };			//三角形
 	/*---------------- 基础参数 ----------------*/
-	Graphics g;																	//核心图形学类
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
+	Mat<RGB> ScreenPix;
 	Mat<Mat<double>> Screen;
-	int SamplesNum = 1e3, maxRayLevel = 5;
+	int SamplesNum = 1e9, maxRayLevel = 5;
 	double refractRateBuffer = 1, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
@@ -42,6 +41,8 @@ public:
 	~RayTracing() { ; }															//析构函数
 	void init(int width, int height);											//初始化
 	void readImg(const char* fileName);											//读图
+	void writeImg(const char* filename);										//写图
+	void setPix(int x, int y, Mat<double>& color);								//画像素
 	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0);							//渲染
 	Mat<double>& traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level);
