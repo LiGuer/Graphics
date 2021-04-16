@@ -74,8 +74,7 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 					PixYVec.mult(y + rand() / double(RAND_MAX) - Screen.cols / 2 - 0.5, ScreenYVec)
 				);//[3]
 				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), color.zero(), 0);	//[4][5]
-				Screen(x, y).add(Screen(x, y), color *= 1.0 / (sample + 1));
-				setPix(x, y, Screen(x, y));
+				setPix(x, y, Screen(x, y) += (color *= 1.0 / (sample + 1)));
 			} 
 		} printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
 	}
@@ -88,17 +87,17 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 			[3] 保留光线走过距离最近的三角形的相关数据
 		[4] 如果该光线等级小于设定的阈值等级
 			计算三角形反射方向，将反射光线为基准重新计算
+&	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 -----------------------------------------------------------------------------*/
 Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
 	if (level > maxRayLevel) return color.zero();
 	double minDistance = DBL_MAX;
 	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
 	Material* intersectMaterial = NULL;
-	//[1]
+	//[1][2][3]
 	for (int i = 0; i < TriangleSet.size(); i++) {
-		//[2][3]
-		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp);
-		if (distance > eps && distance < minDistance) {			//distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
+		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp, minDistance);
+		if (distance > eps) {
 			minDistance = distance; intersectMaterial = TriangleSet[i].material;
 			FaceVec = FaceVecTmp; intersection = intersectionTmp;
 		}
@@ -112,10 +111,10 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		color *= intersectMaterial->reflectRate;
 	}
 	else if (intersectMaterial->refractRate != 0) {					//Refract
-		double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
-		refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
+		double t = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
+		refract(Ray, FaceVec, RayTmp, t, refractRateBuffer);
 		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, color.zero(), level + 1);
-		refractRateBuffer = refractRateBufferTmp;
+		refractRateBuffer = t;
 	}
 	else if (intersectMaterial->reflectRate != 0) {					//Reflect
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
@@ -141,7 +140,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 				  若Δ≥0 有交点.
 				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
 ---------------------------------------------------------------------------*/
-double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection) {
+double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection, double minDistance) {
 	// Sphere Seek Intersection
 	if (triangle.p[2][0] == NULL) {
 		// 计算ΔX、Δ
@@ -151,7 +150,8 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 		if (Delta < 0) return -1;									//有无交点
 		Delta = sqrt(Delta);
 		double RayFaceDistance = (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
-		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
+		if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
+		intersection.mult(RayFaceDistance, Ray) += RaySt;
 		FaceVec.sub(intersection, triangle.p[0]).normalized();
 		return RayFaceDistance;
 	}
@@ -164,7 +164,8 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	double t = FaceVec.dot(Ray);
 	if (t == 0) return -1;											//光线与面是否平行
 	double RayFaceDistance = FaceVec.dot(tmp.sub(triangle.p[0], RaySt)) / t;
-	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
+	if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
+	intersection.mult(RayFaceDistance, Ray) += RaySt;
 	//[3]
 	tmp.sub(intersection, triangle.p[0]);
 	double Dot00 = edge[0].dot(edge[0]),
@@ -172,8 +173,9 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 		   Dot11 = edge[1].dot(edge[1]),
 		   Dot02 = edge[0].dot(tmp),
 		   Dot12 = edge[1].dot(tmp);
-	double u = (Dot11 * Dot02 - Dot01 * Dot12) / (Dot00 * Dot11 - Dot01 * Dot01);
-	double v = (Dot00 * Dot12 - Dot01 * Dot02) / (Dot00 * Dot11 - Dot01 * Dot01);
+	t = Dot00 * Dot11 - Dot01 * Dot01;
+	double u = (Dot11 * Dot02 - Dot01 * Dot12) / t;
+	double v = (Dot00 * Dot12 - Dot01 * Dot02) / t;
 	return (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) ? -1 : RayFaceDistance;
 }
 /*--------------------------------[ 反射 ]--------------------------------
@@ -206,15 +208,10 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
-	tmp1.getData(tmp1[1] * faceVec[2] - tmp1[2] * faceVec[1],
-				 tmp1[2] * faceVec[0] - tmp1[0] * faceVec[2],
-				 tmp1[0] * faceVec[1] - tmp1[1] * faceVec[0]
-	).normalized();
-	tmp2.getData(faceVec[1] * tmp1[2] - faceVec[2] * tmp1[1],
-				 faceVec[2] * tmp1[0] - faceVec[0] * tmp1[2],
-				 faceVec[0] * tmp1[1] - faceVec[1] * tmp1[0]
-	);
-	return reflectRay.add(tmp1.mult(cos(r1) * sqrt(r2), tmp1), reflectRay.add(tmp2.mult(sin(r1) * sqrt(r2), tmp2), reflectRay.mult(sqrt(1 - r2), faceVec))).normalized();
+	tmp1.crossProduct(tmp1, faceVec).normalized();
+	tmp2.crossProduct(faceVec, tmp1);
+	reflectRay.mult(sqrt(1 - r2), faceVec) += (tmp1 *= cos(r1) * sqrt(r2)) += (tmp2 *= sin(r1) * sqrt(r2));
+	return reflectRay.normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
