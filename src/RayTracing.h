@@ -1,5 +1,5 @@
 /*
-Copyright 2020 LiGuer. All Rights Reserved.
+Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,18 +9,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+[Reference]:
+[1] Thanks for Kevin Beason at http://www.kevinbeason.com/smallpt/
 ==============================================================================*/
 #ifndef RAY_TRACING_H
 #define RAY_TRACING_H
 #include "Graphics.h"
 #include "GraphicsND.h"
 #include "RGB.h"
+#include <math.h>
 #define PI 3.141592653589
 
 class RayTracing {
 public:
 	struct Material {															//材质
-		RGB color = 0;
+		Mat<double> color{ 3, 1 };
 		bool rediateRate = 0, diffuseReflect = 0;
 		double reflectRate = 1, refractRate = 0;
 	};
@@ -28,6 +31,7 @@ public:
 	/*---------------- 基础参数 ----------------*/
 	Graphics g;																	//核心图形学类
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
+	Mat<Mat<double>> Screen;
 	int SamplesNum = 1e3, maxRayLevel = 5;
 	double refractRateBuffer = 1, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
@@ -37,9 +41,10 @@ public:
 	RayTracing(int width, int height) { init(width, height); }					//构造函数
 	~RayTracing() { ; }															//析构函数
 	void init(int width, int height);											//初始化
+	void readImg(const char* fileName);											//读图
 	/*---------------- DRAW ----------------*/
-	void paint();																//渲染
-	RGB traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level);
+	void paint(const char* fileName, int sampleSt = 0);							//渲染
+	Mat<double>& traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level);
 	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection);	//求交点
 	//几何光学 Geometrical Optics
 	static Mat<double>& reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay);								//反射

@@ -46,7 +46,7 @@ public:
 #define ChannelBlend_Normal(A,B)     ((INT8U)(A))
 #define ChannelBlend_Lighten(A,B)    ((INT8U)((B > A) ? B:A))
 #define ChannelBlend_Darken(A,B)     ((INT8U)((B > A) ? A:B))
-#define ChannelBlend_Multiply(A,B)   ((INT8U)((A * B) / 0xFF))
+#define ChannelBlend_Multiply(A,B)   ((INT8U)(((ARGB)A * B) / 0xFF))
 #define ChannelBlend_Average(A,B)    ((INT8U)((A + B) / 2))
 #define ChannelBlend_Add(A,B)        ((INT8U)(min(0xFF, (A + B))))
 #define ChannelBlend_Subtract(A,B)   ((INT8U)((A + B < 0xFF) ? 0:(A + B - 0xFF)))

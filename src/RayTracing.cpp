@@ -1,5 +1,5 @@
 ﻿/*
-Copyright 2020 LiGuer. All Rights Reserved.
+Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,11 +9,26 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+[Reference]:
+[1] Thanks for Kevin Beason at http://www.kevinbeason.com/smallpt/
 ==============================================================================*/
 #include "RayTracing.h"
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void RayTracing::init(int width, int height) {
 	g.init(width, height);
+	Screen.zero(height, width);
+	for (int i = 0; i < Screen.rows * Screen.cols; i++)Screen[i].zero(3, 1);
+}
+/*--------------------------------[ 读图 ]--------------------------------*/
+void RayTracing::readImg(const char* fileName) {
+	FILE* fin = fopen(fileName, "rb");
+	int rows, cols, fp;
+	fscanf(fin, "P6\n%d %d\n255\n", fp, cols, rows);					// 读图片格式、宽高、最大像素值
+	init(cols, rows);
+	fread(&g.Canvas, 1, rows * cols * 3, fin);							// 读RGB数据
+	for (int i = 0; i < Screen.rows * Screen.cols; i++)
+		for (int k = 0; k < 3; k++)
+			Screen[i][k] = (double)g.Canvas[i][k] / 0xFF;
 }
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
@@ -23,27 +38,28 @@ void RayTracing::init(int width, int height) {
 			[4] 光线追踪算法
 			[5] 基于结果绘制该像素色彩
 -------------------------------------------------------------------------*/
-void RayTracing::paint() {
+void RayTracing::paint(const char* fileName, int sampleSt) {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
 	ScreenVec.add(gCenter, Eye.negative(ScreenVec));												//屏幕轴由眼指向屏幕中心
-	{ double t[] = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0],1,0 }; ScreenYVec.getData(t).normalized(); }	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
-	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt;
-	Mat<Mat<double>> color(g.Canvas.rows, g.Canvas.cols);
-	for (int i = 0; i < color.rows * color.cols; i++)color[i].zero(3, 1);
-	RGB colorTmp;
-	for (int sample = 0; sample < SamplesNum; sample++) {
-		g.writeImg("D:/LiGu.ppm");
-		color *= (double)sample / (sample + 1);
+	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, colorTmp(3, 1);
+	for (int sample = sampleSt; sample < SamplesNum; sample++) {
+		g.writeImg(fileName);
+		Screen *= (double)sample / (sample + 1);
 		for (int x = 0; x < g.Canvas.rows; x++) {
 			for (int y = 0; y < g.Canvas.cols; y++) {
 				PixVec.add(PixXVec.mult(x + rand() / double(RAND_MAX) - g.Canvas.rows / 2 - 0.5, ScreenXVec), PixYVec.mult(y + rand() / double(RAND_MAX) - g.Canvas.cols / 2 - 0.5, ScreenYVec));//[3]
-				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), colorTmp = 0, 0);					//[4][5]
-				for (int k = 0; k < 3; k++) color(x, y)[k] += (double)colorTmp[k] / (sample + 1);
-				g.setPoint(g.Canvas.rows - x, y, (ARGB)color(x, y)[0] * 0x10000 + (ARGB)color(x, y)[1] * 0x100 + (ARGB)color(x, y)[2]);
+				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), colorTmp.zero(), 0);					//[4][5]
+				Screen(x, y).add(Screen(x, y), colorTmp *= 1.0 / (sample + 1));
+				g.setPoint(g.Canvas.rows - x, y,
+					  min((int)(Screen(x, y)[0] * 0xFF), 0xFF) * 0x10000
+					+ min((int)(Screen(x, y)[1] * 0xFF), 0xFF) * 0x100
+					+ min((int)(Screen(x, y)[2] * 0xFF), 0xFF)
+				);
 			} 
 		}
 	}
@@ -64,8 +80,8 @@ void RayTracing::paint() {
 		[4] 如果该光线等级小于设定的阈值等级
 			计算三角形反射方向，将反射光线为基准重新计算
 -----------------------------------------------------------------------------*/
-RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int level) {
-	if (level > maxRayLevel) return color = 0;
+Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
+	if (level > maxRayLevel) return color.zero();
 	double minDistance = DBL_MAX;
 	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
 	Material* intersectMaterial = NULL;
@@ -79,26 +95,25 @@ RGB RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, RGB& color, int l
 		}
 	}
 	//[4]
-	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color = 0;			//Miss intersect
+	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color.zero();		//Miss intersect
 	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
 	Mat<double> RayTmp;
-	if (intersectMaterial->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color = 0, level + 1);
+	if (intersectMaterial->diffuseReflect != 0) {					//Diffuse Reflect
+		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
 	else if (intersectMaterial->refractRate != 0) {					//Refract
 		double refractRateBufferTmp = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
 		refract(Ray, FaceVec, RayTmp, refractRateBufferTmp, refractRateBuffer);
-		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, color = 0, level + 1);
+		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, color.zero(), level + 1);
 		refractRateBuffer = refractRateBufferTmp;
 	}
 	else if (intersectMaterial->reflectRate != 0) {					//Reflect
-		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color = 0, level + 1);
+		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
-	color.R *= (double)intersectMaterial->color.R / 0xFF;
-	color.G *= (double)intersectMaterial->color.G / 0xFF;
-	color.B *= (double)intersectMaterial->color.B / 0xFF;
+	Mat<double> tmp;
+	for (int k = 0; k < 3; k++)color[k] *= intersectMaterial->color[k];
 	return color;
 }
 /*--------------------------------[ 求交点 ]--------------------------------
@@ -172,14 +187,14 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
-	{ double t[] = { tmp1[1] * faceVec[2] - tmp1[2] * faceVec[1],
-					 tmp1[2] * faceVec[0] - tmp1[0] * faceVec[2],
-					 tmp1[0] * faceVec[1] - tmp1[1] * faceVec[0] };
-	tmp1.getData(t).normalized(); }
-	{ double t[] = { faceVec[1] * tmp1[2] - faceVec[2] * tmp1[1],
-					 faceVec[2] * tmp1[0] - faceVec[0] * tmp1[2],
-					 faceVec[0] * tmp1[1] - faceVec[1] * tmp1[0] };
-	tmp2.getData(t); }
+	tmp1.getData(tmp1[1] * faceVec[2] - tmp1[2] * faceVec[1],
+				 tmp1[2] * faceVec[0] - tmp1[0] * faceVec[2],
+				 tmp1[0] * faceVec[1] - tmp1[1] * faceVec[0]
+	).normalized();
+	tmp2.getData(faceVec[1] * tmp1[2] - faceVec[2] * tmp1[1],
+				 faceVec[2] * tmp1[0] - faceVec[0] * tmp1[2],
+				 faceVec[0] * tmp1[1] - faceVec[1] * tmp1[0]
+	);
 	return reflectRay.add(tmp1.mult(cos(r1) * sqrt(r2), tmp1), reflectRay.add(tmp2.mult(sin(r1) * sqrt(r2), tmp2), reflectRay.mult(sqrt(1 - r2), faceVec))).normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
@@ -248,7 +263,7 @@ void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* mate
 **------------------------------------------------------------------------*/
 void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, Material* material) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
+	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
 	direction.add(ed, st.negative(direction));
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
@@ -262,7 +277,7 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
 	for (int i = 0; i <= 360 / delta; i++) {
-		{double t[] = { cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
+		deltaVector.getData(cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360), 0);
 		deltaVector.mult(rotateMat, deltaVector);
 		stPoint.add(st, stPoint.mult(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
