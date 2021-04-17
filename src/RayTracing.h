@@ -43,6 +43,7 @@ public:
 	void readImg(const char* fileName);											//¶ÁÍ¼
 	void writeImg(const char* filename);										//Ð´Í¼
 	void setPix(int x, int y, Mat<double>& color);								//»­ÏñËØ
+	void readObj(const char* filename, Mat<double>& origin, Material* material = NULL);											//¶Á3DÄ£ÐÍ
 	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0);							//äÖÈ¾
 	Mat<double>& traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level);

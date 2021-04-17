@@ -47,6 +47,29 @@ void RayTracing::setPix(int x, int y, Mat<double>& color) {
 	ScreenPix(ScreenPix.rows - x - 1, y).G = min((int)(color[1] * 0xFF), 0xFF);
 	ScreenPix(ScreenPix.rows - x - 1, y).B = min((int)(color[2] * 0xFF), 0xFF);
 }
+/*--------------------------------[ 读3D模型 ]--------------------------------*/
+void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* material) {
+	FILE* fin = fopen(fileName, "rb");
+	char Index; double R;
+	Mat<double> p1(3, 1), p2(3, 1), p3(3, 1);
+	while (Index != EOF) {
+		fgets(&Index, 1, fin);
+		switch(Index) {
+		case 'f':
+			fread(p1.data, 1, 3 * sizeof(double), fin);
+			fread(p2.data, 1, 3 * sizeof(double), fin);
+			fread(p3.data, 1, 3 * sizeof(double), fin);
+			drawTriangle(p1, p2, p3, material);
+			break;
+		case 's':
+			fread(p1.data, 1, sizeof(double), fin);
+			fread(&R, 1, sizeof(double), fin);
+			drawSphere(p1, R, material);
+		default: break;
+		}
+	}
+	fclose(fin);
+}
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
 		[1] 计算屏幕矢量、屏幕X,Y向轴
