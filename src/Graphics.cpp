@@ -24,15 +24,11 @@ void Graphics::init(INT32S width, INT32S height) {
 void Graphics::clear(ARGB color)
 {
 	if (color == TRANSPARENT || color == 0) {	//memset按字节处理，故只能处理高低字节相同的值
-		memset(Canvas.data, color, sizeof(RGB) * Canvas.rows * Canvas.cols); return;
+		memset(Canvas.data, color, sizeof(RGB) * Canvas.size()); return;
 	}
-	for (INT32S y = 0; y < Canvas.cols; y++) {
-		for (INT32S x = 0; x < Canvas.rows; x++) {
-			Canvas(x, y).R = color >> 16;
-			Canvas(x, y).G = color >> 8;
-			Canvas(x, y).B = color;
-		}
-	}
+	for (INT32S y = 0; y < Canvas.cols; y++)
+		for (INT32S x = 0; x < Canvas.rows; x++)
+			Canvas(x, y) = color;
 }
 /*----------------[ SET/READ POINT ]---------------- 
 *	AlphaBlend 算法,	8位ARGB色彩
@@ -56,7 +52,7 @@ ARGB Graphics::readPoint(INT32S x, INT32S y) {
 void Graphics::writeImg(const char* filename) {
 	FILE* fp = fopen(filename, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", Canvas.cols, Canvas.rows);			// 写图片格式、宽高、最大像素值
-	fwrite(Canvas.data, 1, Canvas.rows * Canvas.cols * 3, fp);			// 写RGB数据
+	fwrite(Canvas.data, 1, Canvas.size() * 3, fp);			// 写RGB数据
 	fclose(fp);
 }
 /*----------------[ 判断过界 ]----------------*/
@@ -78,8 +74,7 @@ void Graphics::transSelf() {
 			 memcpy(tmp.data + yt * Canvas.cols + (xt + 1), Canvas.data + y * Canvas.cols + x, sizeof(RGB));
 			 memcpy(tmp.data + (yt + 1) * Canvas.cols + (xt + 1), Canvas.data + y * Canvas.cols + x, sizeof(RGB));
 		}
-	}
-	Canvas = tmp;
+	} Canvas.eatMat(tmp);
 }
 /*----------------[ 剪切图 ]----------------*/
 void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
@@ -87,7 +82,7 @@ void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
 	Mat<RGB> tmp(height, width);
 	for (int y = 0; y < ey - sy; y++)
 		memcpy(tmp.data + y * width, Canvas.data + (sy + y) * Canvas.cols + sx, sizeof(RGB) * width);
-	Canvas = tmp;
+	Canvas.eatMat(tmp);
 }
 /******************************************************************************
 
@@ -97,10 +92,10 @@ void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
 /*----------------[ DRAW POINT ]----------------*/
 void Graphics::drawPoint(INT32S x0, INT32S y0) {
 	if (judgeOutRange(x0, y0))return;
-	setPoint(x0, y0, PaintColor);						//基础点(点粗==0)
+	setPoint(x0, y0, PaintColor);										//基础点(点粗==0)
 	/*------ 点粗>0时 ------*/
 	if (PaintSize > 0) {
-		INT32S x = 0, y = PaintSize, p = 3 - (PaintSize << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
+		INT32S x = 0, y = PaintSize, p = 3 - (PaintSize << 1);			//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
 		INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
 		/*------ 绘制圆 (x=0始,y=x终) ------*/
 		while (x <= y) {
@@ -109,10 +104,7 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 			x++;
 			INT32S dp = 4 * x + 6;
 			if (p < 0)p += dp;
-			else {														//p过临界值，y加一
-				p += dp - 4 * y + 4;
-				y--;
-			}
+			else { p += dp - 4 * y + 4; y--; }							//p过临界值，y加一
 		}
 	}
 }
@@ -175,10 +167,7 @@ void Graphics::drawCircle(INT32S x0, INT32S y0, INT32S r)
 		x++;
 		INT32S dp = 4 * x + 6;
 		if (p < 0)p += dp;
-		else{														//p过临界值，y加一
-			p += dp - 4 * y + 4;
-			y--;
-		}
+		else{ p += dp - 4 * y + 4; y--; } //p过临界值，y加一
 	}
 }
 /*----------------[ DRAW ELLIPSE ]---------------
@@ -202,30 +191,22 @@ void Graphics::drawEllipse(INT32S x0, INT32S y0, INT32S rx, INT32S ry)
 	INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
 	/*------ 绘制椭圆 (区域1) ------*/
 	while (ry2 * x < rx2 * y) {
-		for (int i = 0; i < 4; i++) {								//四分对称绘制
+		for (int i = 0; i < 4; i++) 								//四分对称绘制
 			drawPoint(x0 + x * x_step[i], y0 + y * y_step[i]);
-		}
 		x++;
 		INT64S dp = (1 + 2 * x) * ry2;
 		if (p < 0)p += dp;
-		else {														//p过临界值，y加一
-			y--;
-			p += dp - 2 * rx2 * y;
-		}
+		else { y--; p += dp - 2 * rx2 * y; }						//p过临界值，y加一
 	}
 	/*------ 绘制椭圆 (区域2) ------*/
 	p = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - ry2 * rx2;
 	while (y >= 0) {
-		for (int i = 0; i < 4; i++) {								//八分圆对称绘制
+		for (int i = 0; i < 4; i++) 								//八分圆对称绘制
 			drawPoint(x0 + x * x_step[i], y0 + y * y_step[i]);
-		}
 		y--;
 		INT64S dp = (1 - 2 * y) * rx2;
 		if (p > 0)p += dp;
-		else {														//p过临界值，y加一
-			x++;
-			p += dp + 2 * ry2 * x;
-		}
+		else { x++; p += dp + 2 * ry2 * x; }						//p过临界值，y加一
 	}
 }
 /*----------------[ DRAW GRID ]----------------*/
@@ -269,15 +250,12 @@ void Graphics::drawBezier(INT32S xCtrl[], INT32S yCtrl[], INT32S n)
 {
 	INT32S N = Canvas.rows + Canvas.cols;					//#待优化
 	FP64 C[50];
-	for (INT32S i = 0; i < n; i++) {
+	for (INT32S i = 0; i < n; i++) 
 		setPoint(xCtrl[i], yCtrl[i],0xFFFFFF);
-	}
 	for (INT32S i = 0; i < n; i++) {
 		C[i] = 1;
-		for (INT32S j = n - 1; j >= i + 1; j--)
-			C[i] *= j;
-		for (INT32S j = n - 1 - i; j >= 2; j--)
-			C[i] /= j;
+		for (INT32S j = n - 1; j >= i + 1; j--) C[i] *= j;
+		for (INT32S j = n - 1 - i; j >= 2; j--) C[i] /= j;
 	}
 	for (INT32S k = 0; k < N; k++) {
 		FP64 u = (FP64)k / N;

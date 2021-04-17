@@ -14,8 +14,8 @@ limitations under the License.
 #define DIGITAL_IMAGE_PROCESSING_H
 #include <stdlib.h>
 #include <time.h>
-#include "../LiGu_AlgorithmLib/Mat.h"
-#include "../LiGu_AlgorithmLib/BasicMachineLearning.h"
+#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
 #include "../opencv2-include/opencv2/opencv.hpp"
 #pragma comment(lib,"opencv2-include/opencv_world430.lib")
 #define PI 3.141592653589
@@ -41,24 +41,24 @@ Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
 	return data;
 }
 void Output(const char* outputImgUrl, Mat<double>* data) {
-	unsigned char* output = (unsigned char*)calloc(data[0].cols * data[0].rows * 3, sizeof(unsigned char));
-	for (int i = 0; i < data[0].rows * data[0].cols; i++)
+	unsigned char* output = (unsigned char*)calloc(data[0].size() * 3, sizeof(unsigned char));
+	for (int i = 0; i < data[0].size(); i++)
 		for (int k = 0; k < 3; k++)
 			output[i * 3 + k] = (data[k])[i] * 255;
 	FILE* fp = fopen(outputImgUrl, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", data[0].cols, data[0].rows);	// 写图片格式、宽高、最大像素值
-	fwrite(output, 1, data[0].cols * data[0].rows * 3, fp);	// 写RGB数据
+	fwrite(output, 1, data[0].size() * 3, fp);	// 写RGB数据
 	fclose(fp);
 	free(output);
 }
 void Output(const char* outputImgUrl, Mat<double>& data) {
-	unsigned char* output = (unsigned char*)calloc(data.cols * data.rows, sizeof(unsigned char));
-	for (int i = 0; i < data.rows * data.cols; i++)
+	unsigned char* output = (unsigned char*)calloc(data.size(), sizeof(unsigned char));
+	for (int i = 0; i < data.size(); i++)
 			for (int k = 0; k < 3; k++)
 				output[i] = data[i] * 255;
 	FILE* fp = fopen(outputImgUrl, "wb");
 	fprintf(fp, "P5\n%d %d\n255\n", data.cols, data.rows);	// 写图片格式、宽高、最大像素值
-	fwrite(output, 1, data.cols * data.rows, fp);	// 写RGB数据
+	fwrite(output, 1, data.size(), fp);	// 写RGB数据
 	fclose(fp);
 	free(output);
 }
@@ -69,7 +69,7 @@ void Output(const char* outputImgUrl, Mat<double>& data) {
 *************************************************************************************************/
 Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double threshold = 0.5) {
 	output.zero(input.rows, input.cols);
-	for (int i = 0; i < input.rows * input.cols; i++)
+	for (int i = 0; i < input.size(); i++)
 		output[i] = input[i] > threshold ? 1 : 0;
 	return output;
 }
@@ -80,7 +80,7 @@ Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double thresh
 *************************************************************************************************/
 Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, int TimesMax = 0x7FFFFFFF) {
 	// Process input & output
-	Mat<double> data(3, input[0].rows * input[0].cols);
+	Mat<double> data(3, input[0].size());
 	for (int k = 0; k < 3; k++)
 		for (int i = 0; i < input[0].rows; i++)
 			for (int j = 0; j < input[0].cols; j++)
@@ -115,7 +115,7 @@ Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
 	output_x.conv(input, SobelKernel, 1);
 	output_y.conv(input, SobelKernel.transposi(output_y), 1);
 	output.zero(input.rows, input.cols);
-	for (int i = 0; i < input.rows * input.cols; i++)
+	for (int i = 0; i < input.size(); i++)
 		output[i] = sqrt(output_x[i] * output_x[i] + output_y[i] * output_y[i]);
 	return output;
 }
@@ -185,7 +185,7 @@ Mat<int>& Histograms(Mat<double>* input, Mat<double>& output) {
 [公式]: InvImage = 1 - Image
 -------------------------------------------------------------------------*/
 Mat<double>& Invert(Mat<double>& input, Mat<double>& output) {
-	output.mult(1, input.negative(output)); return output;
+	output.mult(-1, input); return output;
 }
 Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
 	for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;

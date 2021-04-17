@@ -18,7 +18,7 @@ limitations under the License.
 void RayTracing::init(int width, int height) {
 	ScreenPix.zero(height, width);
 	Screen.zero(height, width);
-	for (int i = 0; i < Screen.rows * Screen.cols; i++)Screen[i].zero(3, 1);
+	for (int i = 0; i < Screen.size(); i++)Screen[i].zero(3, 1);
 }
 /*--------------------------------[ 读图 ]--------------------------------*/
 void RayTracing::readImg(const char* fileName) {
@@ -26,7 +26,7 @@ void RayTracing::readImg(const char* fileName) {
 	int rows, cols;
 	fscanf(fin, "P6\n%d %d\n255\n", &cols, &rows);					// 读图片格式、宽高、最大像素值
 	init(cols, rows);
-	fread(&ScreenPix[0], 1, rows * cols * 3, fin);							// 读RGB数据
+	fread(&ScreenPix[0], 1, ScreenPix.size() * 3, fin);							// 读RGB数据
 	for (int x = 0; x < Screen.rows; x++)
 		for (int y = 0; y < Screen.cols; y++)
 			for (int k = 0; k < 3; k++)
@@ -37,7 +37,7 @@ void RayTracing::readImg(const char* fileName) {
 void RayTracing::writeImg(const char* filename) {
 	FILE* fp = fopen(filename, "wb");
 	fprintf(fp, "P6\n%d %d\n255\n", ScreenPix.cols, ScreenPix.rows);			// 写图片格式、宽高、最大像素值
-	fwrite(ScreenPix.data, 1, ScreenPix.rows * ScreenPix.cols * 3, fp);			// 写RGB数据
+	fwrite(ScreenPix.data, 1, ScreenPix.size() * 3, fp);			// 写RGB数据
 	fclose(fp);
 }
 /*--------------------------------[ 画像素 ]--------------------------------*/
@@ -180,7 +180,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	}
 	//[1][2]
 	Mat<double> edge[2], tmp;
-	FaceVec.crossProduct(
+	FaceVec.crossProduct_(
 		edge[0].sub(triangle.p[1], triangle.p[0]),
 		edge[1].sub(triangle.p[2], triangle.p[0])
 	).normalized();
@@ -232,7 +232,7 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
 	tmp1.mult(cos(r1) * sqrt(r2), tmp1.crossProduct(tmp1, faceVec).normalized());
-	tmp2.mult(sin(r1) * sqrt(r2), tmp2.crossProduct(faceVec, tmp1));
+	tmp2.mult(sin(r1) * sqrt(r2), tmp2.crossProduct_(faceVec, tmp1));
 	reflectRay.add(reflectRay.add(reflectRay.mult(sqrt(1 - r2), faceVec), tmp1), tmp2);
 	return reflectRay.normalized();
 }

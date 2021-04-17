@@ -28,7 +28,7 @@ void GraphicsND::init(int width, int height, int Dim) {
 void GraphicsND::clear(ARGB color) {
 	g.clear(color);
 	for (int i = 0; i < Z_Buffer.rows; i++)
-		for (int j = 0; j < Z_Buffer[i].rows * Z_Buffer[i].cols; j++)
+		for (int j = 0; j < Z_Buffer[i].size(); j++)
 			Z_Buffer[i].data[j] = -0x7FFFFFFF;
 	TransformMat.E(Z_Buffer.rows + 2 + 1);
 }
@@ -66,7 +66,7 @@ bool GraphicsND::setPix(Mat<int>& p0, int size) {
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
 void GraphicsND::setAxisLim(Mat<double>& pMin, Mat<double>& pMax) {
 	Mat<double> scale, tmp;
-	scale.add(pMax, pMin.negative(scale));
+	scale.sub(pMax, pMin);
 	for (int i = 0; i < scale.rows; i++) {
 		if (i == 1)scale[i] = g.Canvas.rows / scale[i];
 		else scale[i] = g.Canvas.cols / scale[i];
@@ -139,7 +139,7 @@ void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 	Mat<int> sp, ep;
 	value2pix(sp0, sp); value2pix(ep0, ep);
 	Mat<int> err(sp.rows, 1), inc(sp.rows, 1), delta, point(sp), tmp;
-	delta.add(ep, sp.negative(tmp));
+	delta.sub(ep, sp);
 	//设置xyz单步方向	
 	for (int dim = 0; dim < sp.rows; dim++) {
 		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右1,垂直0,向左-1)
@@ -161,7 +161,7 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 }
 void GraphicsND::drawPolyline(Mat<double>& y, double xmin, double xmax) {
 	Mat<double> point(2, 1), prePoint(2, 1);
-	{double t[] = { xmin, y[0] }; point.getData(t); prePoint.getData(t); }
+	point.getData(xmin, y[0]); prePoint.getData(xmin, y[0]);
 	double delta = (xmax - xmin) / (y.cols - 1);
 	for (int i = 1; i < y.cols; i++) {
 		point[0] += delta; point[1] = y[i];
@@ -196,7 +196,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 		//[3]
 		Mat<int> err[2], inc[2], delta[2], point[2];
 		for (int k = 0; k < 2; k++) {
-			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].add(pt[k + 1], pt[0].negative(tmp)); point[k] = pt[0];
+			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].sub(pt[k + 1], pt[0]); point[k] = pt[0];
 			for (int dim = 0; dim < Dim; dim++) {
 				inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
@@ -209,7 +209,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 			if (i == delta[1 - dXMaxCur][0] && flag) {
 				flag = false;														//关闭检测
 				int kt = 1 - dXMaxCur;
-				delta[kt].add(pt[dXMaxCur + 1], pt[kt + 1].negative(tmp));
+				delta[kt].sub(pt[dXMaxCur + 1], pt[kt + 1]);
 				if (delta[kt][0] == 0) break;
 				point[kt] = pt[kt + 1];
 				for (int dim = 1; dim < Dim; dim++) {
@@ -219,7 +219,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 			}
 			//[5]画线
 			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, pointTmp(point[0]);
-			deltaTmp.add(point[1], point[0].negative(tmp));
+			deltaTmp.sub(point[1], point[0]);
 			for (int dim = 0; dim < Dim; dim++) {									//设置xyz单步方向	
 				incTmp[dim] = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;						//向左
@@ -247,10 +247,8 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct, bool FACE, bool LINE) {
 	if (direct == NULL) {
 		Mat<double> pt(2, 1);
-		{ double t[] = { sp[0],ep[1] }; pt.getData(t); }
-		drawLine(sp, pt); drawLine(pt, ep);
-		{ double t[] = { sp[1],ep[0] }; pt.getData(t); }
-		drawLine(sp, pt); drawLine(pt, ep);
+		pt.getData(sp[0], ep[1]); drawLine(sp, pt); drawLine(pt, ep);
+		pt.getData(sp[1], ep[0]); drawLine(sp, pt); drawLine(pt, ep);
 	}
 	else {
 		// 计算 Rotate Matrix
@@ -328,14 +326,12 @@ void GraphicsND::drawSurface(Mat<double> z, double xs, double xe, double ys, dou
 	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
 	for (int y = 0; y < z.cols; y++) {
 		for (int x = 0; x < z.rows; x++) {
-			{double t[] = { xs + x * dx,ys + y * dy,z(x,y) }; p.getData(t); }
+			p.getData(xs + x * dx, ys + y * dy, z(x, y));
 			if (x > 0) { 
-				double t[] = { xs + (x - 1) * dx,ys + y * dy,z(x - 1,y) }; 
-				pl.getData(t); drawLine(pl, p);
+				pl.getData(xs + (x - 1) * dx, ys + y * dy, z(x - 1, y)); drawLine(pl, p);
 			}
 			if (y > 0) { 
-				double t[] = { xs + x * dx,ys + (y - 1) * dy,z(x,y - 1) }; 
-				pu.getData(t); drawLine(pu, p);
+				pu.getData(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p);
 			}
 		}
 	}
@@ -386,8 +382,8 @@ void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE, boo
 **------------------------------------------------------------------------*/
 void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, bool FACE, bool LINE) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
-	direction.add(ed, st.negative(direction));
+	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
+	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
 			rotateAxis.crossProduct(direction, zAxis),
@@ -399,7 +395,7 @@ void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
 	for (int i = 0; i <= 360 / delta; i++) {
-		{double t[] = { cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360),0 }; deltaVector.getData(t); }
+		deltaVector.getData(cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360), 0);
 		deltaVector.mult(rotateMat, deltaVector);
 		stPoint.add(st, stPoint.mult(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
@@ -585,14 +581,14 @@ void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	// 箭头
 	Mat<double> st(3, 1), ed(3, 1);
 	int vectorLength = 10, vectorWidth = vectorLength / 2.718281828456;
-	{double t[] = { Xmax,0, 0 }; st.getData(t); }
-	{double t[] = { Xmax + vectorLength,0, 0 }; ed.getData(t); }
+	st.getData(Xmax, 0, 0);
+	ed.getData(Xmax + vectorLength, 0, 0);
 	if (Xmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
-	{double t[] = { 0,Ymax, 0 }; st.getData(t); }
-	{double t[] = { 0,Ymax + vectorLength, 0 }; ed.getData(t); }
+	st.getData(0, Ymax, 0);
+	ed.getData(0, Ymax + vectorLength, 0);
 	if (Ymax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
-	{double t[] = { 0,0,Zmax }; st.getData(t); }
-	{double t[] = { 0,0,Zmax + vectorLength }; ed.getData(t); }
+	st.getData(0, 0, Zmax);
+	ed.getData(0, 0, Zmax + vectorLength);
 	if (Zmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
 }
 /*--------------------------------[ 画等高线 ]--------------------------------*/

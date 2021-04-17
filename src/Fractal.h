@@ -141,8 +141,8 @@ Mat<double>& PerlinNoise(Mat<double>& output, int frequency) {
 void FractalTree3D(std::vector<Mat<double>>& linesSt, std::vector<Mat<double>>& linesEd, int level, double alpha, int fork = 3) {
 	if (level <= 0)return;
 	// 确定旋转矩阵
-	Mat<double> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; {double t[] = { 0, 0, 1 }; zAxis.getData(t); }
-	direction.add(ed, st.negative(direction));
+	Mat<double> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
+	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
 			rotateAxis.crossProduct(direction, zAxis),
@@ -155,7 +155,7 @@ void FractalTree3D(std::vector<Mat<double>>& linesSt, std::vector<Mat<double>>& 
 	double Lenth = direction.norm();
 	Mat<double> endPoint(3, 1);
 	for (int i = 0; i < fork; i++) {
-		{double t[] = { sin(alpha) * cos((double)i * 2 * PI / fork), sin(alpha) * sin((double)i * 2 * PI / fork), cos(alpha) }; endPoint.getData(t); }
+		endPoint.getData(sin(alpha) * cos((double)i * 2 * PI / fork), sin(alpha) * sin((double)i * 2 * PI / fork), cos(alpha));
 		endPoint.add(ed, endPoint.mult(0.7 * Lenth, endPoint.mult(rotateMat, endPoint)));
 		linesSt.push_back(ed);
 		linesEd.push_back(endPoint);

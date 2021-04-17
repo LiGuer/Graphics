@@ -20,7 +20,7 @@ Reference.
 #include <algorithm>
 #include <vector>
 #include <stack>
-#include"../LiGu_AlgorithmLib/Mat.h"
+#include"../../LiGu_AlgorithmLib/Mat.h"
 namespace ComputationalGeometry{
 
 const double PI = 3.141592653589;
@@ -156,8 +156,8 @@ Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum){
 			ConvexHullPoint.push(prePoint);
 			// 叉乘判断角度转向
 			Mat<double> a, b;
-			a.add(prePointNext, prePoint.negative(a));
-			b.add(point[i], prePoint.negative(b));
+			a.sub(prePointNext, prePoint);
+			b.sub(point[i], prePoint);
 			if (a[0] * b[1] - a[1] * b[0] < 0) break;
 			ConvexHullPoint.pop();
 		}
@@ -225,7 +225,7 @@ Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 		minPoint = (point[i][0] < minPoint[0] || (point[i][0] == minPoint[0] && point[i][1] < minPoint[1])) ? point[i] : minPoint;
 	}
 	Mat<double> supertriangle(2, 3), length;
-	length.add(maxPoint, minPoint.negative(length));
+	length.sub(maxPoint, minPoint);
 	supertriangle(0, 0) = minPoint[0] - length[0] - 2; supertriangle(1, 0) = minPoint[1] - 2;
 	supertriangle(0, 1) = maxPoint[0] + length[0] + 2; supertriangle(1, 1) = minPoint[1] - 2;
 	supertriangle(0, 2) = (maxPoint[0] + minPoint[0]) / 2; supertriangle(1, 2) = maxPoint[1] + length[1] + 2;
@@ -241,7 +241,7 @@ Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 				triTemp[j].getCol(k, triEdge[k]);
 			double R;
 			ThreePointsToCircle(triEdge, center, R);
-			double distance = (temp.add(point[i], center.negative(temp))).norm();
+			double distance = (temp.sub(point[i], center)).norm();
 			//[3.2.2] 如果该点在外接圆的右侧
 			if (point[i][0] > center[0] + R) {
 				triAns.push_back(triTemp[j]);
