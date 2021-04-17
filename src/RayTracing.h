@@ -23,7 +23,7 @@ class RayTracing {
 public:
 	struct Material {															//材质
 		Mat<double> color{ 3, 1 };
-		bool rediateRate = 0, diffuseReflect = 0;
+		bool rediateRate = 0, diffuseReflect = 0, quickReflect = 0;
 		double reflectRate = 1, refractRate = 0;
 	};
 	struct Triangle { Mat<double> p[3];	Material* material = NULL; };			//三角形
@@ -35,6 +35,7 @@ public:
 	double refractRateBuffer = 1, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
+	std::vector<Mat<double>> PointLight;
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数

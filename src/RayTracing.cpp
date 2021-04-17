@@ -129,7 +129,17 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color.zero();		//Miss intersect
 	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
 	Mat<double> RayTmp;
-	if (intersectMaterial->diffuseReflect != 0) {					//Diffuse Reflect
+	if (intersectMaterial->quickReflect != 0) {
+		double lightCos = 0;
+		FaceVec *= FaceVec.dot(Ray) > 0 ? -1 : 1;
+		for (int i = 0; i < PointLight.size(); i++) {
+			RayTmp.sub(PointLight[i], intersection);
+			double t = (FaceVec.dot(RayTmp) / RayTmp.norm() + 1) / 2;
+			lightCos = t > lightCos ? t : lightCos;
+		}
+		color.mult(lightCos, color.getData(1, 1, 1));
+	}
+	else if (intersectMaterial->diffuseReflect != 0) {					//Diffuse Reflect
 		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
