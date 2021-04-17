@@ -143,7 +143,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
-	return color.elementProduct(intersectMaterial->color);
+	return color.elementMult(intersectMaterial->color);
 }
 /*--------------------------------[ 求交点 ]--------------------------------
 *	[流程]:
@@ -174,7 +174,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 		Delta = sqrt(Delta);
 		double RayFaceDistance = (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 		if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
-		intersection.mult(RayFaceDistance, Ray) += RaySt;
+		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
 		FaceVec.sub(intersection, triangle.p[0]).normalized();
 		return RayFaceDistance;
 	}
@@ -188,7 +188,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	if (t == 0) return -1;											//光线与面是否平行
 	double RayFaceDistance = FaceVec.dot(tmp.sub(triangle.p[0], RaySt)) / t;
 	if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
-	intersection.mult(RayFaceDistance, Ray) += RaySt;
+	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
 	//[3]
 	tmp.sub(intersection, triangle.p[0]);
 	double Dot00 = edge[0].dot(edge[0]),
@@ -231,9 +231,9 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
-	tmp1.crossProduct(tmp1, faceVec).normalized();
-	tmp2.crossProduct(faceVec, tmp1);
-	reflectRay.mult(sqrt(1 - r2), faceVec) += (tmp1 *= cos(r1) * sqrt(r2)) += (tmp2 *= sin(r1) * sqrt(r2));
+	tmp1.mult(cos(r1) * sqrt(r2), tmp1.crossProduct(tmp1, faceVec).normalized());
+	tmp2.mult(sin(r1) * sqrt(r2), tmp2.crossProduct(faceVec, tmp1));
+	reflectRay.add(reflectRay.add(reflectRay.mult(sqrt(1 - r2), faceVec), tmp1), tmp2);
 	return reflectRay.normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
