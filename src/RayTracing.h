@@ -35,7 +35,7 @@ public:
 	double refractRateBuffer = 1, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
-	std::vector<Mat<double>> PointLight;
+	std::vector<Mat<double>> PointLight;										//点光源集(QuickReflect专用)
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数

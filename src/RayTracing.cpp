@@ -50,7 +50,7 @@ void RayTracing::setPix(int x, int y, Mat<double>& color) {
 /*--------------------------------[ 读3D模型 ]--------------------------------*/
 void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* material) {
 	FILE* fin = fopen(fileName, "rb");
-	char Index; double R;
+	char Index = 0; double R;
 	Mat<double> p1(3, 1), p2(3, 1), p3(3, 1);
 	while (Index != EOF) {
 		fgets(&Index, 1, fin);
@@ -137,7 +137,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 			double t = (FaceVec.dot(RayTmp) / RayTmp.norm() + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
 		}
-		color.mult(lightCos, color.getData(1, 1, 1));
+		color.mult(lightCos, color.ones(3, 1));
 	}
 	else if (intersectMaterial->diffuseReflect != 0) {					//Diffuse Reflect
 		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
