@@ -148,7 +148,7 @@ void FractalTree3D(std::vector<Mat<double>>& linesSt, std::vector<Mat<double>>& 
 			rotateAxis.crossProduct(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3, 1), rotateMat
-		); rotateMat.cut(0, 2, 0, 2, rotateMat);
+		); rotateMat.block(0, 2, 0, 2, rotateMat);
 	}
 	else rotateMat.E(3);
 	//递归

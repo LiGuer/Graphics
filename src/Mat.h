@@ -1,5 +1,5 @@
 ﻿/*
-Copyright 2020,2021 LiGuer. All Rights Reserved.
+Copyright 2020 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -98,7 +98,6 @@ Mat& crossProduct(Mat& a, Mat& b)			//叉乘 [ crossProduct ]
 Mat& negative(Mat& ans)                     //负 [ negative ]
 Mat& transposi(Mat& ans)                    //转置 [ transposi ]
 void sum(int dim, Mat& ans)                 //求和 [ sum ]
-Mat& sumCol(Mat& ans) 						//求和至一列 [ sum ]
 T norm()                                    //范数 [ norm ]
 Mat& normalized()							//归一化 [ normalized ]
 T comi(int i0, int j0)                      //余子式 [ comi ]
@@ -301,12 +300,22 @@ Mat& diag(Mat& ans)							//构造对角矩阵 [ diag ]
 		for (int i = 1; i < size(); i++)ans += a[i];
 		return ans;
 	}
-	Mat& sumCol(Mat& ans) {
-		Mat ansTmp(rows, 1);
-		for (int i = 0; i < rows; i++)
+	Mat& sum(Mat& ans,int dim) {
+		if (dim == 0) {				//对每一列求和
+			Mat ansTmp(1, cols);
 			for (int j = 0; j < cols; j++)
-				ansTmp[i] += (*this)(i, j);
-		ans.eatMat(ansTmp); return ans;
+				for (int i = 0; i < rows; i++)
+					ansTmp[j] += (*this)(i, j);
+			ans.eatMat(ansTmp); return ans;
+		}
+		if (dim == 1) {				//对每一行求和
+			Mat ansTmp(rows, 1);
+			for (int i = 0; i < rows; i++)
+				for (int j = 0; j < cols; j++)
+					ansTmp[i] += (*this)(i, j);
+			ans.eatMat(ansTmp); return ans;
+		}
+		error(); return ans;
 	}
 	/*----------------求积 [ product Π ]----------------*/
 	T product() {
@@ -612,7 +621,7 @@ Mat& setCol(int _col, Mat& a)
 	}
 	/*----------------交换数据 [ swap ]----------------*/
 	void swap(Mat& a) {
-		T* tptr = a.data; a.data = data; data = tptr;
+		T* tmp = a.data; a.data = data; data = tmp;
 		int t = a.rows; a.rows = rows; rows = t;
 		t = a.cols; a.cols = cols; cols = t;
 	}
@@ -641,7 +650,7 @@ Mat& setCol(int _col, Mat& a)
 		ans.eatMat(ansTmp); return ans;
 	}
 	/*----------------剪切 [ Cut  ]----------------*/
-	Mat& cut(int rowSt, int rowEd, int colSt, int colEd, Mat& ans) {
+	Mat& block(int rowSt, int rowEd, int colSt, int colEd, Mat& ans) {
 		Mat ansTmp(rowEd - rowSt + 1, colEd - colSt + 1);
 		for (int i = rowSt; i <= rowEd; i++)
 			for (int j = colSt; j <= colEd; j++)

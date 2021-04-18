@@ -320,7 +320,7 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3, 1), rotateMat
 		);
-		rotateMat.cut(1, 3, 1, 3, rotateMat);
+		rotateMat.block(1, 3, 1, 3, rotateMat);
 	}
 	else rotateMat.E(3);
 	// 画圆台
