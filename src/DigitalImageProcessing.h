@@ -90,7 +90,7 @@ Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, in
 	time_t now; srand((unsigned)time(&now));
 	Mat<double> Center;
 	Mat<int> Cluster, Cluster_Cur;
-	K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
+	BasicMachineLearning::K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
 	for (int i = 0; i < K; i++)
 		for (int j = 0; j < Cluster_Cur[i]; j++)
 			for (int dim = 0; dim < 3; dim++)

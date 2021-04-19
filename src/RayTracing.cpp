@@ -24,9 +24,9 @@ void RayTracing::init(int width, int height) {
 void RayTracing::readImg(const char* fileName) {
 	FILE* fin = fopen(fileName, "rb");
 	int rows, cols;
-	fscanf(fin, "P6\n%d %d\n255\n", &cols, &rows);					// 读图片格式、宽高、最大像素值
+	fscanf(fin, "P6\n%d %d\n255\n", &cols, &rows);						// 读图片格式、宽高、最大像素值
 	init(cols, rows);
-	fread(&ScreenPix[0], 1, ScreenPix.size() * 3, fin);							// 读RGB数据
+	fread(&ScreenPix[0], 1, ScreenPix.size() * 3, fin);					// 读RGB数据
 	for (int x = 0; x < Screen.rows; x++)
 		for (int y = 0; y < Screen.cols; y++)
 			for (int k = 0; k < 3; k++)
@@ -36,8 +36,8 @@ void RayTracing::readImg(const char* fileName) {
 /*--------------------------------[ 存图 ]--------------------------------*/
 void RayTracing::writeImg(const char* filename) {
 	FILE* fp = fopen(filename, "wb");
-	fprintf(fp, "P6\n%d %d\n255\n", ScreenPix.cols, ScreenPix.rows);			// 写图片格式、宽高、最大像素值
-	fwrite(ScreenPix.data, 1, ScreenPix.size() * 3, fp);			// 写RGB数据
+	fprintf(fp, "P6\n%d %d\n255\n", ScreenPix.cols, ScreenPix.rows);	// 写图片格式、宽高、最大像素值
+	fwrite(ScreenPix.data, 1, ScreenPix.size() * 3, fp);				// 写RGB数据
 	fclose(fp);
 }
 /*--------------------------------[ 画像素 ]--------------------------------*/
@@ -113,23 +113,23 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 &	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 -----------------------------------------------------------------------------*/
 Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
-	if (level > maxRayLevel) return color.zero();
 	double minDistance = DBL_MAX;
-	Mat<double> intersection, intersectionTmp, FaceVec, FaceVecTmp;
+	Mat<double> intersection, intersectionTmp, FaceVec, tmp;
 	Material* intersectMaterial = NULL;
 	//[1][2][3]
 	for (int i = 0; i < TriangleSet.size(); i++) {
-		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, FaceVecTmp, intersectionTmp, minDistance);
+		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, tmp, intersectionTmp, minDistance);
 		if (distance > eps) {
 			minDistance = distance; intersectMaterial = TriangleSet[i].material;
-			FaceVec = FaceVecTmp; intersection = intersectionTmp;
+			FaceVec = tmp; intersection = intersectionTmp;
 		}
 	}
 	//[4]
 	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color.zero();		//Miss intersect
 	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
+	if (level > maxRayLevel && rand() / double(RAND_MAX) > maxRayLevelProbability) return color.zero(); 		//Max Ray Level
 	Mat<double> RayTmp;
-	if (intersectMaterial->quickReflect != 0) {
+	if (intersectMaterial->quickReflect != 0) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
 		double lightCos = 0;
 		FaceVec *= FaceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
@@ -139,7 +139,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		}
 		color.mult(lightCos, color.ones(3, 1));
 	}
-	else if (intersectMaterial->diffuseReflect != 0) {					//Diffuse Reflect
+	else if (intersectMaterial->diffuseReflect != 0) {				//Diffuse Reflect
 		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
@@ -153,7 +153,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= intersectMaterial->reflectRate;
 	}
-	return color.elementMult(intersectMaterial->color);
+	return color.elementMult(tmp.mult(level > maxRayLevel ? 1 / maxRayLevelProbability : 1, intersectMaterial->color));
 }
 /*--------------------------------[ 求交点 ]--------------------------------
 *	[流程]:
@@ -175,7 +175,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 ---------------------------------------------------------------------------*/
 double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection, double minDistance) {
 	// Sphere Seek Intersection
-	if (triangle.p[2][0] == NULL) {
+	if (triangle.p[2][0] == DBL_MAX) {
 		// 计算ΔX、Δ
 		Mat<double> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
 		double R = triangle.p[1][0], A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
@@ -235,7 +235,10 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 	CosOut = sqrt(CosOut);
 	return refractRay.add(refractRay.mult(refractRate, incidentRay), tmp.mult((CosIn > 0 ? 1 : -1)* CosOut - refractRate * CosIn, faceVec)).normalized();
 }
-/*--------------------------------[ 漫反射 ]--------------------------------*/
+/*--------------------------------[ 漫反射 ]--------------------------------
+*	[算法]: MonteCarlo: 随机持续采样
+*	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
+---------------------------------------------------------------------------*/
 Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
 	double r1 = 2 * PI * rand() / double(RAND_MAX), r2 = rand() / double(RAND_MAX);
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
@@ -346,7 +349,7 @@ void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 **-----------------------------------------------------------------------*/
 void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
 	Mat<double> p1(3, 1), p2 = (3, 1);
-	p1[0] = p1[1] = p1[2] = r; p2[0] = NULL;
+	p1[0] = p1[1] = p1[2] = r; p2[0] = DBL_MAX;
 	drawTriangle(center, p1, p2, material); 
 }
 /*--------------------------------[ 画椭球 ]--------------------------------

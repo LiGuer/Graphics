@@ -21,47 +21,110 @@ Reference.
 #include <vector>
 #include <stack>
 #include"../../LiGu_AlgorithmLib/Mat.h"
-namespace ComputationalGeometry{
-
-const double PI = 3.141592653589;
-/*----------------[ 2D 二维 ]----------------*/
-void ThreePointsToCircle(Mat<double> Points[], Mat<double>& center, double& R);	//平面三点确定圆方程
-bool isInCircle(Mat<double> Points[]);											//判断四点共圆
-Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum);			//凸包
-Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum);			//Delaunay三角剖分
-/*----------------[ 3D 三维 ]----------------*/
-Mat<double>* getSphereFibonacciPoint(int& n);									//球面均匀点分布
-/******************************************************************************
-*
-*                    2D 二维
-*
-******************************************************************************/
-/*--------------------------------[ Segments Intersect 线段相交判断 ]--------------------------------
+#define PI 3.141592653589
+namespace Geometry {
+	/*----------------[ 2D 二维 ]----------------*/
+	//三角形
+	bool inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);
+	double RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3, Mat<double>& FaceVec, Mat<double>& intersection);
+	//圆
+	bool onCircle(Mat<double> Points[]);													//判断四点共圆
+	Mat<double>& ThreePoints2Circle(Mat<double> Points[], Mat<double>& center, double& R);	//平面三点确定圆方程
+	//Other
+	Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum);			//凸包
+	Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum);			//Delaunay三角剖分
+	/*----------------[ 3D 三维 ]----------------*/
+	//球
+	double RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& Center, double R);	//射线与球面交点
+	Mat<double>* getSphereFibonacciPoint(int& n);									//球面均匀点分布
+}
+/*************************************************************************************************
+						Segments Intersect 线段相交判断
 *	判定条件：
 	1.Each segment straddles the line containing the other.
 	2.An endpoint of one segment line on the other segment. (the boundary case.)
-**---------------------------------------------------------*/
-bool isSegmentsIntersect(Mat<double>& a, Mat<double>& b){/*
+************************************************************************************************* /
+bool isSegmentsIntersect(Mat<double>& a, Mat<double>& b){
 	double dir_a1 = CrossProduct(a.p[0], a.p[1], b.p[0]),
 		dir_a2 = CrossProduct(a.p[0], a.p[1], b.p[1]),
 		dir_b1 = CrossProduct(b.p[0], b.p[1], a.p[0]),
 		dir_b2 = CrossProduct(b.p[0], b.p[1], a.p[1]);
 	if (dir_a1 == 0)
-		if (OnSegments_judge(a, b.p[0])) return true; else {}
+		if (OnSegments_judge(a, b.p[0])) return true; else;
 	else if (dir_a2 == 0)
-		if (OnSegments_judge(a, b.p[1])) return true; else {}
+		if (OnSegments_judge(a, b.p[1])) return true; else;
 	else if (dir_b1 == 0)
-		if (OnSegments_judge(b, a.p[0])) return true; else {}
+		if (OnSegments_judge(b, a.p[0])) return true; else;
 	else if (dir_b2 == 0)
-		if (OnSegments_judge(b, a.p[1])) return true; else {}
+		if (OnSegments_judge(b, a.p[1])) return true; else;
 	else if (dir_a1 != dir_a2 && dir_b1 != dir_b2) return true;
-	return false;*/
+	return false;
+}*/
+/*************************************************************************************************
+						inTriangle 是否在三角内
+*************************************************************************************************/
+bool Geometry::inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3) {
+	Mat<double> tmp, edge[2];
+	edge[0].sub(TriP2, TriP1);
+	edge[1].sub(TriP3, TriP1);
+	tmp.sub(p0, TriP1);
+	double Dot00 = edge[0].dot(edge[0]),
+		   Dot01 = edge[0].dot(edge[1]),
+		   Dot11 = edge[1].dot(edge[1]),
+		   Dot02 = edge[0].dot(tmp),
+		   Dot12 = edge[1].dot(tmp);
+	double t = Dot00 * Dot11 - Dot01 * Dot01;
+	double u = (Dot11 * Dot02 - Dot01 * Dot12) / t;
+	double v = (Dot00 * Dot12 - Dot01 * Dot02) / t;
+	return (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) ? false : true;
 }
-/*--------------------------------[ CircumCircle 三角形外接圆 ]--------------------------------
-*	外接圆圆心: 即. 三点确定圆方程问题， 也是任意两边的垂直平分线的交点.直接用 ThreePointsToCircle()方法
-**--------------------------------------------------------------------------------------------*/
-
-/*--------------------------------[ ThreePointsToCircle 平面三点确定圆方程 ]--------------------------------
+/*************************************************************************************************
+						TriangleIntersection 射线与三角形交点
+*	[流程]:
+		[1] 计算三角形所在面矢量
+		[2] 计算光线面交点、光线面相交所走过距离
+		[3] 判断交点是否在三角形内部, 若否返回-1
+*	[算法]:
+		平面方程: Af (X - Xf) + BY (Y - Yf) + C (Z - Zf) = 0
+		直线方程: (X - Xl) / Al = (Y - Yl) / Bl = (Z - Zl) / Cl = K
+		点面距:	d = |AXp + BYp + CZp + D| / sqrt(A² + B² + C²)
+		线面交点: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl) 即光线走过线距离
+				  X = K Al + Xl
+*************************************************************************************************/
+double Geometry::RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3, Mat<double>& FaceVec, Mat<double>& intersection) {
+	//[1][2]
+	Mat<double> edge[2], tmp;
+	FaceVec.crossProduct_(
+		edge[0].sub(TriP2, TriP1),
+		edge[1].sub(TriP3, TriP1)
+	).normalized();
+	double t = FaceVec.dot(Ray);
+	if (t == 0) return -DBL_MAX;											//光线与面是否平行
+	double RayFaceDistance = FaceVec.dot(tmp.sub(TriP1, RaySt)) / t;
+	if (inTriangle(intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt), TriP1, TriP2, TriP3)) return RayFaceDistance;
+	return -DBL_MAX;
+}
+/*************************************************************************************************
+						isInCircle 判断四点共圆
+*	[输出]: 圆外-1，圆上0，圆内1
+*	三点确定圆方程: 即 解行列式:
+		| x1²+y1²  x1  y1  1 | ?= 0
+		| x2²+y2²  x2  y2  1 |
+		| x3²+y3²  x3  y3  1 |
+		| x4²+y4²  x4  y4  1 |
+*	[几何解释]: 通过把平面点提升到三维的抛物面中，由于抛物面被平面所截的截面为圆形，四点共面即使共圆，也可以用四面体的体积判断是否共圆。
+*************************************************************************************************/
+bool Geometry::onCircle(Mat<double> Points[]) {
+	Mat<double> mat(4, 4);
+	for (int i = 0; i < 4; i++) {
+		mat(i, 0) = Points[i].dot(Points[i]);
+		mat(i, 1) = Points[i][0];
+		mat(i, 2) = Points[i][1];
+		mat(i, 4) = 1;
+	}return mat.abs() == 0 ? true : false;
+}
+/*************************************************************************************************
+						ThreePointsToCircle 平面三点确定圆方程
 *	[公式]: 圆方程: (x - cx)² + (y - cy)² = R²
 *	[算法]: 三点确定圆方程: 即 解行列式:
 			| x²+y²    x   y   1 |  =  0
@@ -74,42 +137,23 @@ bool isSegmentsIntersect(Mat<double>& a, Mat<double>& b){/*
 			M11(x²+y²) - M12 x + M13 y - M14 = (x²+y²)·a + x·b + y·c + 1·d = 0
 			=> (x² + b/a x) + (y² + c/a y) = - d/a
 			=> (x + b/2a)² + (y + c/2a)² = -d/a + b²/4a² + c²/4a²
-**------------------------------------------------------------------------------------------------*/
-void ThreePointsToCircle(Mat<double> Points[], Mat<double>& center, double& R) {
-	center.zero(2, 1);
-	Mat<double> A(4, 4);
-	for (int i = 0; i < 4; i++)A(i, 3) = 1;
+							CircumCircle 三角形外接圆
+*	外接圆圆心: 即. 三点确定圆方程问题， 也是任意两边的垂直平分线的交点.直接用 ThreePointsToCircle()方法
+*************************************************************************************************/
+Mat<double>& Geometry::ThreePoints2Circle(Mat<double> Points[], Mat<double>& center, double& R) {
+	Mat<double> mat(4, 4);
 	for (int i = 0; i < 3; i++) {
-		double norm = Points[i].norm();
-		A(i + 1, 0) = norm * norm;
-		A(i + 1, 1) = Points[i][0];
-		A(i + 1, 2) = Points[i][1];
+		mat(i + 1, 0) = Points[i].dot(Points[i]);
+		mat(i + 1, 1) = Points[i][0];
+		mat(i + 1, 2) = Points[i][1];
+		mat(i + 1, 3) = 1;
 	}
-	double a = A.comi(0, 0), b = -A.comi(0, 1), c = A.comi(0, 2), d = -A.comi(0, 3);
-	center[0] = -b / (2 * a); center[1] = -c / (2 * a);
+	double a = mat.comi(0, 0), b = -mat.comi(0, 1), c = mat.comi(0, 2), d = -mat.comi(0, 3);
 	R = sqrt(-d / a + b * b / (4 * a * a) + c * c / (4 * a * a));
+	return center.zero(2, 1).getData(-b / (2 * a), -c / (2 * a));
 }
-/*--------------------------------[ isInCircle 判断四点共圆 ]--------------------------------
-*	[输出]: 圆外-1，圆上0，圆内1
-*	三点确定圆方程: 即 解行列式:
-		| x1²+y1²  x1  y1  1 | ?= 0
-		| x2²+y2²  x2  y2  1 |
-		| x3²+y3²  x3  y3  1 |
-		| x4²+y4²  x4  y4  1 |
-*	[几何解释]: 通过把平面点提升到三维的抛物面中，由于抛物面被平面所截的截面为圆形，四点共面即使共圆，也可以用四面体的体积判断是否共圆。
-**------------------------------------------------------------------------------------------------*/
-bool isInCircle(Mat<double> Points[]) {
-	Mat<double> A(4, 4);
-	for (int i = 0; i < 4; i++) {
-		A(i, 0) = Points[i].norm();
-		A(i, 1) = Points[i][0];
-		A(i, 2) = Points[i][1];
-		A(i, 4) = 1;
-	}
-	double t = A.abs();
-	return t == 0 ? 1 : 0;
-}
-/*--------------------------------[ ConvexHull 凸包 ]--------------------------------
+/*************************************************************************************************
+						ConvexHull 凸包
 *	[算法]: Graham 扫描法
 *	[时间复杂度]: O(n logn)
 *	[流程]:
@@ -127,11 +171,11 @@ bool isInCircle(Mat<double> Points[]) {
 *	[Referance]:
 		[1] Introduction Algorithms.THOMAS H.CORMEN,CHARLES E.LEISERSON,RONALD L.RIVEST,CLIFFORD STEIN
 		[2] Thanks for https://www.cnblogs.com/aiguona/p/7232243.html
-**----------------------------------------------------------------------------*/
-Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum){
+*************************************************************************************************/
+Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum){
 	// [1] 
 	int minCur = 0;
-	Mat<double> minPoint(point[0]);
+	Mat<double> minPoint = point[0];
 	for (int i = 1; i < n; i++)
 		if (point[i][1] < minPoint[1] || (point[i][1] == minPoint[1] && point[i][0] < minPoint[0])) {
 			minPoint = point[i]; minCur = i;
@@ -141,8 +185,8 @@ Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum){
 	std::sort(point + 1, point + n, [&minPoint](Mat<double>& a, Mat<double>& b) {
 		if (atan2(a[1] - minPoint[1], a[0] - minPoint[0]) != atan2(b[1] - minPoint[1], b[0] - minPoint[0]))
 			return (atan2(a[1] - minPoint[1], a[0] - minPoint[0])) < (atan2(b[1] - minPoint[1], b[0] - minPoint[0]));
-		return (a[0] - minPoint[0])* (a[0] - minPoint[0])+ (a[1] - minPoint[1]) * (a[1] - minPoint[1]) 
-			< (b[0] - minPoint[0]) * (b[0] - minPoint[0]) + (b[1] - minPoint[1]) * (b[1] - minPoint[1]);
+		return (a[0] - minPoint[0]) * (a[0] - minPoint[0]) + (a[1] - minPoint[1]) * (a[1] - minPoint[1])
+			 < (b[0] - minPoint[0]) * (b[0] - minPoint[0]) + (b[1] - minPoint[1]) * (b[1] - minPoint[1]);
 	});
 	// [3]
 	std::stack<Mat<double>> ConvexHullPoint;
@@ -165,32 +209,15 @@ Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum){
 	}
 	// [5] Output
 	ansPointNum = ConvexHullPoint.size();
-	Mat<double>* outputPoint = (Mat<double>*)malloc(ansPointNum * sizeof(Mat<double>));
-	memset(outputPoint, 0, ansPointNum * sizeof(Mat<double>));
+	Mat<double>* outputPoint = (Mat<double>*)calloc(ansPointNum, sizeof(Mat<double>));
 	for (int i = 0; i < ansPointNum; i++) {
 		outputPoint[i] = ConvexHullPoint.top();
 		ConvexHullPoint.pop();
 	}
 	return outputPoint;
 }
-/*int main() {
-	Plot p;
-	p.setAxisRange(0, 0, 100, 100);
-	Mat<double> point[100],* ConvexHullPoint;
-	p.g->PaintColor = 0xFF0000; p.g->PaintSize = 3;
-	for (int i = 0; i < 30; i++) {
-		point[i].rands(2, 1, 10, 90);
-		p.plotPoint(point[i][0], point[i][1]);
-	}
-	int ConvexHullnum;
-	ConvexHullPoint = ConvexHull(point, 30, ConvexHullnum);
-	p.g->PaintColor = 0xFFFFFF; p.g->PaintSize = 0;
-	for (int i = 0; i < ConvexHullnum; i++) {
-		p.plotLine(ConvexHullPoint[i][0], ConvexHullPoint[i][1]
-			, ConvexHullPoint[(i + 1) % ConvexHullnum][0], ConvexHullPoint[(i + 1) % ConvexHullnum][1]);
-	}p.g->PicWrite("D:/LIGU.ppm");
-}*/
-/*--------------------------------[ Delaunay 三角剖分 ]--------------------------------
+/*************************************************************************************************
+						Delaunay 三角剖分
 *	[定义]:
 		[1] Delaunay三角剖分: 每个三角形的外接圆内不包含V中任何点
 	[流程]:
@@ -212,8 +239,8 @@ Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum){
 		[4] 将triangles与trianglesTemp进行合并, 并除去与超级三角形有关的三角形
 *	[Referance]:
 		[1] http://paulbourke.net/papers/triangulate/
-**----------------------------------------------------------------------*/
-Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
+*************************************************************************************************/
+Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	std::vector<Mat<double>> triAns, triTemp, edgeBuffer;
 	std::sort(point, point + n, [](Mat<double> a, Mat<double> b) {				// 将点按坐标x从小到大排序
 		if(a[0] != b[0])return a[0] < b[0]; return a[1] < b[1];
@@ -240,7 +267,7 @@ Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 			for (int k = 0; k < 3; k++)
 				triTemp[j].getCol(k, triEdge[k]);
 			double R;
-			ThreePointsToCircle(triEdge, center, R);
+			ThreePoints2Circle(triEdge, center, R);
 			double distance = (temp.sub(point[i], center)).norm();
 			//[3.2.2] 如果该点在外接圆的右侧
 			if (point[i][0] > center[0] + R) {
@@ -299,53 +326,39 @@ Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	for (int i = 0; i < TrianglesNum; i++) Triangles[i] = triAns[i];
 	return Triangles;
 }
-/*------ example ------
-int main() {
-	Plot p;
-	p.setAxisRange(0, 0, 100, 100);
-	Mat<double> point[100],*triangles;
-	p.g->PaintColor = 0xFF0000; p.g->PaintSize = 5;
-	for (int i = 0; i < 100; i++) {
-		point[i].rands(2, 1, 10, 90);
-		p.plotPoint(point[i][0], point[i][1]);
-	}
-	int trianglesnum;
-	triangles = Delaunay(point, 100, trianglesnum);
-	double x[3], y[3];
-	p.g->PaintColor = 0xFFFFFF; p.g->PaintSize = 0;
-	for (int i = 0; i < trianglesnum; i++) {
-		for (int j = 0; j < 3; j++) {
-			x[j] = triangles[i](0, j);
-			y[j] = triangles[i](1, j);
-		}
-		p.ploPolygon(x, y, 3);
-	}p.g->PicWrite("D:/LIGU.ppm");
-}*/
-/******************************************************************************
-*
-*                    3D 三维
-*
-******************************************************************************/
-/*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
+/*************************************************************************************************
+						RaySphereIntersection 射线与球面交点
+*	[算法]:
+		球方程: (X - Xs)² + (Y - Ys)² + (Z - Zs)² = R²
+		线球交点: K²(Al² + Bl² + Cl²) + 2K(Al ΔX + Bl ΔY + Cl ΔZ) + (ΔX² + ΔY² + ΔZ² - R²) = 0
+				  ΔX = Xl - Xs
+				  Δ = b² - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)² - 4(Al² + Bl² + Cl²)(ΔX² + ΔY² + ΔZ² - R²)
+				  若Δ≥0 有交点.
+				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
+*************************************************************************************************/
+double Geometry::RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& Center, double R) {
+	Mat<double> RayStCenter; RayStCenter.sub(RaySt, Center);
+	double A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
+	double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+	if (Delta < 0) return -DBL_MAX;									//有无交点
+	Delta = sqrt(Delta);
+	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
+}
+/*************************************************************************************************
+						getSphereFibonacciPoint 球面均匀点分布
 *	[Referance]:
 		[1] Thanks and copyright for https://github.com/SebLague/Boids
-**---------------------------------------------------------------------------------------------------------*/
-Mat<double>* getSphereFibonacciPoint(int& n) {
-	// 球面均匀点分布法
-	n = 300;
+*************************************************************************************************/
+Mat<double>* Geometry::getSphereFibonacciPoint(int& n) {
 	Mat<double>* point = (Mat<double>*)malloc(n * sizeof(Mat<double>));
 	memset(point, 0, n * sizeof(Mat<double>));
-	// 均匀球面点
-	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
-	double angleIncrement = PI * 2 * goldenRatio;
+	double goldenRatio = (1 + sqrt(5)) / 2, angleIncrement = PI * 2 * goldenRatio;	// 黄金分割点
 	for (int i = 0; i < n; i++) {
 		double t = (double)i / n, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;
 		point[i].zero(3, 1);
 		point[i][0] = sin(inclination) * cos(azimuth);
 		point[i][1] = sin(inclination) * sin(azimuth);
 		point[i][2] = cos(inclination);
-	}
-	return point;
-}
+	} return point;
 }
 #endif

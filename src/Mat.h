@@ -107,52 +107,52 @@ void swap(Mat& a);                          //交换数据 [ swap ]
 /******************************************************************************
 *                    基础运算
 -------------------------------------------------------------------------------
-T& operator[](int i);                    // 索引元素
+T& operator[](int i);					// 索引元素
 T& operator()(int i, int j);
 T& operator()(int i);
-T max();                                // max/min
+T max();								// max/min
 T max(int& index);
 T min();
 T min(int& index);
-bool operator==(const Mat& b);          //判断相等 [==]
-Mat& operator=(const Mat& a);           //赋矩阵 [=] //不能赋值自己
+bool operator==(const Mat& a);			//判断相等 [==]
+Mat& operator=(const Mat& a);			//赋矩阵 [=] //不能赋值自己
 Mat& getData(T* a);
 Mat& getData(T x, T y);
 Mat& getData(T x, T y, T z);
-Mat& operator+=(Mat& a);                //加法 [add +]
+Mat& operator+=(Mat& a);				//加法 [add +]
 Mat& add(Mat& a, Mat& b);
-Mat& operator-=(Mat& a);                //减法 [sub -]
+Mat& operator-=(Mat& a);				//减法 [sub -]
 Mat& sub(Mat& a, Mat& b);
-Mat& mult(Mat& a, Mat& b);              //乘法 [mult ×]
+Mat& mult(Mat& a, Mat& b);				//乘法 [mult ×]
 Mat& operator*=(const Mat& a);
-Mat& operator*=(const double a);        //数乘 [mult ×]
+Mat& operator*=(const double a);		//数乘 [mult ×]
 Mat& mult(const double a, Mat& b);
-Mat& divide(const double a, Mat& b);    //数除 [divide /]
-static T dot(Mat& a, Mat& b);           //点乘 [dot ·]
+Mat& divide(const double a, Mat& b);	//数除 [divide /]
+static T dot(Mat& a, Mat& b);			//点乘 [dot ·]
 T dot(Mat& a);
-Mat& crossProduct(Mat& a, Mat& b);      //叉乘 [crossProduct ×]
+Mat& crossProduct(Mat& a, Mat& b);		//叉乘 [crossProduct ×]
 Mat& crossProduct_(Mat& a, Mat& b);
-Mat& elementMult(Mat& a, Mat& b);       //元素乘 [elementMult ×]
+Mat& elementMult(Mat& a, Mat& b);		//元素乘 [elementMult ×]
 Mat& elementMult(Mat& a);
-Mat& elementDivide(Mat& a, Mat& b);     //元素除 [elementDivide /]
+Mat& elementDivide(Mat& a, Mat& b);		//元素除 [elementDivide /]
 Mat& elementDivide(Mat& a);
-Mat& negative(Mat& ans);                //负 [negative -]
-Mat& transposi(Mat& ans);               //转置 [transposi T]
-T sum();                                //求和 [sum Σ]
+Mat& negative(Mat& ans);				//负 [negative -]
+Mat& transposi(Mat& ans);				//转置 [transposi T]
+T sum();								//求和 [sum Σ]
 static T sum(Mat& a);
 Mat& sum(Mat& ans,int dim);
-T product();                            //求积 [product Π]
-T norm();                               //范数 [norm ||x||]
-Mat& normalized();                      //归一化 [normalized]
-T comi(int i0, int j0);                 //余子式 [comi]
-Mat& inv(Mat& ans);                     //取逆 [inv x~¹]
-T abs();                                //行列式 [abs |x|]
-Mat& adjugate(Mat& ans);                //伴随矩阵 [adjugate A*]
-void eig(T esp, Mat& eigvec, Mat& eigvalue);    //特征值特征向量 [eig]
-Mat& solveEquations(Mat& b, Mat& x);            //解方程组 [solveEquations]
-void LUPdecomposition(Mat& U, Mat& L, Mat<int>& P);                     //LUP分解 [LUPdecomposition]
-Mat& diag(Mat& ans);                                                    //构造对角矩阵 [diag]
-Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);     //卷积 [conv]
+T product();							//求积 [product Π]
+T norm();								//范数 [norm ||x||]
+Mat& normalized();						//归一化 [normalized]
+T comi(int i0, int j0);					//余子式 [comi]
+Mat& inv(Mat& ans);						//取逆 [inv x~¹]
+T abs();								//行列式 [abs |x|]
+Mat& adjugate(Mat& ans);				//伴随矩阵 [adjugate A*]
+void eig(T esp, Mat& eigvec, Mat& eigvalue);	//特征值特征向量 [eig]
+Mat& solveEquations(Mat& b, Mat& x);			//解方程组 [solveEquations]
+void LUPdecomposition(Mat& U, Mat& L, Mat<int>& P);	//LUP分解 [LUPdecomposition]
+Mat& diag(Mat& ans);							//构造对角矩阵 [diag]
+Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 -------------------------------------------------------------------------------
 *	运算嵌套注意,Eg: b.add(b.mult(a, b), a.mult(-1, a));
 		不管括号第一二项顺序,都是数乘,乘法,加法, 问题原因暂不了解，别用该形式。
@@ -187,12 +187,10 @@ Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);     //卷积
 			if (mindata > data[i]) { mindata = data[i]; index = i; }
 		return mindata;
 	}
-	/*----------------判断相等 [ == ]----------------*/
-	bool operator==(const Mat& b) {
-		if (rows != b.rows || cols != b.cols)return false;
-		for (int i = 0; i < size(); i++)
-			if (data[i] != b.data[i])return false;
-		return true;
+	/*----------------判断相等 [ ==/!= ]----------------*/
+	bool operator==(const Mat& a) {
+		if (rows != a.rows || cols != a.cols)return false;
+		return memcmp(data, a.data, size() * sizeof(T)) == 0 ? true : false;
 	}
 	/*----------------赋矩阵 [ = ]----------------*/ //不能赋值自己
 	Mat& operator=(const Mat& a) {
@@ -350,7 +348,7 @@ Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);     //卷积
 		Mat ansTmp(cols, rows);
 		for (int i = 0; i < rows; i++)
 			for (int j = 0; j < cols; j++)
-				ansTmp(j, i) = data(i, j);
+				ansTmp(j, i) = (*this)(i, j);
 		ans.eatMat(ansTmp); return ans;
 	}
 	/*----------------求和 [ sum Σ ]----------------*/
@@ -427,7 +425,7 @@ Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);     //卷积
 		//对每一列
 		Mat b(n, 1), x(n, 1);
 		for (int k = 0; k < n; k++) {
-			b.clean(); b[k] = 1;
+			b.zero(); b[k] = 1;
 			// 解线性方程组
 			//solve y
 			for (int i = 0; i < n; i++) {
@@ -649,7 +647,7 @@ Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);     //卷积
 		ans.eatMat(ansTmp); return ans;
 	}
 	/*----------------卷积 [ conv ]----------------*/
-	Mat<double>& conv(Mat& a, Mat& b, int padding = 0, int stride = 1) {
+	Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1) {
 		Mat ansTmp((a.rows - b.rows + 2 * padding) / stride + 1, (a.cols - b.cols + 2 * padding) / stride + 1);
 		// for each element of output
 		for (int y = 0; y < ansTmp.cols; y++) {
@@ -678,12 +676,12 @@ Mat& horizStack(Mat& a, Mat& b)             //水平向拼接 [horizStack ]
 	/*----------------读/写一列 [getCol/setCol]----------------*/
 	Mat& getCol(int _col, Mat& a) {
 		a.alloc(rows, 1);
-		for (int i = 0; i < rows; i++) a[i] = *this(i, _col);
+		for (int i = 0; i < rows; i++) a[i] = (*this)(i, _col);
 		return a;
 	}
 	Mat& getRow(int _row, Mat& a) {
 		a.alloc(1, cols);
-		for (int i = 0; i < cols; i++) a[i] = *this(_row, i);
+		for (int i = 0; i < cols; i++) a[i] = (*this)(_row, i);
 		return a;
 	}
 	Mat& setCol(int _col, Mat& a) {
