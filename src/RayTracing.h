@@ -48,7 +48,7 @@ public:
 	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0);							//渲染
 	Mat<double>& traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level);
-	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection, double minDistance = DBL_MAX);	//求交点
+	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray);													//求交点
 	//几何光学 Geometrical Optics
 	static Mat<double>& reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay);								//反射
 	static Mat<double>& refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut);//折射

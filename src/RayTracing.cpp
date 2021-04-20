@@ -113,103 +113,106 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 &	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 -----------------------------------------------------------------------------*/
 Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
-	double minDistance = DBL_MAX;
-	Mat<double> intersection, intersectionTmp, FaceVec, tmp;
-	Material* intersectMaterial = NULL;
 	//[1][2][3]
+	double minDistance = DBL_MAX;
+	Triangle* minDisTri = NULL;
 	for (int i = 0; i < TriangleSet.size(); i++) {
-		double distance = seekIntersection(TriangleSet[i], RaySt, Ray, tmp, intersectionTmp, minDistance);
-		if (distance > eps) {
-			minDistance = distance; intersectMaterial = TriangleSet[i].material;
-			FaceVec = tmp; intersection = intersectionTmp;
+		double distance = seekIntersection(TriangleSet[i], RaySt, Ray);
+		if (distance > eps && distance < minDistance) { 
+			minDistance = distance;  minDisTri = &TriangleSet[i]; 
 		}
 	}
-	//[4]
-	if (minDistance == DBL_MAX || intersectMaterial == NULL) return color.zero();		//Miss intersect
-	if (intersectMaterial->rediateRate != 0) return color = intersectMaterial->color;	//Light Source
-	if (level > maxRayLevel && rand() / double(RAND_MAX) > maxRayLevelProbability) return color.zero(); 		//Max Ray Level
-	Mat<double> RayTmp;
-	if (intersectMaterial->quickReflect != 0) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
+	if (minDistance == DBL_MAX) return color.zero();										//Miss intersect
+	if (minDisTri->material->rediateRate != 0) return color = minDisTri->material->color;	//Light Source
+	if (level > maxRayLevel&& rand() / double(RAND_MAX) > maxRayLevelProbability) return color.zero(); 		//Max Ray Level
+	//[4] intersection & FaceVec
+	Mat<double> intersection, FaceVec, tmp, RayTmp;
+	intersection.add(RaySt, intersection.mult(minDistance, Ray));
+	if (minDisTri->p[2][0] == DBL_MAX)
+		FaceVec.sub(intersection, minDisTri->p[0]).normalized();
+	else
+		FaceVec.crossProduct_(
+			   tmp.sub(minDisTri->p[1], minDisTri->p[0]), 
+			RayTmp.sub(minDisTri->p[2], minDisTri->p[0])
+		).normalized();
+	//[5]
+	if (minDisTri->material->quickReflect != 0) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
 		double lightCos = 0;
 		FaceVec *= FaceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
-			RayTmp.sub(PointLight[i], intersection);
-			double t = (FaceVec.dot(RayTmp) / RayTmp.norm() + 1) / 2;
+			double t = (FaceVec.dot(RayTmp.sub(PointLight[i], intersection).normalized()) + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
 		}
 		color.mult(lightCos, color.ones(3, 1));
 	}
-	else if (intersectMaterial->diffuseReflect != 0) {				//Diffuse Reflect
+	else if (minDisTri->material->diffuseReflect != 0) {				//Diffuse Reflect
 		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
-		color *= intersectMaterial->reflectRate;
+		color *= minDisTri->material->reflectRate;
 	}
-	else if (intersectMaterial->refractRate != 0) {					//Refract
-		double t = refractRateBuffer; refractRateBuffer = refractRateBuffer == intersectMaterial->refractRate ? 1 : intersectMaterial->refractRate;
+	else if (minDisTri->material->refractRate != 0) {					//Refract
+		double t = refractRateBuffer; refractRateBuffer = refractRateBuffer == minDisTri->material->refractRate ? 1 : minDisTri->material->refractRate;
 		refract(Ray, FaceVec, RayTmp, t, refractRateBuffer);
-		traceRay(intersectionTmp.add(intersectionTmp.mult(eps, RayTmp), intersection), RayTmp, color.zero(), level + 1);
+		traceRay(tmp.add(tmp.mult(eps, RayTmp), intersection), RayTmp, color.zero(), level + 1);
 		refractRateBuffer = t;
 	}
-	else if (intersectMaterial->reflectRate != 0) {					//Reflect
+	else if (minDisTri->material->reflectRate != 0) {					//Reflect
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
-		color *= intersectMaterial->reflectRate;
+		color *= minDisTri->material->reflectRate;
 	}
-	return color.elementMult(tmp.mult(level > maxRayLevel ? 1 / maxRayLevelProbability : 1, intersectMaterial->color));
+	return color.elementMult(tmp.mult(level > maxRayLevel ? 1 / maxRayLevelProbability : 1, minDisTri->material->color));
 }
 /*--------------------------------[ 求交点 ]--------------------------------
-*	[流程]:
-		[1] 计算三角形所在面矢量
-		[2] 计算光线面交点、光线面相交所走过距离
-		[3] 判断交点是否在三角形内部, 若否返回-1
 *	[算法]:
-		平面方程: Af (X - Xf) + BY (Y - Yf) + C (Z - Zf) = 0
-		直线方程: (X - Xl) / Al = (Y - Yl) / Bl = (Z - Zl) / Cl = K
-		点面距:	d = |AXp + BYp + CZp + D| / sqrt(A² + B² + C²)
-		线面交点: K = [Af(Xf - Xl) + Bf(Yf - Yl) + Cf(Zf - Zl)] / (Af Al + Bf Bl + Cf Cl) 即光线走过线距离
-				  X = K Al + Xl
+		[射线球面交点]
 		球方程: (X - Xs)² + (Y - Ys)² + (Z - Zs)² = R²
 		线球交点: K²(Al² + Bl² + Cl²) + 2K(Al ΔX + Bl ΔY + Cl ΔZ) + (ΔX² + ΔY² + ΔZ² - R²) = 0
 				  ΔX = Xl - Xs
 				  Δ = b² - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)² - 4(Al² + Bl² + Cl²)(ΔX² + ΔY² + ΔZ² - R²)
 				  若Δ≥0 有交点.
 				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
+		[射线三角形交点]
+		Moller-Trumbore方法(1997)
+		射线: P = O + t D
+		射线三角形交点: 
+				O + t D = (1 - u - v)V0 + u V1 + v V2
+				[ -D  V1-V0  V2-V0] [ t  u  v ]' = O - V0
+				T = O - V0    E1 = V1 - V0    E2 = V2 - V0
+				[ -D  E1  E2 ] [ t  u  v ]' = T
+				t = | T  E1  E2| / |-D  E1  E2|
+				u = |-D   T  E2| / |-D  E1  E2|
+				v = |-D  E1  E2| / |-D  E1  E2|
+		(混合积公式): |a  b  c| = a×b·c = -a×c·b
+				t = (T×E1·E2) / (D×E2·E1)
+				u = (D×E2· T) / (D×E2·E1)
+				v = (T×E1· D) / (D×E2·E1)
 ---------------------------------------------------------------------------*/
-double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& FaceVec, Mat<double>& intersection, double minDistance) {
+double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray) {
 	// Sphere Seek Intersection
 	if (triangle.p[2][0] == DBL_MAX) {
-		// 计算ΔX、Δ
 		Mat<double> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
 		double R = triangle.p[1][0], A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
 		double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
-		if (Delta < 0) return -1;									//有无交点
+		if (Delta < 0) return -DBL_MAX;									//有无交点
 		Delta = sqrt(Delta);
-		double RayFaceDistance = (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
-		if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
-		intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
-		FaceVec.sub(intersection, triangle.p[0]).normalized();
-		return RayFaceDistance;
+		return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 	}
-	//[1][2]
+	// Triangle Seek Intersection
 	Mat<double> edge[2], tmp;
-	FaceVec.crossProduct_(
-		edge[0].sub(triangle.p[1], triangle.p[0]),
-		edge[1].sub(triangle.p[2], triangle.p[0])
-	).normalized();
-	double t = FaceVec.dot(Ray);
-	if (t == 0) return -1;											//光线与面是否平行
-	double RayFaceDistance = FaceVec.dot(tmp.sub(triangle.p[0], RaySt)) / t;
-	if (RayFaceDistance <= eps || RayFaceDistance >= minDistance) return -1;
-	intersection.add(intersection.mult(RayFaceDistance, Ray), RaySt);
-	//[3]
-	tmp.sub(intersection, triangle.p[0]);
-	double Dot00 = edge[0].dot(edge[0]),
-		   Dot01 = edge[0].dot(edge[1]),
-		   Dot11 = edge[1].dot(edge[1]),
-		   Dot02 = edge[0].dot(tmp),
-		   Dot12 = edge[1].dot(tmp);
-	t = Dot00 * Dot11 - Dot01 * Dot01;
-	double u = (Dot11 * Dot02 - Dot01 * Dot12) / t;
-	double v = (Dot00 * Dot12 - Dot01 * Dot02) / t;
-	return (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) ? -1 : RayFaceDistance;
+	edge[0].sub(triangle.p[1], triangle.p[0]);
+	edge[1].sub(triangle.p[2], triangle.p[0]);
+	// p & a & tmp
+	Mat<double> p;
+	double a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
+	if (a > 0) tmp.sub(RaySt, triangle.p[0]);
+	else { tmp.sub(triangle.p[0], RaySt); a = -a; }
+	if (a < 1e-4) return -DBL_MAX;										//射线与三角面平行
+	// u
+	double u = p.dot(tmp) / a;
+	if(u < 0 || u > 1) return -DBL_MAX;
+	// q & v
+	Mat<double> q;
+	double v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
+	return ( v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
 /*--------------------------------[ 反射 ]--------------------------------
 *	[反射定律]: 入射角 == 反射角
