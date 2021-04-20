@@ -25,7 +25,7 @@ Reference.
 namespace Geometry {
 	/*----------------[ 2D 二维 ]----------------*/
 	//三角形
-	bool inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);
+	bool inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);//是否在三角内
 	double RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);	//射线与三角形交点
 	//圆
 	bool onCircle(Mat<double> Points[]);													//判断四点共圆

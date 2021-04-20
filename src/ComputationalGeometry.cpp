@@ -144,7 +144,7 @@ Mat<double>& Geometry::ThreePoints2Circle(Mat<double> Points[], Mat<double>& cen
 		[2] Thanks for https://www.cnblogs.com/aiguona/p/7232243.html
 *************************************************************************************************/
 Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) {
-	// [1] 
+	//[1] 
 	int minCur = 0;
 	Mat<double> minPoint = point[0];
 	for (int i = 1; i < n; i++)
@@ -152,17 +152,17 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 			minPoint = point[i]; minCur = i;
 		}
 	point[0].swap(point[minCur]);
-	// [2] 
+	//[2] 
 	std::sort(point + 1, point + n, [&minPoint](Mat<double>& a, Mat<double>& b) {
 		if (atan2(a[1] - minPoint[1], a[0] - minPoint[0]) != atan2(b[1] - minPoint[1], b[0] - minPoint[0]))
 			return (atan2(a[1] - minPoint[1], a[0] - minPoint[0])) < (atan2(b[1] - minPoint[1], b[0] - minPoint[0]));
 		return (a[0] - minPoint[0]) * (a[0] - minPoint[0]) + (a[1] - minPoint[1]) * (a[1] - minPoint[1])
 			< (b[0] - minPoint[0]) * (b[0] - minPoint[0]) + (b[1] - minPoint[1]) * (b[1] - minPoint[1]);
 		});
-	// [3]
+	//[3]
 	std::stack<Mat<double>> ConvexHullPoint;
 	for (int i = 0; i <= 2; i++)ConvexHullPoint.push(point[i]);
-	// [4]
+	//[4]
 	for (int i = 3; i < n; i++) {
 		while (true) {
 			Mat<double> prePoint = ConvexHullPoint.top();
@@ -178,7 +178,7 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 		}
 		ConvexHullPoint.push(point[i]);
 	}
-	// [5] Output
+	//[5] Output
 	ansPointNum = ConvexHullPoint.size();
 	Mat<double>* outputPoint = (Mat<double>*)calloc(ansPointNum, sizeof(Mat<double>));
 	for (int i = 0; i < ansPointNum; i++) {

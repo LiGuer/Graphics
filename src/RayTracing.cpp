@@ -93,8 +93,8 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 		for (int x = 0; x < Screen.rows; x++) {
 			for (int y = 0; y < Screen.cols; y++) {
 				PixVec.add(
-					PixXVec.mult(x + rand() / double(RAND_MAX) - Screen.rows / 2 - 0.5, ScreenXVec),
-					PixYVec.mult(y + rand() / double(RAND_MAX) - Screen.cols / 2 - 0.5, ScreenYVec)
+					PixXVec.mult(x + RAND_DBL - Screen.rows / 2 - 0.5, ScreenXVec),
+					PixYVec.mult(y + RAND_DBL - Screen.cols / 2 - 0.5, ScreenYVec)
 				);//[3]
 				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), color.zero(), 0);	//[4][5]
 				setPix(x, y, Screen(x, y) += (color *= 1.0 / (sample + 1)));
@@ -124,7 +124,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 	}
 	if (minDistance == DBL_MAX) return color.zero();										//Miss intersect
 	if (minDisTri->material->rediateRate != 0) return color = minDisTri->material->color;	//Light Source
-	if (level > maxRayLevel&& rand() / double(RAND_MAX) > maxRayLevelProbability) return color.zero(); 		//Max Ray Level
+	if (level > maxRayLevel && RAND_DBL > maxRayLevelPR) return color.zero();				//Max Ray Level
 	//[4] intersection & FaceVec
 	Mat<double> intersection, FaceVec, tmp, RayTmp;
 	intersection.add(RaySt, intersection.mult(minDistance, Ray));
@@ -159,7 +159,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= minDisTri->material->reflectRate;
 	}
-	return color.elementMult(tmp.mult(level > maxRayLevel ? 1 / maxRayLevelProbability : 1, minDisTri->material->color));
+	return color.elementMult(tmp.mult(level > maxRayLevel ? 1 / maxRayLevelPR : 1, minDisTri->material->color));
 }
 /*--------------------------------[ 求交点 ]--------------------------------
 *	[算法]:
@@ -243,7 +243,7 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 *	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
 ---------------------------------------------------------------------------*/
 Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
-	double r1 = 2 * PI * rand() / double(RAND_MAX), r2 = rand() / double(RAND_MAX);
+	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
 	Mat<double> tmp1(3, 1), tmp2(3, 1);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;

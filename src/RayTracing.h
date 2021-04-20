@@ -1,4 +1,4 @@
-/*
+ï»¿/*
 Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,54 +18,54 @@ limitations under the License.
 #include "GraphicsND.h"
 #include <vector>
 #define PI 3.141592653589
-
+#define RAND_DBL (rand() / double(RAND_MAX))
 class RayTracing {
 public:
-	struct Material {															//²ÄÖÊ
+	struct Material {															//æè´¨
 		Mat<double> color{ 3, 1 };
 		bool rediateRate = 0, diffuseReflect = 0, quickReflect = 0;
 		double reflectRate = 1, refractRate = 0;
 	};
-	struct Triangle { Mat<double> p[3];	Material* material = NULL; };			//Èı½ÇĞÎ
-	/*---------------- »ù´¡²ÎÊı ----------------*/
+	struct Triangle { Mat<double> p[3];	Material* material = NULL; };			//ä¸‰è§’å½¢
+	/*---------------- åŸºç¡€å‚æ•° ----------------*/
 	Mat<double> Eye{ 3,1 }, gCenter{ 3,1 };
 	Mat<RGB> ScreenPix;
 	Mat<Mat<double>> Screen;
 	int SamplesNum = 1e9, maxRayLevel = 5;
-	double refractRateBuffer = 1, eps = 1e-4, maxRayLevelProbability = 1.0 / 6;
-	std::vector<Triangle> TriangleSet;											//Èı½ÇĞÎ¼¯
-	std::vector<Material> MaterialSet;											//²ÄÖÊ¼¯
-	std::vector<Mat<double>> PointLight;										//µã¹âÔ´¼¯(QuickReflect×¨ÓÃ)
-	/*---------------- µ×²ã ----------------*/
+	double refractRateBuffer = 1, eps = 1e-4, maxRayLevelPR = 1.0 / 6;
+	std::vector<Triangle> TriangleSet;											//ä¸‰è§’å½¢é›†
+	std::vector<Material> MaterialSet;											//æè´¨é›†
+	std::vector<Mat<double>> PointLight;										//ç‚¹å…‰æºé›†(QuickReflectä¸“ç”¨)
+	/*---------------- åº•å±‚ ----------------*/
 	RayTracing() { ; }
-	RayTracing(int width, int height) { init(width, height); }					//¹¹Ôìº¯Êı
-	~RayTracing() { ; }															//Îö¹¹º¯Êı
-	void init(int width, int height);											//³õÊ¼»¯
-	void readImg(const char* fileName);											//¶ÁÍ¼
-	void writeImg(const char* filename);										//Ğ´Í¼
-	void setPix(int x, int y, Mat<double>& color);								//»­ÏñËØ
-	void readObj(const char* filename, Mat<double>& origin, Material* material = NULL);											//¶Á3DÄ£ĞÍ
+	RayTracing(int width, int height) { init(width, height); }					//æ„é€ å‡½æ•°
+	~RayTracing() { ; }															//ææ„å‡½æ•°
+	void init(int width, int height);											//åˆå§‹åŒ–
+	void readImg(const char* fileName);											//è¯»å›¾
+	void writeImg(const char* filename);										//å†™å›¾
+	void setPix(int x, int y, Mat<double>& color);								//ç”»åƒç´ 
+	void readObj(const char* filename, Mat<double>& origin, Material* material = NULL);											//è¯»3Dæ¨¡å‹
 	/*---------------- DRAW ----------------*/
-	void paint(const char* fileName, int sampleSt = 0);							//äÖÈ¾
+	void paint(const char* fileName, int sampleSt = 0);							//æ¸²æŸ“
 	Mat<double>& traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level);
-	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray);													//Çó½»µã
-	//¼¸ºÎ¹âÑ§ Geometrical Optics
-	static Mat<double>& reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay);								//·´Éä
-	static Mat<double>& refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut);//ÕÛÉä
-	static Mat<double>& diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay);						//Âş·´Éä
+	double seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray);													//æ±‚äº¤ç‚¹
+	//å‡ ä½•å…‰å­¦ Geometrical Optics
+	static Mat<double>& reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay);								//åå°„
+	static Mat<double>& refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut);//æŠ˜å°„
+	static Mat<double>& diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay);						//æ¼«åå°„
 	//2-D
-	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material = NULL);							//»­Èı½ÇĞÎ
-	void drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//»­ËÄ±ßĞÎ
-	void drawPolygon(Mat<double> p[], int n, Material* material = NULL);														//»­¶à±ßĞÎ
-	void drawSurface(Mat<double> z, double xs, double xe, double ys, double ye);												//»­ÇúÃæ	
+	void drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material = NULL);							//ç”»ä¸‰è§’å½¢
+	void drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//ç”»å››è¾¹å½¢
+	void drawPolygon(Mat<double> p[], int n, Material* material = NULL);														//ç”»å¤šè¾¹å½¢
+	void drawSurface(Mat<double> z, double xs, double xe, double ys, double ye);												//ç”»æ›²é¢	
 	// 3-D
-	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//»­ËÄÃæÌå
-	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material = NULL);											//»­¾ØÌå
-	void drawPolyhedron(Mat<double>* p, int n, Material* material = NULL);														//»­¶àÃæÌå
-	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, Material* material = NULL);	//»­Ô²Ì¨
-	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, Material* material = NULL);					//»­Ô²Öù
-	void drawSphere(Mat<double>& center, double r, Material* material = NULL);													//»­Çò
-	void drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material = NULL);											//»­ÍÖÇò
+	void drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material = NULL);		//ç”»å››é¢ä½“
+	void drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material = NULL);											//ç”»çŸ©ä½“
+	void drawPolyhedron(Mat<double>* p, int n, Material* material = NULL);														//ç”»å¤šé¢ä½“
+	void drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta = 5, Material* material = NULL);	//ç”»åœ†å°
+	void drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta = 5, Material* material = NULL);					//ç”»åœ†æŸ±
+	void drawSphere(Mat<double>& center, double r, Material* material = NULL);													//ç”»çƒ
+	void drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material = NULL);											//ç”»æ¤­çƒ
 };
 
 #endif
