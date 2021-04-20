@@ -36,7 +36,7 @@ public:
 	#define TRANSPARENT 0xFFFFFFFF
 	/*-------------------------------- 基础参数 --------------------------------*/
 	Mat<RGB> Canvas{ 100, 100 };											//图
-	Mat<FP64> TransMat{ 3 };												//变换矩阵
+	Mat<FP64> TransMat;														//变换矩阵
 	ARGB PaintColor = 0xFFFFFF;												//画笔颜色
 	INT32S PaintSize = 0, FontSize=16;										//画笔大小//字符大小
 	/*-------------------------------- 底层函数 --------------------------------*/

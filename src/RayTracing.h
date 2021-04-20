@@ -22,7 +22,7 @@ limitations under the License.
 class RayTracing {
 public:
 	struct Material {															//材质
-		Mat<double> color{ 3, 1 };
+		Mat<double> color{ 3 };
 		bool rediateRate = 0, diffuseReflect = 0, quickReflect = 0;
 		double reflectRate = 1, refractRate = 0;
 	};

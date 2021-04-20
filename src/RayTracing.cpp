@@ -18,7 +18,7 @@ limitations under the License.
 void RayTracing::init(int width, int height) {
 	ScreenPix.zero(height, width);
 	Screen.zero(height, width);
-	for (int i = 0; i < Screen.size(); i++)Screen[i].zero(3, 1);
+	for (int i = 0; i < Screen.size(); i++)Screen[i].zero(3);
 }
 /*--------------------------------[ 读图 ]--------------------------------*/
 void RayTracing::readImg(const char* fileName) {
@@ -51,7 +51,7 @@ void RayTracing::setPix(int x, int y, Mat<double>& color) {
 void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* material) {
 	FILE* fin = fopen(fileName, "rb");
 	char Index = 0; double R;
-	Mat<double> p1(3, 1), p2(3, 1), p3(3, 1);
+	Mat<double> p1(3), p2(3), p3(3);
 	while (Index != EOF) {
 		fgets(&Index, 1, fin);
 		switch(Index) {
@@ -80,13 +80,13 @@ void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* mat
 -------------------------------------------------------------------------*/
 void RayTracing::paint(const char* fileName, int sampleSt) {
 	//[1]
-	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3, 1);
+	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec.sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
 	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
-	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3, 1);
+	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
 	for (int sample = sampleSt; sample < SamplesNum; sample++) {
 		writeImg(fileName); clock_t start = clock();
 		Screen *= (double)sample / (sample + 1);
@@ -143,7 +143,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 			double t = (FaceVec.dot(RayTmp.sub(PointLight[i], intersection).normalized()) + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
 		}
-		color.mult(lightCos, color.ones(3, 1));
+		color.mult(lightCos, color.ones(3));
 	}
 	else if (minDisTri->material->diffuseReflect != 0) {				//Diffuse Reflect
 		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
@@ -244,7 +244,7 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 ---------------------------------------------------------------------------*/
 Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
 	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
-	Mat<double> tmp1(3, 1), tmp2(3, 1);
+	Mat<double> tmp1(3), tmp2(3);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
 	tmp1.mult(cos(r1) * sqrt(r2), tmp1.crossProduct(tmp1, faceVec).normalized());
@@ -318,19 +318,19 @@ void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* mate
 **------------------------------------------------------------------------*/
 void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, Material* material) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
+	Mat<double> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
 			rotateAxis.crossProduct(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
-			tmp.zero(3, 1), rotateMat
+			tmp.zero(3), rotateMat.E(4)
 		);
 		rotateMat.block(1, 3, 1, 3, rotateMat);
 	}
 	else rotateMat.E(3);
 	// 画圆台
-	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
+	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= 360 / delta; i++) {
 		deltaVector.getData(cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360), 0);
 		deltaVector.mult(rotateMat, deltaVector);
@@ -351,7 +351,7 @@ void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 /*--------------------------------[ 画球 ]--------------------------------
 **-----------------------------------------------------------------------*/
 void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
-	Mat<double> p1(3, 1), p2 = (3, 1);
+	Mat<double> p1(3), p2(3);
 	p1[0] = p1[1] = p1[2] = r; p2[0] = DBL_MAX;
 	drawTriangle(center, p1, p2, material); 
 }
@@ -367,7 +367,7 @@ void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
 **-----------------------------------------------------------------------*/
 void RayTracing::drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material) {
 	const int delta = 5;
-	Mat<double> point(3, 1);
+	Mat<double> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
 		double theta = (i * delta) * 2.0 * PI / 360;
 		for (int j = -90 / delta; j <= 90 / delta; j++) {

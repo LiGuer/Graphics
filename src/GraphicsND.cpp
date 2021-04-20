@@ -20,7 +20,7 @@ Mat<double> GraphicsND::TransformMat;											//变换矩阵
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void GraphicsND::init(int width, int height, int Dim) { 
 	g.init(width, height);  
-	Z_Buffer.zero(Dim - 2, 1);
+	Z_Buffer.zero(Dim - 2);
 	for (int i = 0; i < Z_Buffer.rows; i++) 
 		Z_Buffer[i].zero(g.Canvas.rows, g.Canvas.cols);
 	clear(0);
@@ -34,14 +34,14 @@ void GraphicsND::clear(ARGB color) {
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
-	Mat<double> point(TransformMat.rows, 1);
+	Mat<double> point(TransformMat.rows);
 	point[0] = 1; point[1] = x0; point[2] = y0; point[3] = z0;
 	point.mult(TransformMat, point);
 	x = point[1]; y = point[2]; z = point[3];
 }
 void GraphicsND::value2pix(Mat<double>& p0, Mat<int>& pAns) {
-	pAns.zero(p0.rows, 1);
-	Mat<double> point(TransformMat.rows, 1);
+	pAns.zero(p0.rows);
+	Mat<double> point(TransformMat.rows);
 	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
 	point.mult(TransformMat, point);
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
@@ -72,7 +72,7 @@ void GraphicsND::setAxisLim(Mat<double>& pMin, Mat<double>& pMax) {
 		else scale[i] = g.Canvas.cols / scale[i];
 	}
 	translation(pMin.negative(tmp));
-	scaling(scale, tmp.zero(pMin.rows, 1));
+	scaling(scale, tmp.zero(pMin.rows));
 }
 /******************************************************************************
 
@@ -138,7 +138,7 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 void GraphicsND::drawLine(Mat<double>& sp0, Mat<double>& ep0) {
 	Mat<int> sp, ep;
 	value2pix(sp0, sp); value2pix(ep0, ep);
-	Mat<int> err(sp.rows, 1), inc(sp.rows, 1), delta, point(sp), tmp;
+	Mat<int> err(sp.rows), inc(sp.rows), delta, point(sp), tmp;
 	delta.sub(ep, sp);
 	//设置xyz单步方向	
 	for (int dim = 0; dim < sp.rows; dim++) {
@@ -160,7 +160,7 @@ void GraphicsND::drawPolyline(Mat<double> *p, int n, bool close) {
 	if (close) drawLine(p[0], p[n - 1]);
 }
 void GraphicsND::drawPolyline(Mat<double>& y, double xmin, double xmax) {
-	Mat<double> point(2, 1), prePoint(2, 1);
+	Mat<double> point(2), prePoint(2);
 	point.getData(xmin, y[0]); prePoint.getData(xmin, y[0]);
 	double delta = (xmax - xmin) / (y.cols - 1);
 	for (int i = 1; i < y.cols; i++) {
@@ -196,7 +196,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 		//[3]
 		Mat<int> err[2], inc[2], delta[2], point[2];
 		for (int k = 0; k < 2; k++) {
-			err[k].zero(Dim, 1), inc[k].zero(Dim, 1); delta[k].sub(pt[k + 1], pt[0]); point[k] = pt[0];
+			err[k].zero(Dim), inc[k].zero(Dim); delta[k].sub(pt[k + 1], pt[0]); point[k] = pt[0];
 			for (int dim = 0; dim < Dim; dim++) {
 				inc[k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
 				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
@@ -218,7 +218,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 				}
 			}
 			//[5]画线
-			Mat<int> errTmp(Dim, 1), incTmp(Dim, 1), deltaTmp, pointTmp(point[0]);
+			Mat<int> errTmp(Dim), incTmp(Dim), deltaTmp, pointTmp(point[0]);
 			deltaTmp.sub(point[1], point[0]);
 			for (int dim = 0; dim < Dim; dim++) {									//设置xyz单步方向	
 				incTmp[dim] = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
@@ -246,7 +246,7 @@ void GraphicsND::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void GraphicsND::drawRectangle(Mat<double>& sp, Mat<double>& ep, Mat<double>* direct, bool FACE, bool LINE) {
 	if (direct == NULL) {
-		Mat<double> pt(2, 1);
+		Mat<double> pt(2);
 		pt.getData(sp[0], ep[1]); drawLine(sp, pt); drawLine(pt, ep);
 		pt.getData(sp[1], ep[0]); drawLine(sp, pt); drawLine(pt, ep);
 	}
@@ -322,7 +322,7 @@ void GraphicsND::drawEllipse(Mat<double>& center, double rx, double ry, Mat<doub
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
 void GraphicsND::drawSurface(Mat<double> z, double xs, double xe, double ys, double ye) {
-	Mat<double> p(3, 1), pl(3, 1), pu(3, 1);
+	Mat<double> p(3), pl(3), pu(3);
 	double dx = (xe - xs) / z.rows, dy = (ye - ys) / z.cols;
 	for (int y = 0; y < z.cols; y++) {
 		for (int x = 0; x < z.rows; x++) {
@@ -382,18 +382,18 @@ void GraphicsND::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE, boo
 **------------------------------------------------------------------------*/
 void GraphicsND::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, bool FACE, bool LINE) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat(4), zAxis(3, 1), tmp; zAxis.getData(0, 0, 1);
+	Mat<double> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
 			rotateAxis.crossProduct(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
-			tmp.zero(3, 1), rotateMat
+			tmp.zero(3), rotateMat.E(4)
 		); 
 		rotateMat.block(1, 3, 1, 3, rotateMat);
 	} else rotateMat.E(3);
 	// 画圆台
-	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3, 1);
+	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= 360 / delta; i++) {
 		deltaVector.getData(cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360), 0);
 		deltaVector.mult(rotateMat, deltaVector);
@@ -430,7 +430,7 @@ void GraphicsND::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double
 **-----------------------------------------------------------------------*/
 void GraphicsND::drawSphere(Mat<double>& center, double r, int delta, bool FACE, bool LINE) {
 	// 经纬度法
-	Mat<double> point(3, 1);
+	Mat<double> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
 		double theta = (i * delta) * 2.0 * PI / 360;
 		for (int j = -90 / delta; j <= 90 / delta; j++) {
@@ -454,7 +454,7 @@ void GraphicsND::drawSphere(Mat<double>& center, double r, int delta, bool FACE,
 **---------------------------------------------------------------------------------------------------------*/
 void GraphicsND::drawSphere2(Mat<double>& center, double r, int n) {
 	// 均匀球面点
-	Mat<double> point(3, 1);
+	Mat<double> point(3);
 	double goldenRatio = (1 + sqrt(5)) / 2;				// 黄金分割点
 	double angleIncrement = PI * 2 * goldenRatio;
 	for (int i = 0; i < 300; i++) {
@@ -477,7 +477,7 @@ void GraphicsND::drawSphere2(Mat<double>& center, double r, int n) {
 **-----------------------------------------------------------------------*/
 void GraphicsND::drawEllipsoid(Mat<double>& center, Mat<double>& r) {
 	const int delta = 5;
-	Mat<double> point(3, 1);
+	Mat<double> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
 		double theta = (i * delta) * 2.0 * PI / 360;
 		for (int j = -90 / delta; j <= 90 / delta; j++) {
@@ -528,7 +528,7 @@ void GraphicsND::drawSuperCuboid(Mat<double>& pMin, Mat<double>& pMax, bool FACE
 void GraphicsND::drawSuperSphere(Mat<double>& center, double r, bool FACE, bool LINE) {
 	unsigned int Dim = center.rows, maxCode = 0, times = 1, cur;
 	double delta = 0.1, tmp;
-	Mat<double> point(Dim, 1), tmpMat;
+	Mat<double> point(Dim), tmpMat;
 	for (int dim = 0; dim < Dim; dim++) { times *= 1.0 / delta + 1; maxCode += 1 << dim; }
 	for (int i = 0; i < times; i++) {
 		//[1] 计算正象限的点坐标
@@ -579,7 +579,7 @@ void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	drawLine(0, 0, negative ? -Ymax : 0, Ymax);//y
 	drawLine(0, 0, 0, 0, negative ? -Zmax : 0, Zmax);//z
 	// 箭头
-	Mat<double> st(3, 1), ed(3, 1);
+	Mat<double> st(3), ed(3);
 	int vectorLength = 10, vectorWidth = vectorLength / 2.718281828456;
 	st.getData(Xmax, 0, 0);
 	ed.getData(Xmax + vectorLength, 0, 0);
@@ -661,7 +661,7 @@ ARGB GraphicsND::colorlist(double index, int model)
 |z'|   |dz  0  0  1 | |z|
 **-----------------------------------------------------------------------*/
 void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
-	Mat<double> translationMat(transMat.rows);
+	Mat<double> translationMat; translationMat.E(transMat.rows);
 	for (int i = 0; i < delta.rows; i++) translationMat(i + 1, 0) = delta[i];
 	transMat.mult(translationMat, transMat);
 }
@@ -684,7 +684,7 @@ void GraphicsND::translation(Mat<double>& delta, Mat<double>& transMat) {
 				[d  c -b  a]
 **--------------------------------------------------------------------------*/
 void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& center, Mat<double>& transMat) {
-	Mat<double> tmp, rotateMat(transMat.rows);
+	Mat<double> tmp, rotateMat;
 	translation(center.negative(tmp), transMat);
 	// q
 	if (transMat.rows - 1 == 2) { //二维 S02
@@ -692,10 +692,10 @@ void GraphicsND::rotate(Mat<double>& rotateAxis, double theta, Mat<double>& cent
 			1, 0, 0,
 			0, cos(theta), -sin(theta),
 			0, sin(theta),  cos(theta),
-		}; rotateMat.getData(t);
+		}; rotateMat.E(transMat.rows).getData(t);
 	}
 	if (transMat.rows - 1 == 3) { //三维 S03·四元数
-		Mat<double> q(transMat.rows, 1);
+		Mat<double> q(transMat.rows);
 		rotateAxis.normalized();
 		q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
 		// rotate mat
@@ -730,7 +730,7 @@ void GraphicsND::scaling(Mat<double>& scale, Mat<double>& center, Mat<double>& t
 	Mat<double> tmp;
 	translation(center.negative(tmp), transMat);
 	// scaling
-	Mat<double> scaleMat(transMat.rows);
+	Mat<double> scaleMat; scaleMat.E(transMat.rows);
 	for (int i = 0; i < scale.rows; i++)scaleMat(i + 1, i + 1) = scale[i];
 	transMat.mult(scaleMat, transMat);
 	translation(center, transMat);

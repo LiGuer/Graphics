@@ -467,37 +467,37 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 /*----------------[ TRANSLATION ]----------------*/
 void Graphics::translation(INT32S dx, INT32S dy)
 {
-	Mat<FP64> M(3);
+	Mat<FP64> M;
 	FP64 t[] = {
 		1, 0, dx,
 		0, 1, dy,
 		0, 0, 1
 	};
-	TransMat.mult(M.getData(t), TransMat);
+	TransMat.mult(M.E(3).getData(t), TransMat);
 }
 /*----------------[ ROMOTE ]----------------*/
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
 	translation(-x0, -y0);
-	Mat<FP64> M(3);
+	Mat<FP64> M;
 	FP64 t[] = {
 		cos(theta), -sin(theta), 0,
 		sin(theta),  cos(theta), 0,
 		0, 0, 1
 	};
-	TransMat.mult(M.getData(t), TransMat);
+	TransMat.mult(M.E(3).getData(t), TransMat);
 	translation(x0, y0);
 }
 /*----------------[ scaling ]----------------*/
 void Graphics::scaling(FP64 sx, FP64 sy, INT32S x0, INT32S y0)
 {
 	translation(-x0, -y0);
-	Mat<FP64> M(3);
+	Mat<FP64> M;
 	FP64 t[] = {
 		sx,  0,  0,
 		 0, sy,  0,
 		 0,  0,  1
 	};
-	TransMat.mult(M.getData(t), TransMat);
+	TransMat.mult(M.E(3).getData(t), TransMat);
 	translation(x0, y0);
 }
