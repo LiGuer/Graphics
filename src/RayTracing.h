@@ -32,7 +32,7 @@ public:
 	Mat<RGB> ScreenPix;
 	Mat<Mat<double>> Screen;
 	int SamplesNum = 1e9, maxRayLevel = 5;
-	double refractRateBuffer = 1, eps = 1e-4, maxRayLevelPR = 1.0 / 6;
+	double refractRateBuf = 1, eps = 1e-4, maxRayLevelPR = 1.0 / 6;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Material> MaterialSet;											//材质集
 	std::vector<Mat<double>> PointLight;										//点光源集(QuickReflect专用)

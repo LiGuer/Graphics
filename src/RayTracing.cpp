@@ -17,8 +17,8 @@ limitations under the License.
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void RayTracing::init(int width, int height) {
 	ScreenPix.zero(height, width);
-	Screen.zero(height, width);
-	for (int i = 0; i < Screen.size(); i++)Screen[i].zero(3);
+	Screen.   zero(height, width);
+	for (int i = 0; i < Screen.size(); i++) Screen[i].zero(3);
 }
 /*--------------------------------[ 读图 ]--------------------------------*/
 void RayTracing::readImg(const char* fileName) {
@@ -81,22 +81,27 @@ void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* mat
 void RayTracing::paint(const char* fileName, int sampleSt) {
 	//[1]
 	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3);
-	ScreenVec.sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
+	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
 	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
 	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
 	for (int sample = sampleSt; sample < SamplesNum; sample++) {
-		writeImg(fileName); clock_t start = clock();
+		writeImg(fileName); 
+		clock_t start = clock();
 		Screen *= (double)sample / (sample + 1);
 		for (int x = 0; x < Screen.rows; x++) {
 			for (int y = 0; y < Screen.cols; y++) {
-				PixVec.add(
+				PixVec.add(														//[3]
 					PixXVec.mult(x + RAND_DBL - Screen.rows / 2 - 0.5, ScreenXVec),
 					PixYVec.mult(y + RAND_DBL - Screen.cols / 2 - 0.5, ScreenYVec)
-				);//[3]
-				traceRay(RaySt.add(gCenter, PixVec), Ray.add(ScreenVec, PixVec).normalized(), color.zero(), 0);	//[4][5]
+				);
+				traceRay(														//[4][5]
+					RaySt.add(gCenter,   PixVec), 
+					Ray.  add(ScreenVec, PixVec).normalized(), 
+					color.zero(), 0
+				);
 				setPix(x, y, Screen(x, y) += (color *= 1.0 / (sample + 1)));
 			} 
 		} printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
@@ -114,12 +119,13 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 -----------------------------------------------------------------------------*/
 Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
 	//[1][2][3]
-	double minDistance = DBL_MAX;
+	double minDistance  = DBL_MAX;
 	Triangle* minDisTri = NULL;
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		double distance = seekIntersection(TriangleSet[i], RaySt, Ray);
 		if (distance > eps && distance < minDistance) { 
-			minDistance = distance;  minDisTri = &TriangleSet[i]; 
+			minDistance = distance;  
+			minDisTri   = &TriangleSet[i]; 
 		}
 	}
 	if (minDistance == DBL_MAX) return color.zero();										//Miss intersect
@@ -146,14 +152,14 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 		color.mult(lightCos, color.ones(3));
 	}
 	else if (minDisTri->material->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
+		traceRay(intersection, diffuseReflect(Ray, FaceVec, RayTmp),   color.zero(), level + 1);
 		color *= minDisTri->material->reflectRate;
 	}
 	else if (minDisTri->material->refractRate != 0) {					//Refract
-		double t = refractRateBuffer; refractRateBuffer = refractRateBuffer == minDisTri->material->refractRate ? 1 : minDisTri->material->refractRate;
-		refract(Ray, FaceVec, RayTmp, t, refractRateBuffer);
+		double t = refractRateBuf; refractRateBuf = refractRateBuf == minDisTri->material->refractRate ? 1 : minDisTri->material->refractRate;
+		refract(Ray, FaceVec, RayTmp, t, refractRateBuf);
 		traceRay(tmp.add(tmp.mult(eps, RayTmp), intersection), RayTmp, color.zero(), level + 1);
-		refractRateBuffer = t;
+		refractRateBuf = t;
 	}
 	else if (minDisTri->material->reflectRate != 0) {					//Reflect
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
@@ -190,8 +196,10 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	// Sphere Seek Intersection
 	if (triangle.p[2][0] == DBL_MAX) {
 		Mat<double> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
-		double R = triangle.p[1][0], A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
-		double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+		double R = triangle.p[1][0], 
+			   A = Ray.dot(Ray), 
+			   B = 2 * Ray.dot(RayStCenter),
+		       Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
 		if (Delta < 0) return -DBL_MAX;									//有无交点
 		Delta = sqrt(Delta);
 		return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
@@ -212,7 +220,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	// q & v
 	Mat<double> q;
 	double v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
-	return ( v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
+	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
 /*--------------------------------[ 反射 ]--------------------------------
 *	[反射定律]: 入射角 == 反射角
@@ -230,13 +238,16 @@ Mat<double>& RayTracing::reflect(Mat<double>& incidentRay, Mat<double>& faceVec,
 			   = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 -------------------------------------------------------------------------*/
 Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut) {
-	double refractRate = rateIn / rateOut;
-	double CosIn = faceVec.dot(incidentRay);
-	double CosOut = 1 - refractRate * refractRate * (1 - CosIn * CosIn);
+	double refractRate = rateIn / rateOut,
+	       CosIn  = faceVec.dot(incidentRay),
+	       CosOut = 1 - refractRate * refractRate * (1 - CosIn * CosIn);
 	if (CosOut >= 0) reflect(incidentRay, faceVec, refractRay);			//全反射
 	Mat<double> tmp;
 	CosOut = sqrt(CosOut);
-	return refractRay.add(refractRay.mult(refractRate, incidentRay), tmp.mult((CosIn > 0 ? 1 : -1)* CosOut - refractRate * CosIn, faceVec)).normalized();
+	return refractRay.add(
+		refractRay.mult(refractRate, incidentRay), 
+		tmp.mult((CosIn > 0 ? 1 : -1)* CosOut - refractRate * CosIn, faceVec)
+	).normalized();
 }
 /*--------------------------------[ 漫反射 ]--------------------------------
 *	[算法]: MonteCarlo: 随机持续采样
@@ -246,11 +257,11 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
 	Mat<double> tmp1(3), tmp2(3);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
-	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; tmp1[1] = tmp1[0] == 0 ? 1 : 0;
-	tmp1.mult(cos(r1) * sqrt(r2), tmp1.crossProduct(tmp1, faceVec).normalized());
+	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; 
+	tmp1[1] = tmp1[0] == 0 ? 1 : 0;
+	tmp1.mult(cos(r1) * sqrt(r2), tmp1.crossProduct (tmp1, faceVec).normalized());
 	tmp2.mult(sin(r1) * sqrt(r2), tmp2.crossProduct_(faceVec, tmp1));
-	reflectRay.add(reflectRay.add(reflectRay.mult(sqrt(1 - r2), faceVec), tmp1), tmp2);
-	return reflectRay.normalized();
+	return reflectRay.add(reflectRay.add(reflectRay.mult(sqrt(1 - r2), faceVec), tmp1), tmp2).normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
@@ -263,8 +274,8 @@ void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 }
 /*--------------------------------[ 画四边形 ]--------------------------------*/
 void RayTracing::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
-		drawTriangle(p1, p2, p3, material); 
-		drawTriangle(p1, p4, p3, material);
+	drawTriangle(p1, p2, p3, material); 
+	drawTriangle(p1, p4, p3, material);
 }
 /*--------------------------------[ 画多边形 ]--------------------------------
 * [算法]:
@@ -299,14 +310,16 @@ void RayTracing::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& 
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
 void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material) {
-	Mat<double> pMinTmp[3], pMaxTmp[3];
+	Mat<double> 
+		pMinTmp[3], 
+		pMaxTmp[3];
 	for (int i = 0; i < 3; i++) {
 		pMinTmp[i] = pMin; pMinTmp[i][i] = pMax[i];
 		pMaxTmp[i] = pMax; pMaxTmp[i][i] = pMin[i];
 	}
 	for (int i = 0; i < 3; i++) {
-		drawTriangle(pMin, pMinTmp[i], pMaxTmp[(i + 2) % 3], material);
-		drawTriangle(pMax, pMaxTmp[i], pMinTmp[(i + 2) % 3], material);
+		drawTriangle(pMin, pMinTmp[i],           pMaxTmp[(i + 2) % 3], material);
+		drawTriangle(pMax, pMaxTmp[i],           pMinTmp[(i + 2) % 3], material);
 		drawTriangle(pMin, pMinTmp[(i + 1) % 3], pMaxTmp[(i + 2) % 3], material);
 		drawTriangle(pMax, pMaxTmp[(i + 1) % 3], pMinTmp[(i + 2) % 3], material);
 	}
@@ -332,12 +345,16 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	// 画圆台
 	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= 360 / delta; i++) {
-		deltaVector.getData(cos(i * delta * 2.0 * PI / 360), sin(i * delta * 2.0 * PI / 360), 0);
+		deltaVector.getData(
+			cos(i * delta * 2.0 * PI / 360), 
+			sin(i * delta * 2.0 * PI / 360), 
+			0
+		);
 		deltaVector.mult(rotateMat, deltaVector);
 		stPoint.add(st, stPoint.mult(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mult(Red, deltaVector));
 		if (i != 0) {
-			drawTriangle(stPoint, preStPoint, edPoint, material);
+			drawTriangle(stPoint,    preStPoint, edPoint, material);
 			drawTriangle(preStPoint, preEdPoint, edPoint, material);
 		}
 		preStPoint = stPoint;
@@ -369,12 +386,12 @@ void RayTracing::drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* ma
 	const int delta = 5;
 	Mat<double> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
-		double theta = (i * delta) * 2.0 * PI / 360;
+		double theta   = (i * delta) * 2.0 * PI / 360;
 		for (int j = -90 / delta; j <= 90 / delta; j++) {
 			double phi = (j * delta) * 2.0 * PI / 360;
 			point[0] = r[0] * cos(phi) * cos(theta) + center[0];
 			point[1] = r[1] * cos(phi) * sin(theta) + center[1];
-			point[2] = r[2] * sin(phi) + center[2];
+			point[2] = r[2] * sin(phi)              + center[2];
 		}
 	}
 }

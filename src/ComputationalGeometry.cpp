@@ -28,7 +28,7 @@ bool Geometry::inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP
 	Mat<double> tmp, edge[2];
 	edge[0].sub(TriP2, TriP1);
 	edge[1].sub(TriP3, TriP1);
-	tmp.sub(p0, TriP1);
+	tmp.    sub(p0,    TriP1);
 	double Dot00 = edge[0].dot(edge[0]),
 		   Dot01 = edge[0].dot(edge[1]),
 		   Dot11 = edge[1].dot(edge[1]),
@@ -64,8 +64,11 @@ double Geometry::RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<do
 	// p & a & tmp
 	Mat<double> p;
 	double a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
-	if (a > 0) tmp.sub(RaySt, TriP1);
-	else { tmp.sub(TriP1, RaySt); a = -a; }
+	if (a > 0) 
+		tmp.sub(RaySt, TriP1);
+	else { 
+		tmp.sub(TriP1, RaySt); a = -a; 
+	}
 	if (a < 1e-4) return -DBL_MAX;										//射线与三角面平行
 	// u
 	double u = p.dot(tmp) / a;
@@ -119,7 +122,11 @@ Mat<double>& Geometry::ThreePoints2Circle(Mat<double> Points[], Mat<double>& cen
 		mat(i + 1, 2) = Points[i][1];
 		mat(i + 1, 3) = 1;
 	}
-	double a = mat.comi(0, 0), b = -mat.comi(0, 1), c = mat.comi(0, 2), d = -mat.comi(0, 3);
+	double 
+		a =  mat.comi(0, 0), 
+		b = -mat.comi(0, 1), 
+		c =  mat.comi(0, 2), 
+		d = -mat.comi(0, 3);
 	R = sqrt(-d / a + b * b / (4 * a * a) + c * c / (4 * a * a));
 	return center.zero(2, 1).getData(-b / (2 * a), -c / (2 * a));
 }
@@ -149,7 +156,7 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 	Mat<double> minPoint = point[0];
 	for (int i = 1; i < n; i++)
 		if (point[i][1] < minPoint[1] || (point[i][1] == minPoint[1] && point[i][0] < minPoint[0])) {
-			minPoint = point[i]; minCur = i;
+			minCur = i; minPoint = point[minCur];
 		}
 	point[0].swap(point[minCur]);
 	//[2] 
@@ -158,20 +165,18 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 			!= atan2(b[1] - minPoint[1], b[0] - minPoint[0])
 			?  atan2(a[1] - minPoint[1], a[0] - minPoint[0])
 			<  atan2(b[1] - minPoint[1], b[0] - minPoint[0])
-			:  pow(a[0] - minPoint[0], 2) + pow(a[1] - minPoint[1], 2)
-			<  pow(b[0] - minPoint[0], 2) + pow(b[1] - minPoint[1], 2);
+			:  pow  (a[0] - minPoint[0], 2) + pow(a[1] - minPoint[1], 2)
+			<  pow  (b[0] - minPoint[0], 2) + pow(b[1] - minPoint[1], 2);
 		});
 	//[3]
 	std::stack<Mat<double>> ConvexHullPoint;
-	for (int i = 0; i <= 2; i++)ConvexHullPoint.push(point[i]);
+	for (int i = 0; i <= 2; i++) ConvexHullPoint.push(point[i]);
 	//[4]
 	Mat<double> a, b;
 	for (int i = 3; i < n; i++) {
 		while (true) {
-			Mat<double> prePoint     = ConvexHullPoint.top();
-			ConvexHullPoint.pop();
-			Mat<double> prePointNext = ConvexHullPoint.top();
-			ConvexHullPoint.push(prePoint);
+			Mat<double> prePoint     = ConvexHullPoint.top(); ConvexHullPoint.pop();
+			Mat<double> prePointNext = ConvexHullPoint.top(); ConvexHullPoint.push(prePoint);
 			//叉乘判断角度转向
 			a.sub(prePointNext, prePoint);
 			b.sub(point[i],     prePoint);
@@ -252,9 +257,16 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 			else if (distance < R) {
 				Mat<double> edge(2, 2), p1, p2;
 				for (int k = 0; k < 3; k++) {
-					triTemp[j].getCol(k, p1); triTemp[j].getCol((k + 1) % 3, p2);
-					if (p1[0] < p2[0] || (p1[0] == p2[0] && p1[1] < p2[1])) { edge.setCol(0, p1); edge.setCol(1, p2); }
-					else { edge.setCol(0, p2); edge.setCol(1, p1); }
+					triTemp[j].getCol(k, p1); 
+					triTemp[j].getCol((k + 1) % 3, p2);
+					if (p1[0] < p2[0] || (p1[0] == p2[0] && p1[1] < p2[1])) { 
+						edge.setCol(0, p1); 
+						edge.setCol(1, p2); 
+					}
+					else { 
+						edge.setCol(0, p2);
+						edge.setCol(1, p1);
+					}
 					edgeBuffer.push_back(edge);
 				}
 				triTemp.erase(triTemp.begin() + j--);
@@ -284,19 +296,18 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	}
 	//[4]
 	for (int i = 0; i < triTemp.size(); i++) triAns.push_back(triTemp[i]);
-	for (int i = 0; i < triAns.size(); i++) {
+	for (int i = 0; i < triAns. size(); i++) {
 		Mat<double> t;
 		for (int j = 0; j < 3; j++) {
 			triAns[i].getCol(j, t);
 			if (t[0]< minPoint[0] || t[1] < minPoint[1] || t[0] > maxPoint[0] || t[1] > maxPoint[1]) {
-				triAns.erase(triAns.begin() + i); i--; break;
+				triAns.erase(triAns.begin() + i--); break;
 			}
 		}
 	}
 	// [Output]
 	TrianglesNum = triAns.size();
-	Mat<double>* Triangles = (Mat<double>*)malloc(TrianglesNum * sizeof(Mat<double>));
-	memset(Triangles, 0, TrianglesNum * sizeof(Mat<double>));
+	Mat<double>* Triangles = (Mat<double>*)calloc(TrianglesNum, sizeof(Mat<double>));
 	for (int i = 0; i < TrianglesNum; i++) Triangles[i] = triAns[i];
 	return Triangles;
 }
@@ -312,8 +323,9 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 *************************************************************************************************/
 double Geometry::RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& Center, double R) {
 	Mat<double> RayStCenter; RayStCenter.sub(RaySt, Center);
-	double A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
-	double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+	double A = Ray.dot(Ray), 
+		   B = 2 * Ray.dot(RayStCenter),
+	       Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
 	if (Delta < 0) return -DBL_MAX;													//有无交点
 	Delta = sqrt(Delta);
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
