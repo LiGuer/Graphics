@@ -1,5 +1,5 @@
 ﻿/*
-Copyright 2020 LiGuer. All Rights Reserved.
+Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,7 +9,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Reference.
+[Reference]
 [1]Introduction Algorithms.THOMAS H.CORMEN,CHARLES E.LEISERSON,RONALD L.RIVEST,CLIFFORD STEIN
 ==============================================================================*/
 #ifndef _MAT_H
@@ -18,6 +18,7 @@ Reference.
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <functional>
 template<class T>
 class Mat
 {
@@ -62,8 +63,8 @@ void swap(Mat& a);                          //交换数据 [ swap ]
 	/*----------------交换数据 [ swap ]----------------*/
 	void swap(Mat& a) {
 		T* tmp = a.data; a.data = data; data = tmp;
-		int t = a.rows; a.rows = rows; rows = t;
-		t = a.cols; a.cols = cols; cols = t;
+		int t  = a.rows; a.rows = rows; rows = t;
+			t  = a.cols; a.cols = cols; cols = t;
 	}
 /******************************************************************************
 *                    基础矩阵
@@ -79,23 +80,29 @@ void swap(Mat& a);                          //交换数据 [ swap ]
 		if (_rows != rows || _cols != cols) {
 			if (data != NULL) delete data;
 			data = (T*)malloc(_rows * _cols * sizeof(T));
-			rows = _rows; cols = _cols;
+			rows = _rows; 
+			cols = _cols;
 		} return *this;
 	}
 	/*---------------- 零元/清零 ----------------*/
 	inline Mat& zero() { memset(data, 0, sizeof(T) * size()); return *this; }
 	Mat& zero(const int _rows, const int _cols = 1) {
-		alloc(_rows, _cols); zero();  return *this;
+		alloc(_rows, _cols); 
+		zero(); 
+		return *this;
 	}
+	Mat& zero(Mat& a) { zero(a.rows, a.cols);  return *this; }
 	/*---------------- 单位元 ----------------*/
 	Mat& E(const int _rows) {
 		zero(_rows, _rows);
-		for (int i = 0; i < rows; i++) data[i * cols + i] = 1;
+		for (int i = 0; i < rows; i++) (*this)(i, i) = 1;
 		return *this;
 	}
 	/*---------------- 全1元 ----------------*/
 	Mat& ones(const int _rows, const int _cols = 1) {
-		alloc(_rows, _cols); fill(1); return *this;
+		alloc(_rows, _cols); 
+		fill(1); 
+		return *this;
 	}
 	/*---------------- 随机元 ----------------*/
 	Mat& rands(const int _rows, const int _cols, T st, T ed) {
@@ -137,7 +144,7 @@ Mat& elementMult(Mat& a);
 Mat& elementDivide(Mat& a, Mat& b);		//元素除 [elementDivide /]
 Mat& elementDivide(Mat& a);
 Mat& negative(Mat& ans);				//负 [negative -]
-Mat& transposi(Mat& ans);				//转置 [transposi T]
+Mat& transpose(Mat& ans);				//转置 [transpose T]
 T sum();								//求和 [sum Σ]
 static T sum(Mat& a);
 Mat& sum(Mat& ans,int dim);
@@ -167,7 +174,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	/*---------------- max/min ----------------*/
 	T max() const {
 		T maxdata = *data;
-		for (int i = 1; i < size(); i++)maxdata = maxdata >= data[i] ? maxdata : data[i];
+		for (int i = 1; i < size(); i++) maxdata = maxdata >= data[i] ? maxdata : data[i];
 		return maxdata;
 	}
 	T max(int& index) {
@@ -178,7 +185,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	}
 	T min() const {
 		T mindata = *data;
-		for (int i = 1; i < size(); i++)mindata = mindata <= data[i] ? mindata : data[i];
+		for (int i = 1; i < size(); i++) mindata = mindata <= data[i] ? mindata : data[i];
 		return mindata;
 	}
 	T min(int& index) {
@@ -194,7 +201,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	}
 	/*----------------赋矩阵 [ = ]----------------*/ //不能赋值自己
 	Mat& operator=(const Mat& a) {
-		if (a.data == NULL)error();
+		if (a.data == NULL) return *this;
 		alloc(a.rows, a.cols);
 		memcpy(data, a.data, sizeof(T) * size());
 		return *this;
@@ -204,13 +211,13 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		return *this;
 	}
 	Mat& getData(T x, T y) {
-		if (rows != 2 || cols != 1)error();
+		if (rows != 2 || cols != 1) error();
 		data[0] = x;
 		data[1] = y;
 		return *this;
 	}
 	Mat& getData(T x, T y, T z) {
-		if (rows != 3 || cols != 1)error();
+		if (rows != 3 || cols != 1) error();
 		data[0] = x;
 		data[1] = y;
 		data[2] = z;
@@ -218,26 +225,26 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	}
 	/*----------------加法 [ add + ]----------------*/
 	Mat& operator+=(Mat& a) {
-		if (a.rows != rows || a.cols != cols)error();
-		for (int i = 0; i < a.size(); i++)data[i] += a[i];
+		if (a.rows != rows || a.cols != cols) error();
+		for (int i = 0; i < a.size(); i++) data[i] += a[i];
 		return *this;
 	}
 	Mat& add(Mat& a, Mat& b) {
-		if (a.rows != b.rows || a.cols != b.cols)error();
+		if (a.rows != b.rows || a.cols != b.cols) error();
 		alloc(a.rows, a.cols);
-		for (int i = 0; i < a.size(); i++)data[i] = a[i] + b[i];
+		for (int i = 0; i < a.size(); i++) data[i] = a[i] + b[i];
 		return *this;
 	}
 	/*----------------减法 [ sub - ]----------------*/
 	Mat& operator-=(Mat& a) {
-		if (a.rows != rows || a.cols != cols)error();
-		for (int i = 0; i < a.size(); i++)data[i] -= a[i];
+		if (a.rows != rows || a.cols != cols) error();
+		for (int i = 0; i < a.size(); i++) data[i] -= a[i];
 		return *this;
 	}
 	Mat& sub(Mat& a, Mat& b) {
-		if (a.rows != b.rows || a.cols != b.cols)error();
+		if (a.rows != b.rows || a.cols != b.cols) error();
 		alloc(a.rows, a.cols);
-		for (int i = 0; i < a.size(); i++)data[i] = a[i] - b[i];
+		for (int i = 0; i < a.size(); i++) data[i] = a[i] - b[i];
 		return *this;
 	}
 	/*----------------乘法 [ mult × ]----------------*/
@@ -280,13 +287,13 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	static T dot(Mat& a, Mat& b) {
 		if (a.rows != b.rows || a.cols != b.cols) error();
 		T ans = a[0] * b[0];
-		for (int i = 1; i < a.size(); i++)ans += a[i] * b[i];
+		for (int i = 1; i < a.size(); i++) ans += a[i] * b[i];
 		return ans;
 	}
 	T dot(Mat& a) {
 		if (a.rows != rows && a.cols != cols) error();
 		T ans = data[0] * a[0];
-		for (int i = 1; i < size(); i++)ans += data[i] * a[i];
+		for (int i = 1; i < size(); i++) ans += data[i] * a[i];
 		return ans;
 	}
 	/*----------------叉乘 [ crossProduct × ]----------------
@@ -316,12 +323,12 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	Mat& elementMult(Mat& a, Mat& b) {
 		if (a.rows != b.rows || a.cols != b.cols) error();
 		alloc(a.rows, a.cols);
-		for (int i = 0; i < size(); i++)data[i] = a[i] * b[i];
+		for (int i = 0; i < size(); i++) data[i] = a[i] * b[i];
 		return*this;
 	}
 	Mat& elementMult(Mat& a) {
 		if (rows != a.rows || cols != a.cols) error();
-		for (int i = 0; i < size(); i++)data[i] *= a[i];
+		for (int i = 0; i < size(); i++) data[i] *= a[i];
 		return *this;
 	}
 	/*----------------元素除 [ elementDivide / ]----------------
@@ -343,8 +350,8 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		for (int i = 0; i < size(); i++) ans[i] = -data[i];
 		return ans;
 	}
-	/*----------------转置 [ transposi T ]----------------*/
-	Mat& transposi(Mat& ans) {
+	/*----------------转置 [ transpose T ]----------------*/
+	Mat& transpose(Mat& ans) {
 		Mat ansTmp(cols, rows);
 		for (int i = 0; i < rows; i++)
 			for (int j = 0; j < cols; j++)
@@ -354,12 +361,12 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	/*----------------求和 [ sum Σ ]----------------*/
 	T sum() {
 		T ans = data[0];
-		for (int i = 1; i < size(); i++)ans += data[i];
+		for (int i = 1; i < size(); i++) ans += data[i];
 		return ans;
 	}
 	static T sum(Mat& a) {
 		T ans = a[0];
-		for (int i = 1; i < size(); i++)ans += a[i];
+		for (int i = 1; i < size(); i++) ans += a[i];
 		return ans;
 	}
 	Mat& sum(Mat& ans,int dim) {
@@ -382,7 +389,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	/*----------------求积 [ product Π ]----------------*/
 	T product() {
 		T ans = data[0];
-		for (int i = 1; i < size(); i++)ans *= data[i];
+		for (int i = 1; i < size(); i++) ans *= data[i];
 		return ans;
 	}
 	/*----------------范数 [ norm ||x|| ]----------------
@@ -395,7 +402,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	Mat& normalized() {
 		T t = norm();
 		if (t == 0)return *this;
-		for (int i = 0; i < size(); i++)data[i] /= t;
+		for (int i = 0; i < size(); i++) data[i] /= t;
 		return *this;
 	}
 	/*----------------余子式 [ comi ]----------------
@@ -405,8 +412,8 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		Mat tmp(rows - 1, cols - 1);
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
-				if (i == i0 || j == j0)continue;
-				tmp(i < i0 ? i : i - 1, j < j0 ? j : j - 1) = data[i * cols + j];
+				if (i == i0 || j == j0) continue;
+				tmp(i < i0 ? i : i - 1, j < j0 ? j : j - 1) = (*this)(i, j);
 			}
 		}
 		return tmp.abs();
@@ -430,15 +437,17 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			//solve y
 			for (int i = 0; i < n; i++) {
 				x[i] = b[P[i]];		//yi
-				for (int j = 0; j < i; j++) x[i] -= x[j] * L(i, j);
+				for (int j = 0; j < i; j++) 
+					x[i] -= x[j] * L(i, j);
 			}
 			//solve x
 			for (int i = n - 1; i >= 0; i--) {
-				for (int j = i + 1; j < n; j++) x[i] -= x[j] * U(i, j);
+				for (int j = i + 1; j < n; j++) 
+					x[i] -= x[j] * U(i, j);
 				x[i] /= U(i, i);
 			}
 			//合并至结果
-			for (int i = 0; i < rows; i++)tmp(i, k) = x[i];
+			for (int i = 0; i < rows; i++) tmp(i, k) = x[i];
 		}
 		ans.eatMat(tmp); return ans;
 	}
@@ -460,13 +469,13 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			T t;
 			for (int i = 0; i < 3; i++) {
 				t = 1;
-				for (int j = 0; j < 3; j++) t *= (*this)(j, (j + i) % 3); ans += t;
+				for (int j = 0; j < 3; j++) t *= (*this)(j,     (j + i) % 3); ans += t;
 				for (int j = 0; j < 3; j++) t *= (*this)(j, (2 - j + i) % 3); ans -= t;
 			} return ans;
 		}
 		//普适
 		for (int i = 0; i < rows; i++)
-			ans += data[i * cols] * (i % 2 == 0 ? 1 : -1) * comi(i, 0);
+			ans += (*this)(i, 0) * (i % 2 == 0 ? 1 : -1) * comi(i, 0);
 		return ans;
 	}
 	/*--------------伴随矩阵 [ adjugate A* ]----------------
@@ -518,9 +527,9 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	void eig(T esp, Mat& eigvec, Mat& eigvalue) {
 		if (rows != cols)return;
 		//[1] init
-		eigvalue = (*this);
-		eigvec.E(rows);
 		int n = rows;
+		eigvalue = (*this);
+		eigvec.E(n);
 		Mat<double> R, RT;
 		//[2] begin iteration
 		while (true) {
@@ -530,20 +539,26 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			for (int i = 0; i < n; i++) {
 				for (int j = 0; j < n; j++) {
 					if (i != j && fabs(eigvalue[i * n + j]) >= maxelement) {
-						maxelement = fabs(eigvalue[i * n + j]); p = i; q = j;
+						maxelement = fabs(eigvalue[i * n + j]); 
+						p = i; 
+						q = j;
 					}
 				}
 			}if (maxelement < esp)return;			// [2]
 			//[4] eigvalue eigvec
-			T theta = 0.5 * atan2(2 * eigvalue[p * n + q], eigvalue[q * n + q] - eigvalue[p * n + p]);
-			T c = cos(theta), s = sin(theta);		// c,s
+			T theta = 0.5 * atan2(
+				2 * eigvalue[p * n + q], 
+				eigvalue[q * n + q] - eigvalue[p * n + p]
+			);
+			T c = cos(theta), 
+			  s = sin(theta);							// c,s
 			R.E(n);
-			R[p * n + p] = c; R[p * n + q] = s;		// R
+			R[p * n + p] =  c; R[p * n + q] = s;		// R
 			R[q * n + p] = -s; R[q * n + q] = c;
-			R.transposi(RT);
-			eigvalue.mult(RT, eigvalue);			// Dj = RjT Dj-1 Rj
+			R.transpose(RT);
+			eigvalue.mult(RT,eigvalue);					// Dj = RjT Dj-1 Rj
 			eigvalue.mult(eigvalue, R);
-			eigvec.mult(eigvec, R);					// X = R Y
+			eigvec.  mult(eigvec,   R);					// X = R Y
 		}
 	}
 	/*----------------解方程组 [ solveEquations ]----------------
@@ -579,15 +594,16 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		//[1] LUP分解
 		Mat U, L; Mat<int> P;
 		LUPdecomposition(U, L, P);
-		//[2] LUP - Solve
-		//[3] solve y
+		//[2] LUP - Solve  [3] solve y
 		for (int i = 0; i < n; i++) {
 			x[i] = b[P[i]];		//yi
-			for (int j = 0; j < i; j++) x[i] -= x[j] * L(i, j);
+			for (int j = 0; j < i; j++) 
+				x[i] -= x[j] * L(i, j);
 		}
 		//[4] solve x
 		for (int i = n - 1; i >= 0; i--) {
-			for (int j = i + 1; j < n; j++) x[i] -= x[j] * U(i, j);
+			for (int j = i + 1; j < n; j++) 
+				x[i] -= x[j] * U(i, j);
 			x[i] /= U(i, i);
 		}
 		return x;
@@ -614,7 +630,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		int n = rows;
 		Mat A(*this);
 		P.zero(n);
-		for (int i = 0; i < n; i++)P[i] = i;
+		for (int i = 0; i < n; i++) P[i] = i;
 		//[1]
 		for (int k = 0; k < n; k++) {
 			//[2] 选主元
@@ -623,7 +639,7 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			for (int i = k; i < n; i++) {
 				if (fabs(A(i, k)) > maxvalue) { maxvalue = fabs(A(i, k)); kt = i; }
 			}
-			if (maxvalue == 0)error();	// singular matrix，秩 rank<n
+			if (maxvalue == 0) error();				// singular matrix，秩 rank<n
 			//[3] 置换行
 			for (int i = 0; i < n; i++) {
 				T t = A(k, i); A(k, i) = A(kt, i); A(kt, i) = t;
@@ -631,38 +647,40 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			int t = P[k]; P[k] = P[kt]; P[kt] = t;
 			//[4] LU分解: 高斯消元法
 			for (int i = k + 1; i < n; i++) {
-				A(i, k) /= A(k, k);		//aik存储消去该行第k位所需的乘数,即L
+				A(i, k) /= A(k, k);					//aik存储消去该行第k位所需的乘数,即L
 				for (int j = k + 1; j < n; j++)
 					A(i, j) -= A(i, k) * A(k, j);	//初等行变换，消去该行第k位
 			}
 		}
 		//[5] A中包含U,L，分离出来即可
-		U.zero(n, n); L.E(n);
-		for (int i = 0; i < n; i++) {
-			for (int j = 0; j < n; j++) {
-				if (i > j)L(i, j) = A(i, j);
-				else U(i, j) = A(i, j);
-			}
-		}
+		U.zero(n, n); 
+		L.E(n);
+		for (int i = 0; i < n; i++) 
+			for (int j = 0; j < n; j++) 
+				if (i > j) L(i, j) = A(i, j);
+				else	   U(i, j) = A(i, j);
 	}
 	/*----------------构造对角矩阵 [ diag ]----------------*/
 	Mat& diag(Mat& ans) {
 		Mat ansTmp;
 		if (rows == cols) {
 			ansTmp.alloc(rows);
-			for (int i = 0; i < rows; i++)ansTmp[i] = data[i * rows + i];
+			for (int i = 0; i < rows; i++) bansTmp[i] = (*this)(i, i);
 		}
 		else if (rows == 1 || cols == 1) {
 			int n = rows > cols ? rows : cols;
 			ansTmp.alloc(n, n);
-			for (int i = 0; i < n; i++)ansTmp(i, i) = data[i];
+			for (int i = 0; i < n; i++) ansTmp(i, i) = data[i];
 		}
 		else error();
 		ans.eatMat(ansTmp); return ans;
 	}
 	/*----------------卷积 [ conv ]----------------*/
 	Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1) {
-		Mat ansTmp((a.rows - b.rows + 2 * padding) / stride + 1, (a.cols - b.cols + 2 * padding) / stride + 1);
+		Mat ansTmp(
+			(a.rows - b.rows + 2 * padding) / stride + 1, 
+			(a.cols - b.cols + 2 * padding) / stride + 1
+		);
 		// for each element of output
 		for (int y = 0; y < ansTmp.cols; y++) {
 			for (int x = 0; x < ansTmp.rows; x++) {
@@ -670,7 +688,8 @@ Mat& conv(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 				for (int ky = 0; ky < b.cols; ky++) {
 					for (int kx = 0; kx < b.rows; kx++) {
 						// get the corresponding element of a
-						int xt = -padding + x * stride + kx, yt = -padding + y * stride + ky;
+						int xt = -padding + x * stride + kx, 
+							yt = -padding + y * stride + ky;
 						ansTmp(x, y) += (xt < 0 || xt >= a.rows || yt < 0 || yt >= a.cols) ? 0 : a(xt, yt) * b(kx, ky);
 					}
 				}
@@ -699,7 +718,7 @@ Mat& horizStack(Mat& a, Mat& b)             //水平向拼接 [horizStack ]
 		return a;
 	}
 	Mat& setCol(int _col, Mat& a) {
-		for (int i = 0; i < rows; i++)data[i * cols + _col] = a[i];
+		for (int i = 0; i < rows; i++) (*this)(i, _col) = a[i];
 		return a;
 	}
 	/*----------------子矩阵 [block]----------------*/
@@ -710,16 +729,31 @@ Mat& horizStack(Mat& a, Mat& b)             //水平向拼接 [horizStack ]
 				ansTmp(i - rowSt, j - colSt) = (*this)(i, j);
 		ans.eatMat(ansTmp); return ans;
 	}
-	/*----------------水平向拼接 [horizStack]----------------*/
-	Mat& horizStack(Mat& a, Mat& b) {
-		if (a.rows != b.rows)error();
-		Mat ansTmp(a.rows, a.cols + b.cols);
-		for (int i = 0; i < ansTmp.row; i++)
+	Mat& block_(int rowSt, int rowEd, int colSt, int colEd, Mat& ans) {
+		ans.alloc(rowEd - rowSt + 1, colEd - colSt + 1);
+		for (int i = rowSt; i <= rowEd; i++)
+			for (int j = colSt; j <= colEd; j++)
+				ans(i - rowSt, j - colSt) = (*this)(i, j);
+		return ans;
+	}
+	/*----------------拼接 [rows/colsStack]----------------*/
+	Mat& rowsStack(Mat& a, Mat& b) {
+		if (a.cols != b.cols)error();
+		Mat ansTmp(a.rows + b.rows, a.cols);
+		for (int i = 0; i < ansTmp.rows; i++)
 			for (int j = 0; j < ansTmp.cols; j++)
-				ansTmp.data[i * cols + j] = j < a.cols ? a(i, j) : b(i, j - a.cols);
+				ansTmp(i, j) = i < a.rows ? a(i, j) : b(i - a.rows, j);
 		eatMat(ansTmp); return *this;
 	}
-	/*----------------复制拓展 [ repeatCol  ]----------------*/
+	Mat& colsStack(Mat& a, Mat& b) {
+		if (a.rows != b.rows)error();
+		Mat ansTmp(a.rows, a.cols + b.cols);
+		for (int i = 0; i < ansTmp.rows; i++)
+			for (int j = 0; j < ansTmp.cols; j++)
+				ansTmp(i, j) = j < a.cols ? a(i, j) : b(i, j - a.cols);
+		eatMat(ansTmp); return *this;
+	}
+	/*----------------复制拓展 [repeatCol]----------------*/
 	Mat& repeatCol(int repeatNum, Mat& ans) {
 		if (cols != 1)error();
 		Mat ansTmp(rows, repeatNum);
@@ -727,6 +761,26 @@ Mat& horizStack(Mat& a, Mat& b)             //水平向拼接 [horizStack ]
 			for (int j = 0; j < repeatNum; j++)
 				ansTmp(i, j) = data[i];
 		ans.eatMat(ansTmp); return ans;
+	}
+	/*----------------函数操作 []----------------*/
+	//Function Pointer
+	Mat& function(Mat& x, T (*fun)(T)) {
+		alloc(x.rows, x.cols);
+		for (int i = 0; i < x.size(); i++) data[i] = fun(x[i]);
+		return *this;
+	}
+	Mat& function(T (*fun)(T)) {
+		for (int i = 0; i <   size(); i++) data[i] = fun(data[i]);
+		return *this;
+	}
+	Mat& function_(Mat& x, std::function<T(T)> fun) {
+		alloc(x.rows, x.cols);
+		for (int i = 0; i < x.size(); i++) data[i] = fun(x[i]);
+		return *this;
+	}
+	Mat& function_(std::function<T(T)> fun) {
+		for (int i = 0; i <   size(); i++) data[i] = fun(data[i]);
+		return *this;
 	}
 };
 #endif
