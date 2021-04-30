@@ -113,7 +113,7 @@ Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
 	}
 	Mat<double> output_x, output_y;
 	output_x.conv(input, SobelKernel, 1);
-	output_y.conv(input, SobelKernel.transposi(output_y), 1);
+	output_y.conv(input, SobelKernel.transpose(output_y), 1);
 	output.zero(input.rows, input.cols);
 	for (int i = 0; i < input.size(); i++)
 		output[i] = sqrt(output_x[i] * output_x[i] + output_y[i] * output_y[i]);

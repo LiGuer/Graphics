@@ -30,13 +30,13 @@ bool Geometry::inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP
 	edge[1].sub(TriP3, TriP1);
 	tmp.sub(p0, TriP1);
 	double Dot00 = edge[0].dot(edge[0]),
-		Dot01 = edge[0].dot(edge[1]),
-		Dot11 = edge[1].dot(edge[1]),
-		Dot02 = edge[0].dot(tmp),
-		Dot12 = edge[1].dot(tmp);
-	double t = Dot00 * Dot11 - Dot01 * Dot01;
-	double u = (Dot11 * Dot02 - Dot01 * Dot12) / t;
-	double v = (Dot00 * Dot12 - Dot01 * Dot02) / t;
+		   Dot01 = edge[0].dot(edge[1]),
+		   Dot11 = edge[1].dot(edge[1]),
+		   Dot02 = edge[0].dot(tmp),
+		   Dot12 = edge[1].dot(tmp);
+	double t = Dot00 * Dot11 - Dot01 * Dot01,
+		   u =(Dot11 * Dot02 - Dot01 * Dot12) / t,
+	       v =(Dot00 * Dot12 - Dot01 * Dot02) / t;
 	return (u < 0 || u > 1 || v < 0 || v > 1 || u + v > 1) ? false : true;
 }
 /*************************************************************************************************
@@ -154,25 +154,27 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 	point[0].swap(point[minCur]);
 	//[2] 
 	std::sort(point + 1, point + n, [&minPoint](Mat<double>& a, Mat<double>& b) {
-		if (atan2(a[1] - minPoint[1], a[0] - minPoint[0]) != atan2(b[1] - minPoint[1], b[0] - minPoint[0]))
-			return (atan2(a[1] - minPoint[1], a[0] - minPoint[0])) < (atan2(b[1] - minPoint[1], b[0] - minPoint[0]));
-		return (a[0] - minPoint[0]) * (a[0] - minPoint[0]) + (a[1] - minPoint[1]) * (a[1] - minPoint[1])
-			< (b[0] - minPoint[0]) * (b[0] - minPoint[0]) + (b[1] - minPoint[1]) * (b[1] - minPoint[1]);
+		return atan2(a[1] - minPoint[1], a[0] - minPoint[0])
+			!= atan2(b[1] - minPoint[1], b[0] - minPoint[0])
+			?  atan2(a[1] - minPoint[1], a[0] - minPoint[0])
+			<  atan2(b[1] - minPoint[1], b[0] - minPoint[0])
+			:  pow(a[0] - minPoint[0], 2) + pow(a[1] - minPoint[1], 2)
+			<  pow(b[0] - minPoint[0], 2) + pow(b[1] - minPoint[1], 2);
 		});
 	//[3]
 	std::stack<Mat<double>> ConvexHullPoint;
 	for (int i = 0; i <= 2; i++)ConvexHullPoint.push(point[i]);
 	//[4]
+	Mat<double> a, b;
 	for (int i = 3; i < n; i++) {
 		while (true) {
-			Mat<double> prePoint = ConvexHullPoint.top();
+			Mat<double> prePoint     = ConvexHullPoint.top();
 			ConvexHullPoint.pop();
 			Mat<double> prePointNext = ConvexHullPoint.top();
 			ConvexHullPoint.push(prePoint);
-			// 叉乘判断角度转向
-			Mat<double> a, b;
+			//叉乘判断角度转向
 			a.sub(prePointNext, prePoint);
-			b.sub(point[i], prePoint);
+			b.sub(point[i],     prePoint);
 			if (a[0] * b[1] - a[1] * b[0] < 0) break;
 			ConvexHullPoint.pop();
 		}
@@ -213,40 +215,40 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 *************************************************************************************************/
 Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	std::vector<Mat<double>> triAns, triTemp, edgeBuffer;
-	std::sort(point, point + n, [](Mat<double> a, Mat<double> b) {				// 将点按坐标x从小到大排序
-		if (a[0] != b[0])return a[0] < b[0]; return a[1] < b[1];
-		});
-	//[2] 确定超级三角形
-	Mat<double> maxPoint(point[0]), minPoint(point[0]);
+	std::sort(point, point + n, [](Mat<double>& a, Mat<double>& b) {				// 将点按坐标x从小到大排序
+		return a[0] != b[0] ? a[0] < b[0] : a[1] < b[1];
+	});
+	//[2]
+	Mat<double> maxPoint(point[0]), 
+				minPoint(point[0]);
 	for (int i = 1; i < n; i++) {
 		maxPoint = (point[i][0] > maxPoint[0] || (point[i][0] == maxPoint[0] && point[i][1] > maxPoint[1])) ? point[i] : maxPoint;
 		minPoint = (point[i][0] < minPoint[0] || (point[i][0] == minPoint[0] && point[i][1] < minPoint[1])) ? point[i] : minPoint;
 	}
 	Mat<double> supertriangle(2, 3), length;
 	length.sub(maxPoint, minPoint);
-	supertriangle(0, 0) = minPoint[0] - length[0] - 2; supertriangle(1, 0) = minPoint[1] - 2;
-	supertriangle(0, 1) = maxPoint[0] + length[0] + 2; supertriangle(1, 1) = minPoint[1] - 2;
-	supertriangle(0, 2) = (maxPoint[0] + minPoint[0]) / 2; supertriangle(1, 2) = maxPoint[1] + length[1] + 2;
+	supertriangle(0, 0) = minPoint[0] - length[0] - 2;    supertriangle(1, 0) = minPoint[1] - 2;
+	supertriangle(0, 1) = maxPoint[0] + length[0] + 2;    supertriangle(1, 1) = minPoint[1] - 2;
+	supertriangle(0, 2) =(maxPoint[0] + minPoint[0]) / 2; supertriangle(1, 2) = maxPoint[1] + length[1] + 2;
 	triTemp.push_back(supertriangle);
-	//[3] 遍历每一个点
+	//[3]
 	for (int i = 0; i < n; i++) {
 		edgeBuffer.clear();
-		//[3.2] 遍历 trianglesTemp 中的每一个三角形
+		//[3.2]
 		for (int j = 0; j < triTemp.size(); j++) {
-			//[3.2.1] 计算该三角形的圆心和半径
+			//[3.2.1] 
 			Mat<double> center, triEdge[3], temp;
 			for (int k = 0; k < 3; k++)
 				triTemp[j].getCol(k, triEdge[k]);
 			double R;
 			ThreePoints2Circle(triEdge, center, R);
 			double distance = (temp.sub(point[i], center)).norm();
-			//[3.2.2] 如果该点在外接圆的右侧
+			//[3.2.2]
 			if (point[i][0] > center[0] + R) {
 				triAns.push_back(triTemp[j]);
-				triTemp.erase(triTemp.begin() + j);
-				j--;
+				triTemp.erase(triTemp.begin() + j--);
 			}
-			//[3.2.4] 如果该点在外接圆内
+			//[3.2.4]
 			else if (distance < R) {
 				Mat<double> edge(2, 2), p1, p2;
 				for (int k = 0; k < 3; k++) {
@@ -255,31 +257,32 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 					else { edge.setCol(0, p2); edge.setCol(1, p1); }
 					edgeBuffer.push_back(edge);
 				}
-				triTemp.erase(triTemp.begin() + j);
-				j--;
+				triTemp.erase(triTemp.begin() + j--);
 			}
 		}
-		//[3.3] 对edgeBuffer去重
+		//[3.3] 
 		std::sort(edgeBuffer.begin(), edgeBuffer.end(), [](Mat<double> a, Mat<double> b) {
 			if (a(0, 0) < b(0, 0) || (a(0, 0) == b(0, 0) && a(1, 0) < b(1, 0)))return true;
 			if (a(0, 1) < b(0, 1) || (a(0, 1) == b(0, 1) && a(1, 1) < b(1, 1)))return true;
 			return false;
-			});
+		});
 		for (int j = 0; j < edgeBuffer.size() - 1; j++) {
 			bool flag = 0;
 			while (j + 1 < edgeBuffer.size() && edgeBuffer[j] == edgeBuffer[j + 1]) {
 				edgeBuffer.erase(edgeBuffer.begin() + j + 1); flag = 1;
 			}
-			if (flag) { edgeBuffer.erase(edgeBuffer.begin() + j); j--; }
+			if(flag) { edgeBuffer.erase(edgeBuffer.begin() + j); j--; }
 		}
-		//[3.4] 将edge buffer中的边与当前的点进行组合成若干三角形并保存至temp triangles中
+		//[3.4] 
 		for (int j = 0; j < edgeBuffer.size(); j++) {
 			Mat<double> t(2, 3), temp;
-			t.setCol(0, edgeBuffer[j].getCol(0, temp)); t.setCol(1, edgeBuffer[j].getCol(1, temp)); t.setCol(2, point[i]);
+			t.setCol(0, edgeBuffer[j].getCol(0, temp)); 
+			t.setCol(1, edgeBuffer[j].getCol(1, temp)); 
+			t.setCol(2, point[i]);
 			triTemp.push_back(t);
 		}
 	}
-	//[4] 将triangles与temp triangles进行合并, 并除去与超级三角形有关的三角形
+	//[4]
 	for (int i = 0; i < triTemp.size(); i++) triAns.push_back(triTemp[i]);
 	for (int i = 0; i < triAns.size(); i++) {
 		Mat<double> t;
@@ -311,7 +314,7 @@ double Geometry::RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat
 	Mat<double> RayStCenter; RayStCenter.sub(RaySt, Center);
 	double A = Ray.dot(Ray), B = 2 * Ray.dot(RayStCenter);
 	double Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
-	if (Delta < 0) return -DBL_MAX;									//有无交点
+	if (Delta < 0) return -DBL_MAX;													//有无交点
 	Delta = sqrt(Delta);
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }

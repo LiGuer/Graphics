@@ -34,9 +34,10 @@ void Graphics::clear(ARGB color)
 *	AlphaBlend 算法,	8位ARGB色彩
 ** ---------------------------------------- */
 void Graphics::setPoint(INT32S x, INT32S y,ARGB color) {
-	INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2);
-	INT32S yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
-	x = xt; y = yt;
+	INT32S xt = TransMat(0, 0) * x + TransMat(0, 1) * y + TransMat(0, 2),
+	       yt = TransMat(1, 0) * x + TransMat(1, 1) * y + TransMat(1, 2);
+	x = xt; 
+	y = yt;
 	if (judgeOutRange(x, y))return;
 	double alpha = (color >> 24) / 255.0;
 	unsigned char R = color >> 16, G = color >> 8, B = color;
@@ -46,7 +47,9 @@ void Graphics::setPoint(INT32S x, INT32S y,ARGB color) {
 }
 ARGB Graphics::readPoint(INT32S x, INT32S y) {
 	if (judgeOutRange(x, y))return TRANSPARENT;
-	return Canvas(x, y).R * 0x10000 + Canvas(x, y).G * 0x100 + Canvas(x, y).B;
+	return Canvas(x, y).R * 0x10000 
+		 + Canvas(x, y).G * 0x100 
+		 + Canvas(x, y).B;
 }
 /*----------------[ 存图 ]----------------*/
 void Graphics::writeImg(const char* filename) {
@@ -78,7 +81,8 @@ void Graphics::transSelf() {
 }
 /*----------------[ 剪切图 ]----------------*/
 void Graphics::CutSelf(INT32S sx, INT32S sy, INT32S ex, INT32S ey) {
-	int width = ex - sx, height = ey - sy;
+	int width  = ex - sx, 
+		height = ey - sy;
 	Mat<RGB> tmp(height, width);
 	for (int y = 0; y < ey - sy; y++)
 		memcpy(tmp.data + y * width, Canvas.data + (sy + y) * Canvas.cols + sx, sizeof(RGB) * width);
@@ -96,7 +100,8 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 	/*------ 点粗>0时 ------*/
 	if (PaintSize > 0) {
 		INT32S x = 0, y = PaintSize, p = 3 - (PaintSize << 1);			//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
-		INT32S x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
+		INT32S x_step[] = { 1,1,-1,-1 }, 
+			   y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
 		/*------ 绘制圆 (x=0始,y=x终) ------*/
 		while (x <= y) {
 			for (int i = x0 - x; i <= x0 + x; i++) { setPoint(i, y0 - y, PaintColor); setPoint(i, y0 + y, PaintColor); }	//填充圆内
@@ -115,7 +120,10 @@ void Graphics::drawPoint(INT32S x0, INT32S y0) {
 		2. 各方向均可绘制
 ** ---------------------------------------- */
 void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
-	INT32S err[2] = { 0 }, inc[2] = { 0 }, delta[2] = { x2 - x1, y2 - y1 }, index[2] = { x1 ,y1 }; //计算坐标增量
+	INT32S err[2] = { 0 }, 
+		   inc[2] = { 0 }, 
+		   delta[2] = { x2 - x1, y2 - y1 },
+		   index[2] = { x1, y1 };										//计算坐标增量
 	//设置x单步方向	
 	for (int dim = 0; dim < 2; dim++) {
 		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
@@ -127,7 +135,10 @@ void Graphics::drawLine(INT32S x1, INT32S y1, INT32S x2, INT32S y2) {
 		drawPoint(index[0], index[1]);									//唯一输出：画点
 		for (int dim = 0; dim < 2; dim++) {
 			err[dim] += delta[dim];
-			if (err[dim] > distance) { err[dim] -= distance; index[dim] += inc[dim]; }
+			if (err[dim] > distance) { 
+				err  [dim] -= distance; 
+				index[dim] += inc[dim];
+			}
 		}
 	}
 }
@@ -241,8 +252,9 @@ void Graphics::drawGrid(INT32S sx, INT32S sy, INT32S ex, INT32S ey, INT32S dx, I
 void Graphics::drawWave(INT32S x[], INT32S y[], INT32S n) {
 	INT32S xt, yt;
 	for (INT32S i = 0; i < n; i++) {
-		if (i != 0)drawLine(xt, yt, x[i], y[i]);
-		xt = x[i], yt = y[i];	
+		if (i != 0) drawLine(xt, yt, x[i], y[i]);
+		xt = x[i], 
+		yt = y[i];	
 	}
 }
 /*----------------[ DRAW BEZIER CURVE ]----------------*/
@@ -289,22 +301,26 @@ void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, ARGB co
 void Graphics::fillFlood(INT32S x0, INT32S y0, ARGB color)
 {
 	ARGB color0 = readPoint(x0, y0);
-	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 };
-	INT32S y_step[] = { 1,-1,0,0,1,-1,1,-1 };
+	INT32S x_step[] = { 0,0,1,-1,1,1,-1,-1 },
+	       y_step[] = { 1,-1,0,0,1,-1,1,-1 };
 	std::queue<INT32S> Qx, Qy;
-	Qx.push(x0);Qy.push(y0);
+	Qx.push(x0);
+	Qy.push(y0);
 	setPoint(x0, y0, color);
-
 	while (!Qx.empty()) {
-		INT32S x = Qx.front(), y = Qy.front();
+		INT32S x = Qx.front(), 
+			   y = Qy.front();
 		for (INT32S i = 0; i < 8; i++) {
-			INT32S xt = x + x_step[i], yt = y + y_step[i];
+			INT32S xt = x + x_step[i], 
+				   yt = y + y_step[i];
 			if (readPoint(xt, yt) == color0 && !judgeOutRange(xt, yt)) {
 				setPoint(xt, yt, color);
-				Qx.push(xt); Qy.push(yt);
+				Qx.push(xt); 
+				Qy.push(yt);
 			}
 		}
-		Qx.pop(); Qy.pop();
+		Qx.pop(); 
+		Qy.pop();
 	}
 }
 /*----------------[ fillTriangle ]----------------
@@ -346,19 +362,18 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 		maxY = maxY >= y[i] ? maxY : y[i];
 		minY = minY <= y[i] ? minY : y[i];
 	}
-	for (int i = 0; i <= maxY - minY; i++){
+	for (int i = 0; i <= maxY - minY; i++)
 		ET[i] = new fillPolygon_Edge();
-	}
 	//------ 建立边表ETy坐标 ------
 	for (int i = 0; i < n; i++){
-		int x1 = x[i], x2 = x[(i + 1) % n];
-		int y1 = y[i], y2 = y[(i + 1) % n];
+		int x1 = x[i], x2 = x[(i + 1) % n],
+			y1 = y[i], y2 = y[(i + 1) % n];
 		if (y1 == y2)continue;							//水平线舍弃
 		int ymin = y1 < y2 ? y1 : y2;
 		fillPolygon_Edge* tE = new fillPolygon_Edge;	//创建新边表节点
 		tE->ymax = y1 > y2 ? y1 : y2; 					//下端点ymin,上端点ymax,下端点x,斜率倒数
-		tE->x = y1 < y2 ? x1 : x2;
-		tE->dx = (double)(x2 - x1) / (y2 - y1); 
+		tE->x    = y1 < y2 ? x1 : x2;
+		tE->dx   = (double)(x2 - x1) / (y2 - y1); 
 		tE->next = ET[ymin - minY]->next;
 		ET[ymin - minY]->next = tE;						//插入ET
 	}
@@ -379,9 +394,8 @@ void Graphics::fillPolygon(INT32S x[], INT32S y[], INT32S n)
 		//------ AET中边两两配对,填充该扫描线 ------
 		p = AET;
 		while (p->next && p->next->next) {				//链表遍历
-			for (int x = p->next->x; x <= p->next->next->x; x++) {
+			for (int x = p->next->x; x <= p->next->next->x; x++)
 				setPoint(x, y, PaintColor);
-			}
 			p = p->next->next;
 		}
 		//------ 删除AET中不再相交的边 ------
