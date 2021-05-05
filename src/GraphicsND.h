@@ -57,13 +57,13 @@ public:
 	void drawBezierFace	(Mat<> p[], int n);																			//画贝塞尔曲面
 	// 3-D
 	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4,	bool FACE = false, bool LINE = true);		//画四面体
-	void drawCuboid		(Mat<>& pMin, Mat<>& pMax,						bool FACE = false, bool LINE = true);		//画矩体
+	void drawCuboid		(Mat<>&pMin,Mat<>& pMax,						bool FACE = false, bool LINE = true);		//画矩体
 	void drawPolyhedron	(Mat<>* p, int n,								bool FACE = false, bool LINE = true);		//画多面体
 	void drawFrustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta = 5, 
 																		bool FACE = false, bool LINE = true);		//画圆台
 	void drawCylinder	(Mat<>& st, Mat<>& ed, double r, double delta=5,bool FACE = false, bool LINE = true);		//画圆柱
 	void drawSphere		(Mat<>& center, double r, int delta = 5,		bool FACE = false, bool LINE = true);		//画球
-	void drawSphere2	(Mat<>& center, double r, int n = 300);														//画球
+	void drawSphere2	(Mat<>& center, double r, int n     = 300);													//画球
 	void drawEllipsoid	(Mat<>& center, Mat<>& r);																	//画椭球
 	void drawBody		(Mat<>& center, Mat<>& r);																	//画曲体
 	void drawBezierBody	(Mat<> p[], int n);																			//画贝塞尔曲体

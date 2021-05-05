@@ -576,7 +576,10 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r, bool FACE, bool LINE) 
 	for (int i = 0; i < times; i++) {
 		//[1] 计算正象限的点坐标
 		cur = 0; point[cur] += delta;
-		while (point[cur] > 1 && cur + 1 < Dim - 1) { point[cur] = 0; cur++; point[cur] += delta; }
+		while (point[cur] > 1 && cur + 1 < Dim - 1) { 
+			point[cur] =  0; cur++; 
+			point[cur] += delta; 
+		}
 		tmp = 1; for (int j = 0; j < Dim - 1; j++) tmp -= point[j] * point[j];
 		point[Dim - 1] = sqrt(tmp);
 		//[2] 然后通过取负绘制其他象限
@@ -597,20 +600,25 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r, bool FACE, bool LINE) 
 void GraphicsND::drawGrid(Mat<>& delta, Mat<>& max, Mat<>& min, bool LINE) {
 	int times = 1, cur;
 	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
-
 	Mat<> point(min), st, ed; point[0] -= delta[0];
 	for (int i = 0; i < times; i++) {
 		//[1]
 		cur = 0; point[cur] += delta[cur];
-		while (point[cur] > max[cur]) { point[cur] = min[cur]; cur++; point[cur] += delta[cur]; }
+		while (point[cur] > max[cur]) { 
+			   point[cur] = min[cur]; cur++; 
+			   point[cur] += delta[cur]; 
+		}
 		//[2]
 		if (!LINE)drawPoint(point);
 		if (LINE) {
-			st = point; ed = point;
+			st = point;
+			ed = point;
 			for (int dim = 0; dim < min.rows; dim++) {
-				st[dim] = min[dim]; ed[dim] = max[dim];
+				st[dim] = min[dim]; 
+				ed[dim] = max[dim];
 				drawLine(st, ed);
-				st[dim] = point[dim]; ed[dim] = point[dim];
+				st[dim] = point[dim]; 
+				ed[dim] = point[dim];
 			}
 		}
 	}
@@ -623,7 +631,8 @@ void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	drawLine(0, 0, 0, 0, negative ? -Zmax : 0, Zmax);//z
 	// 箭头
 	Mat<> st(3), ed(3);
-	int vectorLength = 10, vectorWidth = vectorLength / 2.718281828456;
+	int vectorLength = 10, 
+		vectorWidth  = vectorLength / 2.718281828456;
 	st.getData(Xmax, 0, 0);
 	ed.getData(Xmax + vectorLength, 0, 0);
 	if (Xmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
@@ -648,8 +657,9 @@ void GraphicsND::contour(Mat<>& map, const int N) {
 				for (int k = 0; k < 3; k++) {			//basic unit is 2x2 matrix
 					int xt = x + x_step[k], 
 						yt = y + y_step[k];
-					int flagtemp = map.data[yt * map.cols + xt] >= layer ? 1 : 0;
-					if (flagtemp != flag) { flag = 2; break; }
+					if (
+						(map.data[yt * map.cols + xt] >= layer ? 1 : 0) != flag
+					) { flag = 2; break; }
 				}
 				if (flag == 2) {
 					for (int k = 0; k < 3; k++) {
@@ -679,14 +689,14 @@ ARGB GraphicsND::colorlist(double index, int model)
 	switch (model)
 	{
 	case 1: {
-		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
-		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
-		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+		B = a <= 9.0 / 16 ? (a <  1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b <  1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G =(a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
 	}break;
 	case 2: {
-		B = a <= 9.0 / 16 ? (a < 1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
-		R = b <= 9.0 / 16 ? (b < 1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
-		G = (a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
+		B = a <= 9.0 / 16 ? (a <  1.0 / 16 ? 0.5 + 8 * a : (a > 6.0 / 16 ? 1 - (16 / 3.0) * (a - 6.0 / 16) : 1)) : 0;
+		R = b <= 9.0 / 16 ? (b <  1.0 / 16 ? 0.5 + 8 * b : (b > 6.0 / 16 ? 1 - (16 / 3.0) * (b - 6.0 / 16) : 1)) : 0;
+		G =(a >= 3.0 / 16 && b >= 3.0 / 16) ? (a < 6.0 / 16 ? (16 / 3.0) * (a - 3.0 / 16) : (b < 6.0 / 16 ? (16 / 3.0) * (b - 3.0 / 16) : 1)) : 0;
 		A = 0.8;
 	}break;
 	}
@@ -761,9 +771,12 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>&
 	q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
 	// rotate mat
 	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
-	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) = -rotateMat(i, i % 3 + 1);
+	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) *= -1;
 	Mat<> rotateMatR(rotateMat);
-	for (int i = 1; i < 4; i++) { rotateMat(0, i) *= -1; rotateMatR(i, 0) *= -1; }
+	for (int i = 1; i < 4; i++) { 
+		rotateMat (0, i) *= -1; 
+		rotateMatR(i, 0) *= -1;
+	}
 	transMat.mult(
 		rotateMat.mult(rotateMat, rotateMatR), 
 		transMat
@@ -775,8 +788,8 @@ Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, M
 	if (transMat.rows - 1 != 4) exit(-1);
 	Mat<> tmp, rotateMat;
 	translate(center.negative(tmp), transMat);
-	double c1 = cos(theta[0]), s1 = sin(theta[0]);
-	double c2 = cos(theta[1]), s2 = sin(theta[1]);
+	double c1 = cos(theta[0]), s1 = sin(theta[0]),
+	       c2 = cos(theta[1]), s2 = sin(theta[1]);
 	double t[] = {
 		1,0,0,0,0,
 		0,c1,-s1, c2,-s2,
