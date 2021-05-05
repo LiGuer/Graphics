@@ -14,10 +14,6 @@ limitations under the License.
 #define DIGITAL_IMAGE_PROCESSING_H
 #include <stdlib.h>
 #include <time.h>
-#include "../../LiGu_AlgorithmLib/Mat.h"
-#include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
-#include "../opencv2-include/opencv2/opencv.hpp"
-#pragma comment(lib,"opencv2-include/opencv_world430.lib")
 #define PI 3.141592653589
 
 namespace DigitalImageProcessing {
@@ -30,7 +26,12 @@ struct RGB { double R, G, B; };
 			(不发散,不一定收敛,有可能在几个不同点来回跳)
 *	[性质]: |Zn|>2不可能收敛, 即Mandelbrot Set在半径为2的圆内.
 *************************************************************************************************/
-Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
+/*
+#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
+#include "../opencv2-include/opencv2/opencv.hpp"
+#pragma comment(lib,"opencv2-include/opencv_world430.lib")
+Mat<>* Input(const char* inputImgUrl, Mat<>* data) {
 	cv::Mat input = cv::imread(inputImgUrl, cv::IMREAD_COLOR);
 	for (int k = 0; k < 3; k++) data[k].zero(input.rows, input.cols);
 
@@ -40,7 +41,7 @@ Mat<double>* Input(const char* inputImgUrl, Mat<double>* data) {
 	}
 	return data;
 }
-void Output(const char* outputImgUrl, Mat<double>* data) {
+void Output(const char* outputImgUrl, Mat<>* data) {
 	unsigned char* output = (unsigned char*)calloc(data[0].size() * 3, sizeof(unsigned char));
 	for (int i = 0; i < data[0].size(); i++)
 		for (int k = 0; k < 3; k++)
@@ -51,7 +52,7 @@ void Output(const char* outputImgUrl, Mat<double>* data) {
 	fclose(fp);
 	free(output);
 }
-void Output(const char* outputImgUrl, Mat<double>& data) {
+void Output(const char* outputImgUrl, Mat<>& data) {
 	unsigned char* output = (unsigned char*)calloc(data.size(), sizeof(unsigned char));
 	for (int i = 0; i < data.size(); i++)
 			for (int k = 0; k < 3; k++)
@@ -61,13 +62,13 @@ void Output(const char* outputImgUrl, Mat<double>& data) {
 	fwrite(output, 1, data.size(), fp);	// 写RGB数据
 	fclose(fp);
 	free(output);
-}
+}*/
 /*************************************************************************************************
 *								二值化
 *	[目的]: 基于阈值，将图像简化为纯黑白图.
 *	[公式]: BinarizationImage = Image > threshold ? 1 : 0;
 *************************************************************************************************/
-Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double threshold = 0.5) {
+Mat<>& Binarization(Mat<>& input, Mat<>& output, double threshold = 0.5) {
 	output.zero(input.rows, input.cols);
 	for (int i = 0; i < input.size(); i++)
 		output[i] = input[i] > threshold ? 1 : 0;
@@ -78,9 +79,9 @@ Mat<double>& Binarization(Mat<double>& input, Mat<double>& output, double thresh
 *	[目的]: 简化聚类图像中的色彩.
 *	[算法]: K-Mean均值聚类
 *************************************************************************************************/
-Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, int TimesMax = 0x7FFFFFFF) {
+Mat<>* ColorCluster(Mat<>* input, Mat<>* output, int K = 3, int TimesMax = 0x7FFFFFFF) {
 	// Process input & output
-	Mat<double> data(3, input[0].size());
+	Mat<> data(3, input[0].size());
 	for (int k = 0; k < 3; k++)
 		for (int i = 0; i < input[0].rows; i++)
 			for (int j = 0; j < input[0].cols; j++)
@@ -88,7 +89,7 @@ Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, in
 	for (int k = 0; k < 3; k++) output[k].zero(input[0].rows, input[0].cols);
 	// Color Cluster
 	time_t now; srand((unsigned)time(&now));
-	Mat<double> Center;
+	Mat<> Center;
 	Mat<int> Cluster, Cluster_Cur;
 	BasicMachineLearning::K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
 	for (int i = 0; i < K; i++)
@@ -102,8 +103,8 @@ Mat<double>* ColorCluster(Mat<double>* input, Mat<double>* output, int K = 3, in
 *	[目的]: 标识数字图像中亮度变化明显的点.
 *	[公式]: EdgeImage = Conv(Image , SobelKernel)
 *************************************************************************************************/
-Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
-	Mat<double> SobelKernel(3, 3);
+Mat<>& EdgeDetection(Mat<>& input, Mat<>& output) {
+	Mat<> SobelKernel(3, 3);
 	{
 		double t[] = {
 			-1,0,1,
@@ -111,7 +112,7 @@ Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
 			-1,0,1
 		}; SobelKernel.getData(t);
 	}
-	Mat<double> output_x, output_y;
+	Mat<> output_x, output_y;
 	output_x.conv(input, SobelKernel, 1);
 	output_y.conv(input, SobelKernel.transpose(output_y), 1);
 	output.zero(input.rows, input.cols);
@@ -123,20 +124,20 @@ Mat<double>& EdgeDetection(Mat<double>& input, Mat<double>& output) {
 *								傅里叶变换
 *	[目的]: 转频域图像.
 *************************************************************************************************/
-Mat<double>& FourierTransform(Mat<double>& input, Mat<double>& output) {
+Mat<>& FourierTransform(Mat<>& input, Mat<>& output) {
 	return output;
 }
-Mat<double>& InvFourierTransform(Mat<double>& input, Mat<double>& output) {
+Mat<>& InvFourierTransform(Mat<>& input, Mat<>& output) {
 	return output;
 }
 /*************************************************************************************************
 *								Gauss 滤波
 * [输入]: input: 输入原图 dst: 模糊图像  size: 核的大小  sigma: 正态分布标准差
 *************************************************************************************************/
-Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>& output) {
+Mat<>& GaussFilter(Mat<>& input, int size, float sigma, Mat<>& output) {
 	if (size <= 0 || sigma == 0)return output;
 	//二维Gauss核生成
-	Mat<double> kernel(size, size);
+	Mat<> kernel(size, size);
 	double sum = 0;
 	for (int y = 0; y < size; y++) {
 		for (int x = 0; x < size; x++) {
@@ -155,9 +156,9 @@ Mat<double>& GaussFilter(Mat<double>& input, int size, float sigma, Mat<double>&
 *	[目的]: RGB三通道合并为灰度一通道
 *	[公式]: Gray = 0.3 R + 0.59 G + 0.11 B
 *************************************************************************************************/
-Mat<double>& Gray(Mat<double>* input, Mat<double>& output, double Rk = 0.3, double Gk = 0.59, double Bk = 0.11) {
+Mat<>& Gray(Mat<>* input, Mat<>& output, double Rk = 0.3, double Gk = 0.59, double Bk = 0.11) {
 	output.zero(input[0].rows, input[0].cols);
-	Mat<double> tmp;
+	Mat<> tmp;
 	output.add(output, tmp.mult(Rk / (Rk + Gk + Bk), input[0]));
 	output.add(output, tmp.mult(Gk / (Rk + Gk + Bk), input[1]));
 	output.add(output, tmp.mult(Bk / (Rk + Gk + Bk), input[2]));
@@ -167,13 +168,13 @@ Mat<double>& Gray(Mat<double>* input, Mat<double>& output, double Rk = 0.3, doub
 *								直方图
 * [目的]: 统计[0,255]亮度的像素个数分布.
 *************************************************************************************************/
-Mat<int>& Histograms(Mat<double>& input, Mat<double>& output) {
+Mat<int>& Histograms(Mat<>& input, Mat<>& output) {
 	output.zero(1, 255);
 	for (int i = 0; i < input.rows; i++)
 		for (int j = 0; j < input.cols; j++)
 			output[(unsigned char)(input(i, j) * 255)]++;
 }
-Mat<int>& Histograms(Mat<double>* input, Mat<double>& output) {
+Mat<int>& Histograms(Mat<>* input, Mat<>& output) {
 	output.zero(3, 255);
 	for (int k = 0; k < 3; k++)
 		for (int i = 0; i < input->rows; i++)
@@ -184,22 +185,22 @@ Mat<int>& Histograms(Mat<double>* input, Mat<double>& output) {
 [目的]: 所有颜色换成其补色
 [公式]: InvImage = 1 - Image
 -------------------------------------------------------------------------*/
-Mat<double>& Invert(Mat<double>& input, Mat<double>& output) {
+Mat<>& Invert(Mat<>& input, Mat<>& output) {
 	output.mult(-1, input); return output;
 }
-Mat<double>* Invert(Mat<double>* input, Mat<double>* output) {
+Mat<>* Invert(Mat<>* input, Mat<>* output) {
 	for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
 }
 }
 /*//Example
 int main() {
-	Mat<double> img[3];
+	Mat<> img[3];
 	DigitalImageProcessing::Input("IMG01.jpg", img);
-	Mat<double> colorclusterImg[3];
+	Mat<> colorclusterImg[3];
 	DigitalImageProcessing::ColorCluster(img, colorclusterImg, 3, 20);
-	Mat<double> grayImg;
+	Mat<> grayImg;
 	DigitalImageProcessing::Gray(colorclusterImg, grayImg);
-	Mat<double> edgedetectionImg;
+	Mat<> edgedetectionImg;
 	DigitalImageProcessing::EdgeDetection(grayImg, edgedetectionImg);
 	DigitalImageProcessing::Output("img.ppm", edgedetectionImg);
 }

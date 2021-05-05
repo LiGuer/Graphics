@@ -5,7 +5,7 @@
 	1.Each segment straddles the line containing the other.
 	2.An endpoint of one segment line on the other segment. (the boundary case.)
 ************************************************************************************************* /
-bool isSegmentsIntersect(Mat<double>& a, Mat<double>& b){
+bool isSegmentsIntersect(Mat<>& a, Mat<>& b){
 	double dir_a1 = CrossProduct(a.p[0], a.p[1], b.p[0]),
 		dir_a2 = CrossProduct(a.p[0], a.p[1], b.p[1]),
 		dir_b1 = CrossProduct(b.p[0], b.p[1], a.p[0]),
@@ -24,8 +24,8 @@ bool isSegmentsIntersect(Mat<double>& a, Mat<double>& b){
 /*************************************************************************************************
 						inTriangle 是否在三角内
 *************************************************************************************************/
-bool Geometry::inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3) {
-	Mat<double> tmp, edge[2];
+bool Geometry::inTriangle(Mat<>& p0, Mat<>& TriP1, Mat<>& TriP2, Mat<>& TriP3) {
+	Mat<> tmp, edge[2];
 	edge[0].sub(TriP2, TriP1);
 	edge[1].sub(TriP3, TriP1);
 	tmp.    sub(p0,    TriP1);
@@ -57,12 +57,12 @@ bool Geometry::inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP
 				u = (D×E2· T) / (D×E2·E1)
 				v = (T×E1· D) / (D×E2·E1)
 *************************************************************************************************/
-double Geometry::RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3) {
-	Mat<double> edge[2], tmp;
+double Geometry::RayTriIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& TriP1, Mat<>& TriP2, Mat<>& TriP3) {
+	Mat<> edge[2], tmp;
 	edge[0].sub(TriP2, TriP1);
 	edge[1].sub(TriP3, TriP1);
 	// p & a & tmp
-	Mat<double> p;
+	Mat<> p;
 	double a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
 	if (a > 0) 
 		tmp.sub(RaySt, TriP1);
@@ -74,7 +74,7 @@ double Geometry::RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<do
 	double u = p.dot(tmp) / a;
 	if (u < 0 || u > 1) return -DBL_MAX;
 	// q & v
-	Mat<double> q;
+	Mat<> q;
 	double v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
@@ -88,8 +88,8 @@ double Geometry::RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<do
 		| x4²+y4²  x4  y4  1 |
 *	[几何解释]: 通过把平面点提升到三维的抛物面中，由于抛物面被平面所截的截面为圆形，四点共面即使共圆，也可以用四面体的体积判断是否共圆。
 *************************************************************************************************/
-bool Geometry::onCircle(Mat<double> Points[]) {
-	Mat<double> mat(4, 4);
+bool Geometry::onCircle(Mat<> Points[]) {
+	Mat<> mat(4, 4);
 	for (int i = 0; i < 4; i++) {
 		mat(i, 0) = Points[i].dot(Points[i]);
 		mat(i, 1) = Points[i][0];
@@ -114,8 +114,8 @@ bool Geometry::onCircle(Mat<double> Points[]) {
 							CircumCircle 三角形外接圆
 *	外接圆圆心: 即. 三点确定圆方程问题， 也是任意两边的垂直平分线的交点.直接用 ThreePointsToCircle()方法
 *************************************************************************************************/
-Mat<double>& Geometry::ThreePoints2Circle(Mat<double> Points[], Mat<double>& center, double& R) {
-	Mat<double> mat(4, 4);
+Mat<>& Geometry::ThreePoints2Circle(Mat<> Points[], Mat<>& center, double& R) {
+	Mat<> mat(4, 4);
 	for (int i = 0; i < 3; i++) {
 		mat(i + 1, 0) = Points[i].dot(Points[i]);
 		mat(i + 1, 1) = Points[i][0];
@@ -150,17 +150,17 @@ Mat<double>& Geometry::ThreePoints2Circle(Mat<double> Points[], Mat<double>& cen
 		[1] Introduction Algorithms.THOMAS H.CORMEN,CHARLES E.LEISERSON,RONALD L.RIVEST,CLIFFORD STEIN
 		[2] Thanks for https://www.cnblogs.com/aiguona/p/7232243.html
 *************************************************************************************************/
-Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) {
+Mat<>* Geometry::ConvexHull(Mat<> point[], int n, int& ansPointNum) {
 	//[1] 
 	int minCur = 0;
-	Mat<double> minPoint = point[0];
+	Mat<> minPoint = point[0];
 	for (int i = 1; i < n; i++)
 		if (point[i][1] < minPoint[1] || (point[i][1] == minPoint[1] && point[i][0] < minPoint[0])) {
 			minCur = i; minPoint = point[minCur];
 		}
 	point[0].swap(point[minCur]);
 	//[2] 
-	std::sort(point + 1, point + n, [&minPoint](Mat<double>& a, Mat<double>& b) {
+	std::sort(point + 1, point + n, [&minPoint](Mat<>& a, Mat<>& b) {
 		return atan2(a[1] - minPoint[1], a[0] - minPoint[0])
 			!= atan2(b[1] - minPoint[1], b[0] - minPoint[0])
 			?  atan2(a[1] - minPoint[1], a[0] - minPoint[0])
@@ -169,14 +169,14 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 			<  pow  (b[0] - minPoint[0], 2) + pow(b[1] - minPoint[1], 2);
 		});
 	//[3]
-	std::stack<Mat<double>> ConvexHullPoint;
+	std::stack<Mat<>> ConvexHullPoint;
 	for (int i = 0; i <= 2; i++) ConvexHullPoint.push(point[i]);
 	//[4]
-	Mat<double> a, b;
+	Mat<> a, b;
 	for (int i = 3; i < n; i++) {
 		while (true) {
-			Mat<double> prePoint     = ConvexHullPoint.top(); ConvexHullPoint.pop();
-			Mat<double> prePointNext = ConvexHullPoint.top(); ConvexHullPoint.push(prePoint);
+			Mat<> prePoint     = ConvexHullPoint.top(); ConvexHullPoint.pop();
+			Mat<> prePointNext = ConvexHullPoint.top(); ConvexHullPoint.push(prePoint);
 			//叉乘判断角度转向
 			a.sub(prePointNext, prePoint);
 			b.sub(point[i],     prePoint);
@@ -187,7 +187,7 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 	}
 	//[5] Output
 	ansPointNum = ConvexHullPoint.size();
-	Mat<double>* outputPoint = (Mat<double>*)calloc(ansPointNum, sizeof(Mat<double>));
+	Mat<>* outputPoint = (Mat<>*)calloc(ansPointNum, sizeof(Mat<>));
 	for (int i = 0; i < ansPointNum; i++) {
 		outputPoint[i] = ConvexHullPoint.top();
 		ConvexHullPoint.pop();
@@ -218,19 +218,19 @@ Mat<double>* Geometry::ConvexHull(Mat<double> point[], int n, int& ansPointNum) 
 *	[Referance]:
 		[1] http://paulbourke.net/papers/triangulate/
 *************************************************************************************************/
-Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
-	std::vector<Mat<double>> triAns, triTemp, edgeBuffer;
-	std::sort(point, point + n, [](Mat<double>& a, Mat<double>& b) {				// 将点按坐标x从小到大排序
+Mat<>* Geometry::Delaunay(Mat<> point[], int n, int& TrianglesNum) {
+	std::vector<Mat<>> triAns, triTemp, edgeBuffer;
+	std::sort(point, point + n, [](Mat<>& a, Mat<>& b) {				// 将点按坐标x从小到大排序
 		return a[0] != b[0] ? a[0] < b[0] : a[1] < b[1];
 	});
 	//[2]
-	Mat<double> maxPoint(point[0]), 
+	Mat<> maxPoint(point[0]), 
 				minPoint(point[0]);
 	for (int i = 1; i < n; i++) {
 		maxPoint = (point[i][0] > maxPoint[0] || (point[i][0] == maxPoint[0] && point[i][1] > maxPoint[1])) ? point[i] : maxPoint;
 		minPoint = (point[i][0] < minPoint[0] || (point[i][0] == minPoint[0] && point[i][1] < minPoint[1])) ? point[i] : minPoint;
 	}
-	Mat<double> supertriangle(2, 3), length;
+	Mat<> supertriangle(2, 3), length;
 	length.sub(maxPoint, minPoint);
 	supertriangle(0, 0) = minPoint[0] - length[0] - 2;    supertriangle(1, 0) = minPoint[1] - 2;
 	supertriangle(0, 1) = maxPoint[0] + length[0] + 2;    supertriangle(1, 1) = minPoint[1] - 2;
@@ -242,7 +242,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 		//[3.2]
 		for (int j = 0; j < triTemp.size(); j++) {
 			//[3.2.1] 
-			Mat<double> center, triEdge[3], temp;
+			Mat<> center, triEdge[3], temp;
 			for (int k = 0; k < 3; k++)
 				triTemp[j].getCol(k, triEdge[k]);
 			double R;
@@ -255,7 +255,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 			}
 			//[3.2.4]
 			else if (distance < R) {
-				Mat<double> edge(2, 2), p1, p2;
+				Mat<> edge(2, 2), p1, p2;
 				for (int k = 0; k < 3; k++) {
 					triTemp[j].getCol(k, p1); 
 					triTemp[j].getCol((k + 1) % 3, p2);
@@ -273,7 +273,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 			}
 		}
 		//[3.3] 
-		std::sort(edgeBuffer.begin(), edgeBuffer.end(), [](Mat<double> a, Mat<double> b) {
+		std::sort(edgeBuffer.begin(), edgeBuffer.end(), [](Mat<> a, Mat<> b) {
 			if (a(0, 0) < b(0, 0) || (a(0, 0) == b(0, 0) && a(1, 0) < b(1, 0)))return true;
 			if (a(0, 1) < b(0, 1) || (a(0, 1) == b(0, 1) && a(1, 1) < b(1, 1)))return true;
 			return false;
@@ -287,7 +287,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 		}
 		//[3.4] 
 		for (int j = 0; j < edgeBuffer.size(); j++) {
-			Mat<double> t(2, 3), temp;
+			Mat<> t(2, 3), temp;
 			t.setCol(0, edgeBuffer[j].getCol(0, temp)); 
 			t.setCol(1, edgeBuffer[j].getCol(1, temp)); 
 			t.setCol(2, point[i]);
@@ -297,7 +297,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	//[4]
 	for (int i = 0; i < triTemp.size(); i++) triAns.push_back(triTemp[i]);
 	for (int i = 0; i < triAns. size(); i++) {
-		Mat<double> t;
+		Mat<> t;
 		for (int j = 0; j < 3; j++) {
 			triAns[i].getCol(j, t);
 			if (t[0]< minPoint[0] || t[1] < minPoint[1] || t[0] > maxPoint[0] || t[1] > maxPoint[1]) {
@@ -307,7 +307,7 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 	}
 	// [Output]
 	TrianglesNum = triAns.size();
-	Mat<double>* Triangles = (Mat<double>*)calloc(TrianglesNum, sizeof(Mat<double>));
+	Mat<>* Triangles = (Mat<>*)calloc(TrianglesNum, sizeof(Mat<>));
 	for (int i = 0; i < TrianglesNum; i++) Triangles[i] = triAns[i];
 	return Triangles;
 }
@@ -321,8 +321,8 @@ Mat<double>* Geometry::Delaunay(Mat<double> point[], int n, int& TrianglesNum) {
 				  若Δ≥0 有交点.
 				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
 *************************************************************************************************/
-double Geometry::RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& Center, double R) {
-	Mat<double> RayStCenter; RayStCenter.sub(RaySt, Center);
+double Geometry::RaySphereIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double R) {
+	Mat<> RayStCenter; RayStCenter.sub(RaySt, Center);
 	double A = Ray.dot(Ray), 
 		   B = 2 * Ray.dot(RayStCenter),
 	       Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
@@ -335,9 +335,9 @@ double Geometry::RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat
 *	[Referance]:
 		[1] Thanks and copyright for https://github.com/SebLague/Boids
 *************************************************************************************************/
-Mat<double>* Geometry::getSphereFibonacciPoint(int& n) {
-	Mat<double>* point = (Mat<double>*)malloc(n * sizeof(Mat<double>));
-	memset(point, 0, n * sizeof(Mat<double>));
+Mat<>* Geometry::getSphereFibonacciPoint(int& n) {
+	Mat<>* point = (Mat<>*)malloc(n * sizeof(Mat<>));
+	memset(point, 0, n * sizeof(Mat<>));
 	double goldenRatio = (1 + sqrt(5)) / 2, angleIncrement = PI * 2 * goldenRatio;	// 黄金分割点
 	for (int i = 0; i < n; i++) {
 		double t = (double)i / n, inclination = acos(1 - 2 * t), azimuth = angleIncrement * i;

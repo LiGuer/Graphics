@@ -41,17 +41,17 @@ void RayTracing::writeImg(const char* filename) {
 	fclose(fp);
 }
 /*--------------------------------[ 画像素 ]--------------------------------*/
-void RayTracing::setPix(int x, int y, Mat<double>& color) {
+void RayTracing::setPix(int x, int y, Mat<>& color) {
 	if (x < 0 || x >= ScreenPix.rows || y < 0 || y >= ScreenPix.cols) return;
 	ScreenPix(ScreenPix.rows - x - 1, y).R = min((int)(color[0] * 0xFF), 0xFF);
 	ScreenPix(ScreenPix.rows - x - 1, y).G = min((int)(color[1] * 0xFF), 0xFF);
 	ScreenPix(ScreenPix.rows - x - 1, y).B = min((int)(color[2] * 0xFF), 0xFF);
 }
 /*--------------------------------[ 读3D模型 ]--------------------------------*/
-void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* material) {
+void RayTracing::readObj(const char* fileName,Mat<>& origin, Material* material) {
 	FILE* fin = fopen(fileName, "rb");
 	char Index = 0; double R;
-	Mat<double> p1(3), p2(3), p3(3);
+	Mat<> p1(3), p2(3), p3(3);
 	while (Index != EOF) {
 		fgets(&Index, 1, fin);
 		switch(Index) {
@@ -80,13 +80,13 @@ void RayTracing::readObj(const char* fileName,Mat<double>& origin, Material* mat
 -------------------------------------------------------------------------*/
 void RayTracing::paint(const char* fileName, int sampleSt) {
 	//[1]
-	Mat<double> ScreenVec, ScreenXVec, ScreenYVec(3);
+	Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
 	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	double minDistance = 0, RayFaceDistance;
-	Mat<double> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
+	Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
 	for (int sample = sampleSt; sample < SamplesNum; sample++) {
 		writeImg(fileName); 
 		clock_t start = clock();
@@ -117,7 +117,7 @@ void RayTracing::paint(const char* fileName, int sampleSt) {
 			计算三角形反射方向，将反射光线为基准重新计算
 &	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 -----------------------------------------------------------------------------*/
-Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& color, int level) {
+Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	//[1][2][3]
 	double minDistance  = DBL_MAX;
 	Triangle* minDisTri = NULL;
@@ -132,7 +132,7 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 	if (minDisTri->material->rediateRate != 0) return color = minDisTri->material->color;	//Light Source
 	if (level > maxRayLevel && RAND_DBL > maxRayLevelPR) return color.zero();				//Max Ray Level
 	//[4] intersection & FaceVec
-	Mat<double> intersection, FaceVec, tmp, RayTmp;
+	Mat<> intersection, FaceVec, tmp, RayTmp;
 	intersection.add(RaySt, intersection.mult(minDistance, Ray));
 	if (minDisTri->p[2][0] == DBL_MAX)
 		FaceVec.sub(intersection, minDisTri->p[0]).normalized();
@@ -192,10 +192,10 @@ Mat<double>& RayTracing::traceRay(Mat<double>& RaySt, Mat<double>& Ray, Mat<doub
 				u = (D×E2· T) / (D×E2·E1)
 				v = (T×E1· D) / (D×E2·E1)
 ---------------------------------------------------------------------------*/
-double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<double>& Ray) {
+double RayTracing::seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {
 	// Sphere Seek Intersection
 	if (triangle.p[2][0] == DBL_MAX) {
-		Mat<double> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
+		Mat<> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
 		double R = triangle.p[1][0], 
 			   A = Ray.dot(Ray), 
 			   B = 2 * Ray.dot(RayStCenter),
@@ -205,11 +205,11 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 		return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 	}
 	// Triangle Seek Intersection
-	Mat<double> edge[2], tmp;
+	Mat<> edge[2], tmp;
 	edge[0].sub(triangle.p[1], triangle.p[0]);
 	edge[1].sub(triangle.p[2], triangle.p[0]);
 	// p & a & tmp
-	Mat<double> p;
+	Mat<> p;
 	double a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
 	if (a > 0) tmp.sub(RaySt, triangle.p[0]);
 	else { tmp.sub(triangle.p[0], RaySt); a = -a; }
@@ -218,7 +218,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 	double u = p.dot(tmp) / a;
 	if(u < 0 || u > 1) return -DBL_MAX;
 	// q & v
-	Mat<double> q;
+	Mat<> q;
 	double v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
@@ -227,7 +227,7 @@ double RayTracing::seekIntersection(Triangle& triangle, Mat<double>& RaySt, Mat<
 			设面矢F, 入射光L
 			Lf = L - F·2 cos<L,F>
 -------------------------------------------------------------------------*/
-Mat<double>& RayTracing::reflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
+Mat<>& RayTracing::reflect(Mat<>& incidentRay, Mat<>& faceVec, Mat<>& reflectRay) {
 	return reflectRay.add(reflectRay.mult(-2 * faceVec.dot(incidentRay), faceVec), incidentRay).normalized();
 }
 /*--------------------------------[ 折射 ]--------------------------------
@@ -237,12 +237,12 @@ Mat<double>& RayTracing::reflect(Mat<double>& incidentRay, Mat<double>& faceVec,
 			Lz = L + F·sin(α - <L,F>) / sinα
 			   = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
 -------------------------------------------------------------------------*/
-Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& refractRay, double rateIn, double rateOut) {
+Mat<>& RayTracing::refract(Mat<>& incidentRay, Mat<>& faceVec, Mat<>& refractRay, double rateIn, double rateOut) {
 	double refractRate = rateIn / rateOut,
 	       CosIn  = faceVec.dot(incidentRay),
 	       CosOut = 1 - refractRate * refractRate * (1 - CosIn * CosIn);
 	if (CosOut >= 0) reflect(incidentRay, faceVec, refractRay);			//全反射
-	Mat<double> tmp;
+	Mat<> tmp;
 	CosOut = sqrt(CosOut);
 	return refractRay.add(
 		refractRay.mult(refractRate, incidentRay), 
@@ -253,9 +253,9 @@ Mat<double>& RayTracing::refract(Mat<double>& incidentRay, Mat<double>& faceVec,
 *	[算法]: MonteCarlo: 随机持续采样
 *	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
 ---------------------------------------------------------------------------*/
-Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& faceVec, Mat<double>& reflectRay) {
+Mat<>& RayTracing::diffuseReflect(Mat<>& incidentRay, Mat<>& faceVec, Mat<>& reflectRay) {
 	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
-	Mat<double> tmp1(3), tmp2(3);
+	Mat<> tmp1(3), tmp2(3);
 	faceVec *= faceVec.dot(incidentRay) > 0 ? -1 : 1;
 	tmp1[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1; 
 	tmp1[1] = tmp1[0] == 0 ? 1 : 0;
@@ -264,7 +264,7 @@ Mat<double>& RayTracing::diffuseReflect(Mat<double>& incidentRay, Mat<double>& f
 	return reflectRay.add(reflectRay.add(reflectRay.mult(sqrt(1 - r2), faceVec), tmp1), tmp2).normalized();
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
-void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Material* material) {
+void RayTracing::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
 	Triangle triangle;
 	triangle.p[0] = p1;
 	triangle.p[1] = p2;
@@ -273,7 +273,7 @@ void RayTracing::drawTriangle(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3,
 	TriangleSet.push_back(triangle); 
 }
 /*--------------------------------[ 画四边形 ]--------------------------------*/
-void RayTracing::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
+void RayTracing::drawQuadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, Material* material) {
 	drawTriangle(p1, p2, p3, material); 
 	drawTriangle(p1, p4, p3, material);
 }
@@ -288,13 +288,13 @@ void RayTracing::drawQuadrilateral(Mat<double>& p1, Mat<double>& p2, Mat<double>
 	奇数边:
 	五边形:	[1] 1 2 3, 3 4 5 [2] 1 3 5
 -----------------------------------------------------------------------------*/
-void RayTracing::drawPolygon(Mat<double> p[], int n, Material* material) {
+void RayTracing::drawPolygon(Mat<> p[], int n, Material* material) {
 	for (int k = 1; k <= (n + 2) / 3; k++)
 		for (int i = 0; i <= n - 2 * k; i += 2 * k)
 			drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n], material);
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
-void RayTracing::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& p3, Mat<double>& p4, Material* material) {
+void RayTracing::drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, Material* material) {
 	drawTriangle(p1, p2, p3, material);
 	drawTriangle(p2, p3, p4, material);
 	drawTriangle(p3, p4, p1, material);
@@ -309,8 +309,8 @@ void RayTracing::drawTetrahedron(Mat<double>& p1, Mat<double>& p2, Mat<double>& 
 		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
-void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* material) {
-	Mat<double> 
+void RayTracing::drawCuboid(Mat<>& pMin, Mat<>& pMax, Material* material) {
+	Mat<> 
 		pMinTmp[3], 
 		pMaxTmp[3];
 	for (int i = 0; i < 3; i++) {
@@ -329,9 +329,9 @@ void RayTracing::drawCuboid(Mat<double>& pMin, Mat<double>& pMax, Material* mate
 		[1] 计算旋转矩阵
 		[2] 根据旋转矩阵, 计算绘制点坐标, 完成绘制
 **------------------------------------------------------------------------*/
-void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, double Red, double delta, Material* material) {
+void RayTracing::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta, Material* material) {
 	// 计算 Rotate Matrix
-	Mat<double> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
@@ -343,7 +343,7 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	}
 	else rotateMat.E(3);
 	// 画圆台
-	Mat<double> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
+	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= 360 / delta; i++) {
 		deltaVector.getData(
 			cos(i * delta * 2.0 * PI / 360), 
@@ -362,13 +362,13 @@ void RayTracing::drawFrustum(Mat<double>& st, Mat<double>& ed, double Rst, doubl
 	}
 }
 /*--------------------------------[ 画圆柱 ]--------------------------------*/
-void RayTracing::drawCylinder(Mat<double>& st, Mat<double>& ed, double r, double delta, Material* material) {
+void RayTracing::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta, Material* material) {
 	drawFrustum(st, ed, r, r, delta);
 }
 /*--------------------------------[ 画球 ]--------------------------------
 **-----------------------------------------------------------------------*/
-void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
-	Mat<double> p1(3), p2(3);
+void RayTracing::drawSphere(Mat<>& center, double r, Material* material) {
+	Mat<> p1(3), p2(3);
 	p1[0] = p1[1] = p1[2] = r; p2[0] = DBL_MAX;
 	drawTriangle(center, p1, p2, material); 
 }
@@ -382,9 +382,9 @@ void RayTracing::drawSphere(Mat<double>& center, double r, Material* material) {
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void RayTracing::drawEllipsoid(Mat<double>& center, Mat<double>& r, Material* material) {
+void RayTracing::drawEllipsoid(Mat<>& center, Mat<>& r, Material* material) {
 	const int delta = 5;
-	Mat<double> point(3);
+	Mat<> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
 		double theta   = (i * delta) * 2.0 * PI / 360;
 		for (int j = -90 / delta; j <= 90 / delta; j++) {

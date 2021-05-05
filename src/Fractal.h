@@ -129,7 +129,7 @@ void HilbertCurve_d2xy(int n, int distance, int& x, int& y) {//convert d to (x,y
 		[2] (x,y)与格点距离,梯度点积
 		[3] 插值
 *************************************************************************************************/
-double PerlinNoise(double x, double y, Mat<double>& randomGridGradient) {
+double PerlinNoise(double x, double y, Mat<>& randomGridGradient) {
 	// 对四个格点
 	int x0[] = { x, x + 1, x, x + 1 }, 
 		y0[] = { y, y, y + 1, y + 1 };
@@ -146,8 +146,8 @@ double PerlinNoise(double x, double y, Mat<double>& randomGridGradient) {
 	       ix1 = (n[3] - n[2]) * (3.0 - sx * 2.0) * sx * sx + n[2];
 	return (ix1 - ix0) * (3.0 - sy * 2.0) * sy * sy + ix0;
 }
-Mat<double>& PerlinNoise(Mat<double>& output, int frequency) {
-	Mat<double> randomGridGradient;
+Mat<>& PerlinNoise(Mat<>& output, int frequency) {
+	Mat<> randomGridGradient;
 	randomGridGradient.rands(frequency + 1, frequency + 1, 0, 256);
 	for (int y = 0; y < output.rows; y++)
 		for (int x = 0; x < output.cols; x++)
@@ -161,10 +161,10 @@ Mat<double>& PerlinNoise(Mat<double>& output, int frequency) {
 /*************************************************************************************************
 *								三维分形树 Fractal Tree 3D
 *************************************************************************************************/
-void FractalTree3D(std::vector<Mat<double>>& linesSt, std::vector<Mat<double>>& linesEd, int level, double alpha, int fork = 3) {
+void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int level, double alpha, int fork = 3) {
 	if (level <= 0)return;
 	// 确定旋转矩阵
-	Mat<double> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
@@ -176,7 +176,7 @@ void FractalTree3D(std::vector<Mat<double>>& linesSt, std::vector<Mat<double>>& 
 	else rotateMat.E(3);
 	//递归
 	double Lenth = direction.norm();
-	Mat<double> endPoint(3);
+	Mat<> endPoint(3);
 	for (int i = 0; i < fork; i++) {
 		endPoint.getData(
 			sin(alpha) * cos((double)i * 2 * PI / fork), 

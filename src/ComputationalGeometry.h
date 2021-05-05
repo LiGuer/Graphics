@@ -25,17 +25,17 @@ Reference.
 namespace Geometry {
 	/*----------------[ 2D 二维 ]----------------*/
 	//三角形
-	bool inTriangle(Mat<double>& p0, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);//是否在三角内
-	double RayTriIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& TriP1, Mat<double>& TriP2, Mat<double>& TriP3);	//射线与三角形交点
+	bool inTriangle(Mat<>& p0, Mat<>& TriP1, Mat<>& TriP2, Mat<>& TriP3);//是否在三角内
+	double RayTriIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& TriP1, Mat<>& TriP2, Mat<>& TriP3);	//射线与三角形交点
 	//圆
-	bool onCircle(Mat<double> Points[]);													//判断四点共圆
-	Mat<double>& ThreePoints2Circle(Mat<double> Points[], Mat<double>& center, double& R);	//平面三点确定圆方程
+	bool onCircle(Mat<> Points[]);													//判断四点共圆
+	Mat<>& ThreePoints2Circle(Mat<> Points[], Mat<>& center, double& R);	//平面三点确定圆方程
 	//Other
-	Mat<double>* ConvexHull(Mat<double> point[], int n, int& ansPointNum);					//凸包
-	Mat<double>* Delaunay(Mat<double> point[], int n, int& TrianglesNum);					//Delaunay三角剖分
+	Mat<>* ConvexHull(Mat<> point[], int n, int& ansPointNum);					//凸包
+	Mat<>* Delaunay(Mat<> point[], int n, int& TrianglesNum);					//Delaunay三角剖分
 	/*----------------[ 3D 三维 ]----------------*/
 	//球
-	double RaySphereIntersection(Mat<double>& RaySt, Mat<double>& Ray, Mat<double>& Center, double R);	//射线与球面交点
-	Mat<double>* getSphereFibonacciPoint(int& n);											//球面均匀点分布
+	double RaySphereIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double R);	//射线与球面交点
+	Mat<>* getSphereFibonacciPoint(int& n);											//球面均匀点分布
 }
 #endif
