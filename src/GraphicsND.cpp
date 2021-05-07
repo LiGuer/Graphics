@@ -53,19 +53,25 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 }
 /*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z, int size) {
-	if (g.judgeOutRange(y, x) || z < Z_Buffer[0](y, x))return false;
-	if (size == -1) g.drawPoint(y, x);
-	else if (size == 0) g.setPoint(y, x, FaceColor); 
-	Z_Buffer[0](y, x) = z; return true;
+	int t = x;
+	x = g.Canvas.cols / 2 - y;
+	y = g.Canvas.cols / 2 + t;
+	if (g.judgeOutRange(x, y) || z < Z_Buffer[0](x, y))return false;
+	if		(size ==-1)	g.drawPoint(x, y);
+	else if (size == 0) g. setPoint(y, x, FaceColor); 
+	Z_Buffer[0](x, y) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size) {
-	if (g.judgeOutRange(p0[1], p0[0])) return false;
+	int t = p0[0];
+	p0[0] = g.Canvas.cols / 2 - p0[1];
+	p0[1] = g.Canvas.cols / 2 + t;
+	if (g.judgeOutRange(p0[0], p0[1])) return false;
 	for (int i = 2; i < p0.rows; i++)
-		if (p0[i] < Z_Buffer[i - 2](p0[1], p0[0])) 
+		if (p0[i] < Z_Buffer[i - 2](p0[0], p0[1])) 
 			return false;
-	if (size == -1) g.drawPoint(p0[1], p0[0]); 
-	else if (size == 0) g.setPoint(p0[1], p0[0], FaceColor);
-	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](p0[1], p0[0]) = p0[i];
+	if		(size ==-1)	g.drawPoint(p0[0], p0[1]); 
+	else if (size == 0) g. setPoint(p0[0], p0[1], FaceColor);
+	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](p0[0], p0[1]) = p0[i];
 	return true;
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
@@ -76,8 +82,8 @@ void GraphicsND::setAxisLim(Mat<>& pMin, Mat<>& pMax) {
 		if (i == 1) redio[i] = g.Canvas.rows / redio[i];
 		else	    redio[i] = g.Canvas.cols / redio[i];
 	}
-	translate(pMin.negative(tmp));
-	scale(redio, tmp.zero(pMin.rows));
+	translate(tmp.mult(1.0 / 2, tmp.add(pMin, pMax)).negative(tmp));
+	scale(redio, tmp.zero());
 }
 /******************************************************************************
 
@@ -124,13 +130,13 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 	int sx, sy, sz, ex, ey, ez;
 	value2pix(sx0, sy0, sz0, sx, sy, sz); 
 	value2pix(ex0, ey0, ez0, ex, ey, ez);
-	int err[3] = { 0 }, 
-		inc[3] = { 0 }, 
+	int err  [3] = { 0 }, 
+		inc  [3] = { 0 }, 
 		delta[3] = { ex - sx, ey - sy, ez - sz }, 
 		point[3] = { sx, sy, sz };
 	//[2]
 	for (int dim = 0; dim < 3; dim++) {
-		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
+		inc  [dim]  = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
 		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//向左
 	}
 	int distance = delta[0] > delta[1] ? delta[0] : delta[1];			//总步数
@@ -155,7 +161,7 @@ void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
 	delta.sub(ep, sp);
 	//设置xyz单步方向	
 	for (int dim = 0; dim < sp.rows; dim++) {
-		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右1,垂直0,向左-1)
+		inc  [dim]  = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);	//符号函数(向右1,垂直0,向左-1)
 		delta[dim] *= delta[dim] < 0 ? -1 : 1;							//绝对值
 	} int distance = delta.max();										//总步数
 	//画线
