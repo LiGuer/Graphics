@@ -12,6 +12,8 @@ limitations under the License.
 ==============================================================================*/
 #ifndef DIGITAL_IMAGE_PROCESSING_H
 #define DIGITAL_IMAGE_PROCESSING_H
+#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
 #include <stdlib.h>
 #include <time.h>
 #define PI 3.141592653589
@@ -146,7 +148,7 @@ Mat<>& GaussFilter(Mat<>& input, int size, float sigma, Mat<>& output) {
 			sum += kernel(x, y);
 		}
 	}
-	kernel.mult(1 / sum, kernel);
+	kernel.mul(1 / sum, kernel);
 	//Gauss卷积
 	output.conv(input, kernel, 1);
 	return output;
@@ -159,9 +161,9 @@ Mat<>& GaussFilter(Mat<>& input, int size, float sigma, Mat<>& output) {
 Mat<>& Gray(Mat<>* input, Mat<>& output, double Rk = 0.3, double Gk = 0.59, double Bk = 0.11) {
 	output.zero(input[0].rows, input[0].cols);
 	Mat<> tmp;
-	output.add(output, tmp.mult(Rk / (Rk + Gk + Bk), input[0]));
-	output.add(output, tmp.mult(Gk / (Rk + Gk + Bk), input[1]));
-	output.add(output, tmp.mult(Bk / (Rk + Gk + Bk), input[2]));
+	output.add(output, tmp.mul(Rk / (Rk + Gk + Bk), input[0]));
+	output.add(output, tmp.mul(Gk / (Rk + Gk + Bk), input[1]));
+	output.add(output, tmp.mul(Bk / (Rk + Gk + Bk), input[2]));
 	return output;
 }
 /*************************************************************************************************
@@ -186,7 +188,7 @@ Mat<int>& Histograms(Mat<>* input, Mat<>& output) {
 [公式]: InvImage = 1 - Image
 -------------------------------------------------------------------------*/
 Mat<>& Invert(Mat<>& input, Mat<>& output) {
-	output.mult(-1, input); return output;
+	output.mul(-1, input); return output;
 }
 Mat<>* Invert(Mat<>* input, Mat<>* output) {
 	for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;

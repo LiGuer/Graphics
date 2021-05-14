@@ -39,7 +39,7 @@ void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
 	point[1] = x0; 
 	point[2] = y0; 
 	point[3] = z0;
-	point.mult(TransformMat, point);
+	point.mul(TransformMat, point);
 	x = point[1]; 
 	y = point[2]; 
 	z = point[3];
@@ -82,7 +82,7 @@ void GraphicsND::setAxisLim(Mat<>& pMin, Mat<>& pMax) {
 		if (i == 1) redio[i] = g.Canvas.rows / redio[i];
 		else	    redio[i] = g.Canvas.cols / redio[i];
 	}
-	translate(tmp.mult(1.0 / 2, tmp.add(pMin, pMax)).negative(tmp));
+	translate(tmp.mul(1.0 / 2, tmp.add(pMin, pMax)).negative(tmp));
 	scale(redio, tmp.zero());
 }
 /******************************************************************************
@@ -445,9 +445,9 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 			sin(i * delta * 2.0 * PI / 360), 
 			0
 		);
-		deltaVector.mult(rotateMat, deltaVector);
-		stPoint.add(st, stPoint.mult(Rst, deltaVector));
-		edPoint.add(ed, edPoint.mult(Red, deltaVector));
+		deltaVector.mul(rotateMat, deltaVector);
+		stPoint.add(st, stPoint.mul(Rst, deltaVector));
+		edPoint.add(ed, edPoint.mul(Red, deltaVector));
 		if (i != 0) {
 			if (FACE) {
 				drawTriangle(stPoint, preStPoint, edPoint, true, false);
@@ -594,7 +594,7 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r, bool FACE, bool LINE) 
 			for (int j = 0; j < Dim; j++)
 				if (code & (1 << j))
 					tmpMat[j] *= -1;
-			drawPoint(tmpMat.add(center, tmpMat.mult(r, tmpMat)));
+			drawPoint(tmpMat.add(center, tmpMat.mul(r, tmpMat)));
 		}
 	}
 }
@@ -671,22 +671,34 @@ void GraphicsND::contour(Mat<>& map, const int N) {
 					for (int k = 0; k < 3; k++) {
 						int xt = x + x_step[k], 
 							yt = y + y_step[k];
-						if (map.data[yt * map.cols + xt] >= layer) drawPoint(xt, yt);
+						if (map.data[yt * map.cols + xt] >= layer) g.drawPoint(xt, yt);
 					}
 				}
 			}
 		}
 	}
 }
-void GraphicsND::contourface(Mat<>& map, const int N) {
-	double max = map.max(),
-		   min = map.min();								//get the max & min of the map
-	double delta = (max - min) / N, layer = min;
-	for (int i = 0; i <= N; i++, layer += delta) 		//for N layer between max & min, get the edge of each layer
-		for (int y = 0; y < map.rows - 1; y++) 		//for every point(x,y) to compute
-			for (int x = 0; x < map.cols - 1; x++) 
-				if (map.data[y * map.cols + x] >= layer)
-					g.setPoint(x, y, colorlist((double)i / N, 1));
+void GraphicsND::contour(Mat<>& map) {
+	double min = map.min(),
+		 delta = map.max() - min;
+	for (int i = 0; i < map.size(); i++)
+		g.setPoint(map.i2x(i), map.i2y(i), colorlist((map[i] - min) / delta, 1));
+}
+void GraphicsND::contour(Mat<>& mapX, Mat<>& mapY, Mat<>& mapZ) {
+	double 
+		minX = mapX.min(),
+		minY = mapY.min(),
+		minZ = mapZ.min(),
+		maxX = mapX.max(),
+		maxY = mapY.max(),
+		maxZ = mapZ.max();
+	for (int i = 0; i < mapX.size(); i++) {
+		ARGB color = 0;
+		color += (ARGB)((mapX[i] - minX) / (maxX - minX) * 0xFF) * 0x10000;
+		color += (ARGB)((mapY[i] - minY) / (maxY - minY) * 0xFF) * 0x100;
+		color += (ARGB)((mapZ[i] - minZ) / (maxZ - minZ) * 0xFF) * 0x1;
+		g.setPoint(mapX.i2x(i), mapX.i2y(i), color);
+	}		
 }
 /*---------------- 色谱 ----------------*/
 ARGB GraphicsND::colorlist(double index, int model)
@@ -730,7 +742,7 @@ ARGB GraphicsND::colorlist(double index, int model)
 Mat<>& GraphicsND::translate(Mat<>& delta, Mat<>& transMat) {
 	Mat<> translateMat; translateMat.E(transMat.rows);
 	for (int i = 0; i < delta.rows; i++) translateMat(i + 1, 0) = delta[i];
-	return transMat.mult(translateMat, transMat);
+	return transMat.mul(translateMat, transMat);
 }
 /*--------------------------------[ 旋转 ]--------------------------------
 *	[公式]: v' = q v q`¹
@@ -761,7 +773,7 @@ Mat<>& GraphicsND::rotate(double theta, Mat<>& center, Mat<>& transMat) {
 		0, cos(theta), -sin(theta),
 		0, sin(theta),  cos(theta),
 	}; 
-	transMat.mult(
+	transMat.mul(
 		rotateMat.E(transMat.rows).getData(t),
 		transMat
 	);
@@ -783,8 +795,8 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>&
 		rotateMat (0, i) *= -1; 
 		rotateMatR(i, 0) *= -1;
 	}
-	transMat.mult(
-		rotateMat.mult(rotateMat, rotateMatR), 
+	transMat.mul(
+		rotateMat.mul(rotateMat, rotateMatR), 
 		transMat
 	);
 	return translate(center, transMat);
@@ -803,7 +815,7 @@ Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, M
 		0,c2,-s1, c2,-s2,
 		0,s2, c1, s2, c2
 	}; 
-	transMat.mult(rotateMat.getData(t), transMat);
+	transMat.mul(rotateMat.getData(t), transMat);
 	return translate(center, transMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------
@@ -818,6 +830,6 @@ Mat<>& GraphicsND::scale(Mat<>& ratio, Mat<>& center, Mat<>& transMat) {
 	// scale
 	Mat<> scaleMat; scaleMat.E(transMat.rows);
 	for (int i = 0; i < ratio.rows; i++)scaleMat(i + 1, i + 1) = ratio[i];
-	transMat.mult(scaleMat, transMat);
+	transMat.mul(scaleMat, transMat);
 	return translate(center, transMat);
 }

@@ -78,8 +78,9 @@ public:
 	void drawGrid		(Mat<>& delta, Mat<>& max, Mat<>& min							 , bool LINE = true);		//画网格
 	// Other
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);						//画坐标轴
-	void contour(Mat<>& map, const int N);																			//画等高线
-	void contourface(Mat<>& map, const int N);																		//画等高面
+	void contour	(Mat<>& map, const int N);																		//画等高线
+	void contour	(Mat<>& map);																					//画等高面
+	void contour	(Mat<>& mapX, Mat<>& mapY, Mat<>& mapZ);
 	ARGB colorlist(double index, int model);																		//色谱
 	/*---------------- Transformation ----------------*/
 	static Mat<>& translate	(Mat<>& delta,										Mat<>& transMat = TransformMat);	//平移

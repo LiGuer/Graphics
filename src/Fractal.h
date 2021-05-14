@@ -183,7 +183,7 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 			sin(alpha) * sin((double)i * 2 * PI / fork), 
 			cos(alpha)
 		);
-		endPoint.add(ed, endPoint.mult(0.7 * Lenth, endPoint.mult(rotateMat, endPoint)));
+		endPoint.add(ed, endPoint.mul(0.7 * Lenth, endPoint.mul(rotateMat, endPoint)));
 		linesSt.push_back(ed);
 		linesEd.push_back(endPoint);
 		FractalTree3D(linesSt, linesEd, level - 1, alpha);

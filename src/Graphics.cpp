@@ -487,7 +487,7 @@ void Graphics::translate(INT32S dx, INT32S dy)
 		0, 1, dy,
 		0, 0, 1
 	};
-	TransMat.mult(M.E(3).getData(t), TransMat);
+	TransMat.mul(M.E(3).getData(t), TransMat);
 }
 /*----------------[ ROMOTE ]----------------*/
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
@@ -499,7 +499,7 @@ void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0)
 		sin(theta),  cos(theta), 0,
 		0, 0, 1
 	};
-	TransMat.mult(M.E(3).getData(t), TransMat);
+	TransMat.mul(M.E(3).getData(t), TransMat);
 	translate(x0, y0);
 }
 /*----------------[ scale ]----------------*/
@@ -512,6 +512,6 @@ void Graphics::scale(FP64 sx, FP64 sy, INT32S x0, INT32S y0)
 		 0, sy,  0,
 		 0,  0,  1
 	};
-	TransMat.mult(M.E(3).getData(t), TransMat);
+	TransMat.mul(M.E(3).getData(t), TransMat);
 	translate(x0, y0);
 }
