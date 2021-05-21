@@ -363,15 +363,35 @@ void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct, bool FACE, b
 void GraphicsND::drawEllipse(Mat<>& center, double rx, double ry, Mat<>* direct) {
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
-void GraphicsND::drawSurface(Mat<> z, double xs, double xe, double ys, double ye) {
-	Mat<> p(3), pl(3), pu(3);
+void GraphicsND::drawSurface(Mat<> z, double xs, double xe, double ys, double ye, bool FACE, bool LINE) {
+	Mat<> p(3), pl(3), pu(3); Mat<> FaceVec, tmp, light(3); light.fill(1).normalized();
 	double dx = (xe - xs) / z.rows, 
 		   dy = (ye - ys) / z.cols;
 	for (int y = 0; y < z.cols; y++) {
 		for (int x = 0; x < z.rows; x++) {
 			p.getData(xs + x * dx, ys + y * dy, z(x, y));
-			if (x > 0) { pl.getData(xs + (x - 1) * dx, ys + y * dy, z(x - 1, y)); drawLine(pl, p); }
-			if (y > 0) { pu.getData(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p); }
+			if (LINE) {
+				if (x > 0) { pl.getData(xs + (x - 1) * dx, ys + y * dy, z(x - 1, y)); drawLine(pl, p); }
+				if (y > 0) { pu.getData(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p); }
+			}
+			if (FACE) {
+				for (int k = 0; k < 2; k++) {
+					if ((k == 1 && (x == 0 || y == 0)) 
+					||  (k == 0 && (x == z.rows - 1 || y == z.cols - 1))) continue;
+					int dt = k == 0 ? 1 : -1;
+					pl.getData(xs + (x + dt) * dx, ys + y * dy, z(x + dt, y));
+					pu.getData(xs + x * dx, ys + (y + dt) * dy, z(x, y + dt));
+					FaceVec.crossProduct(
+						FaceVec.sub(pl, p),
+						tmp.    sub(pu, p)
+					).normalized();
+					double t = (FaceVec.dot(light) + 1) / 2;
+					FaceColor = (int)(t * 0xFF) * 0x10000 
+							  + (int)(t * 0xFF) * 0x100 
+							  + (int)(t * 0xFF);
+					drawTriangle(p, pl, pu, 1, 0);		
+				}
+			}
 		}
 	}
 }

@@ -53,7 +53,8 @@ public:
 	void drawPolygon	(Mat<> p[], int n,								bool FACE = false, bool LINE = true);		//画多边形
 	void drawCircle		(Mat<>& center, double r, Mat<>* direct = NULL, bool FACE = false, bool LINE = true);		//画圆
 	void drawEllipse	(Mat<>& center, double rx, double ry, Mat<>* direct = NULL);								//画椭圆
-	void drawSurface	(Mat<> z, double xs, double xe, double ys, double ye);										//画曲面
+	void drawSurface	(Mat<> z, double xs, double xe, double ys, double ye, 
+																		bool FACE = false, bool LINE = true);		//画曲面
 	void drawBezierFace	(Mat<> p[], int n);																			//画贝塞尔曲面
 	// 3-D
 	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4,	bool FACE = false, bool LINE = true);		//画四面体
