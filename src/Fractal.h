@@ -141,19 +141,21 @@ double PerlinNoise(double x, double y, Mat<>& randomGridGradient) {
 			 + (y - y0[i]) * sin(random);
 	}
 	//[3]
-	double sx = x - (int)x, sy = y - (int)y;
-	double ix0 = (n[1] - n[0]) * (3.0 - sx * 2.0) * sx * sx + n[0],
-	       ix1 = (n[3] - n[2]) * (3.0 - sx * 2.0) * sx * sx + n[2];
+	double 
+		sx = x - (int)x,
+		sy = y - (int)y,
+		ix0 = (n[1] - n[0]) * (3.0 - sx * 2.0) * sx * sx + n[0],
+		ix1 = (n[3] - n[2]) * (3.0 - sx * 2.0) * sx * sx + n[2];
 	return (ix1 - ix0) * (3.0 - sy * 2.0) * sy * sy + ix0;
 }
 Mat<>& PerlinNoise(Mat<>& output, int frequency) {
 	Mat<> randomGridGradient;
 	randomGridGradient.rands(frequency + 1, frequency + 1, 0, 256);
-	for (int y = 0; y < output.rows; y++)
-		for (int x = 0; x < output.cols; x++)
+	for (int y = 0; y < output.cols; y++)
+		for (int x = 0; x < output.rows; x++)
 			output(x, y) = PerlinNoise(
-				(double)x / output.cols * frequency, 
-				(double)y / output.rows * frequency, 
+				(double)x / output.rows * frequency,
+				(double)y / output.cols * frequency,
 				randomGridGradient
 			);
 	return output;
@@ -162,7 +164,7 @@ Mat<>& PerlinNoise(Mat<>& output, int frequency) {
 *								三维分形树 Fractal Tree 3D
 *************************************************************************************************/
 void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int level, double alpha, int fork = 3) {
-	if (level <= 0)return;
+	if (level <= 0) return;
 	// 确定旋转矩阵
 	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
@@ -171,11 +173,11 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 			rotateAxis.crossProduct(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3), rotateMat.E(4)
-		); rotateMat.block(0, 2, 0, 2, rotateMat);
+		); rotateMat.block(1, 3, 1, 3, rotateMat);
 	}
 	else rotateMat.E(3);
 	//递归
-	double Lenth = direction.norm();
+	double Lenth = direction.norm(); 
 	Mat<> endPoint(3);
 	for (int i = 0; i < fork; i++) {
 		endPoint.getData(

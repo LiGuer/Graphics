@@ -48,30 +48,29 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows);
 	Mat<> point(TransformMat.rows);
 	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
-	point *= TransformMat;
+	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
 }
 /*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z, int size) {
 	int t = x;
 	x = g.Canvas.cols / 2 - y;
-	y = g.Canvas.cols / 2 + t;
+	y = g.Canvas.rows / 2 + t;
 	if (g.judgeOutRange(x, y) || z < Z_Buffer[0](x, y))return false;
 	if		(size ==-1)	g.drawPoint(x, y);
-	else if (size == 0) g. setPoint(y, x, FaceColor); 
+	else if (size == 0) g. setPoint(x, y, FaceColor); 
 	Z_Buffer[0](x, y) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size) {
-	int t = p0[0];
-	p0[0] = g.Canvas.cols / 2 - p0[1];
-	p0[1] = g.Canvas.cols / 2 + t;
-	if (g.judgeOutRange(p0[0], p0[1])) return false;
+	int x = g.Canvas.cols / 2 - p0[1],
+		y = g.Canvas.rows / 2 + p0[0];
+	if (g.judgeOutRange(x, y)) return false;
 	for (int i = 2; i < p0.rows; i++)
-		if (p0[i] < Z_Buffer[i - 2](p0[0], p0[1])) 
+		if (p0[i] < Z_Buffer[i - 2](x, y)) 
 			return false;
-	if		(size ==-1)	g.drawPoint(p0[0], p0[1]); 
-	else if (size == 0) g. setPoint(p0[0], p0[1], FaceColor);
-	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](p0[0], p0[1]) = p0[i];
+	if(size ==-1) g.drawPoint(x, y); 
+	if(size == 0) g. setPoint(x, y, FaceColor);
+	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](x, y) = p0[i];
 	return true;
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
@@ -166,7 +165,7 @@ void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
 	} int distance = delta.max();										//总步数
 	//画线
 	for (int i = 0; i <= distance; i++) {
-		setPix(point);													//唯一输出：画点
+		setPix(point);													//唯一输出:画点
 		for (int dim = 0; dim < sp.rows; dim++) {						//xyz走一步
 			err[dim] += delta[dim];
 			if (err  [dim] >= distance) { 
@@ -782,24 +781,24 @@ Mat<>& GraphicsND::rotate(double theta, Mat<>& center, Mat<>& transMat) {
 //3D S03·四元数
 Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>& transMat) {
 	if (transMat.rows - 1 != 3) exit(-1);
-	Mat<> tmp, rotateMat;
+	Mat<> tmp;
 	translate(center.negative(tmp), transMat);
-	Mat<> q(transMat.rows);
 	rotateAxis.normalized();
-	q[0] = cos(theta / 2); for (int i = 0; i < rotateAxis.rows; i++) q[i + 1] = sin(theta / 2) * rotateAxis[i];
+	Mat<> q(transMat.rows);
+	q[0] = cos(theta / 2); 
+	q[1] = sin(theta / 2) * rotateAxis[0];
+	q[2] = sin(theta / 2) * rotateAxis[1];
+	q[3] = sin(theta / 2) * rotateAxis[2];
 	// rotate mat
+	Mat<> rotateMat; rotateMat.zero(transMat);
 	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
 	for (int i = 1; i < 4; i++) rotateMat(i, i % 3 + 1) *= -1;
-	Mat<> rotateMatR(rotateMat);
-	for (int i = 1; i < 4; i++) { 
-		rotateMat (0, i) *= -1; 
-		rotateMatR(i, 0) *= -1;
-	}
-	transMat.mul(
-		rotateMat.mul(rotateMat, rotateMatR), 
-		transMat
-	);
-	return translate(center, transMat);
+	tmp = rotateMat;
+	for (int i = 1; i < 4; i++) 
+		rotateMat(0, i) *= -1, 
+		tmp      (i, 0) *= -1;
+	rotateMat *= tmp;
+	return translate(center, transMat.mul(rotateMat, transMat));
 }
 //4D S04
 Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, Mat<>& transMat) {
