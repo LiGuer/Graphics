@@ -13,11 +13,24 @@ limitations under the License.
 #ifndef GRAPHICS_FILECODE_H
 #define GRAPHICS_FILECODE_H
 #include "../../LiGu_AlgorithmLib/Mat.h"
+#include "RGB.h"
 namespace GraphicsFileCode {
+/******************************************************************************
+*					.PPM 文件编码/解码
+*	[格式]:
+		[1] P6 + 图片格式 + 宽高 + 最大像素值
+		[2] RGB像素数据
+******************************************************************************/
+void ppmWrite(const char* fileName, Mat<RGB>& image) {
+	FILE* fp = fopen(fileName, "wb");
+	fprintf(fp, "P6\n%d %d\n255\n", image.cols, image.rows);			// 写图片格式、宽高、最大像素值
+	fwrite(image.data, 1, image.size() * 3, fp);						// 写RGB数据
+	fclose(fp);
+}
 /******************************************************************************
 *					.STL 文件编码/解码
 ******************************************************************************/
-void StlFileRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+void stlFileRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	FILE* fin = fopen(fileName, "rb");
 	unsigned char head[80];
 	unsigned int  N; 
