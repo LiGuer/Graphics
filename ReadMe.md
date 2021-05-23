@@ -1,12 +1,13 @@
 # LiGu-Graphics 计算机图形学  
-* <Graphics.h/cpp>				Pix图形学类 (核心类)
-* <GraphicsND.h/cpp>			任意维图形学类 + 科学制图
+* <Graphics.h/cpp>				图形学 (核心类)
+* <GraphicsND.h/cpp>			任意维图形学 + 科学制图
 * <RayTracing.h/cpp>			光线追踪
 * <RGB.h>						像素颜色
+* <ComputationalGeometry.h>		计算几何
 * <DigitalImageProcessing.h>	数字图像处理
 * <Fractal.h>					分形
-* <ComputationalGeometry.h>	计算几何学
-* <ReadImg.exe>				实时动态显示图片
+* <GraphicsFileCode.h>			图形类文件编译码
+* <ReadImg.exe>					实时动态显示图片
 * ------[ example ]------ 
 * <Boids.h>						鸟群算法   
 

@@ -48,6 +48,8 @@ public:
 	void drawBezierLine	(Mat<> p[], int n);								//画贝塞尔曲线
 	// 2-D
 	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,				bool FACE = false, bool LINE = true);		//画三角形
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3,				bool FACE = false, bool LINE = true);		//画三角形集
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>&FaceVec,bool FACE = false, bool LINE = true);		//画三角形集
 	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL,	bool FACE = false, bool LINE = true);		//画矩形
 	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4,	bool FACE = false, bool LINE = true);		//画四边形
 	void drawPolygon	(Mat<> p[], int n,								bool FACE = false, bool LINE = true);		//画多边形
