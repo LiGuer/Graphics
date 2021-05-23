@@ -15,7 +15,6 @@ limitations under the License.
 #ifndef RGB_H
 #define RGB_H
 #include <math.h>
-using namespace std;
 /*********************************************************************************
 *									RGB
 *	[Reference]:

@@ -43,9 +43,9 @@ void RayTracing::writeImg(const char* filename) {
 /*--------------------------------[ 画像素 ]--------------------------------*/
 void RayTracing::setPix(int x, int y, Mat<>& color) {
 	if (x < 0 || x >= ScreenPix.rows || y < 0 || y >= ScreenPix.cols) return;
-	ScreenPix(ScreenPix.rows - x - 1, y).R = min((int)(color[0] * 0xFF), 0xFF);
-	ScreenPix(ScreenPix.rows - x - 1, y).G = min((int)(color[1] * 0xFF), 0xFF);
-	ScreenPix(ScreenPix.rows - x - 1, y).B = min((int)(color[2] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).R = std::min((int)(color[0] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).G = std::min((int)(color[1] * 0xFF), 0xFF);
+	ScreenPix(ScreenPix.rows - x - 1, y).B = std::min((int)(color[2] * 0xFF), 0xFF);
 }
 /*--------------------------------[ 读3D模型 ]--------------------------------*/
 void RayTracing::readObj(const char* fileName,Mat<>& origin, Material* material) {

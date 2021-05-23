@@ -21,7 +21,7 @@ namespace GraphicsFileCode {
 		[1] P6 + 图片格式 + 宽高 + 最大像素值
 		[2] RGB像素数据
 ******************************************************************************/
-void ppmRead(const char* fileName, Mat<RGB>& image) {
+static void ppmRead(const char* fileName, Mat<RGB>& image) {
 	FILE* fi = fopen(fileName, "rb");
 	int rows, cols;
 	fscanf(fi, "P6\n%d %d\n255\n", &cols, &rows);						// 读图片格式、宽高、最大像素值
@@ -29,7 +29,7 @@ void ppmRead(const char* fileName, Mat<RGB>& image) {
 	fread(image.data, 1, image.size() * 3, fi);							// 读RGB数据
 	fclose(fi);
 }
-void ppmWrite(const char* fileName, Mat<RGB>& image) {
+static void ppmWrite(const char* fileName, Mat<RGB>& image) {
 	FILE* fo = fopen(fileName, "wb");
 	fprintf(fo, "P6\n%d %d\n255\n", image.cols, image.rows);			// 写图片格式、宽高、最大像素值
 	fwrite(image.data, 1, image.size() * 3, fo);						// 写RGB数据
@@ -47,17 +47,18 @@ void ppmWrite(const char* fileName, Mat<RGB>& image) {
 			[3.4] 顶点3 (3x4B)
 			[3.5] 属性	(2B)
 ******************************************************************************/
-void stlRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<short>& attribute) {
+static void stlRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<short>& attribute) {
 	FILE* fi = fopen(fileName, "rb");
 	unsigned char head[80];
 	unsigned int  N; 
 	float p[12];
 	fread(head, 80, 1, fi);
 	fread(&N,    4, 1, fi);
-	faceVec.zero(3, N);
-	p1.		zero(3, N);
-	p2.		zero(3, N);
-	p3.		zero(3, N);
+	faceVec.alloc(3, N);
+	p1.		alloc(3, N);
+	p2.		alloc(3, N);
+	p3.		alloc(3, N);
+	attribute.alloc(N);
 	for (int i = 0; i < N; i++) {
 		fread(p, 12 * 4, 1, fi);
 		fread(attribute.data + i, 2, 1, fi);
@@ -68,17 +69,17 @@ void stlRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& 
 	}
 	fclose(fi);
 }
-void stlWrite(const char* fileName, const char* head, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<short>& attribute) {
+static void stlWrite(const char* fileName, const char* head, Mat<float>& faceVec, Mat<float>& p1, Mat<float>& p2, Mat<float>& p3, Mat<short>& attribute) {
 	FILE* fo = fopen(fileName, "wb");
-	unsigned int  N = p1.rows;
+	unsigned int  N = p1.cols;
 	fwrite(head, 80, 1, fo);
 	fwrite(&N,    4, 1, fo);
 	for (int i = 0; i < N; i++) {
-		fread(&faceVec(0, i), 3 * 4, 1, fo);
-		fread(&p1	  (0, i), 3 * 4, 1, fo);
-		fread(&p2	  (0, i), 3 * 4, 1, fo);
-		fread(&p3	  (0, i), 3 * 4, 1, fo);
-		fread(attribute.data + i, 2, 1, fo);
+		fwrite(&faceVec(0, i), 4, 1, fo); fwrite(&faceVec(1, i), 4, 1, fo); fwrite(&faceVec(2, i), 4, 1, fo);
+		fwrite(&p1	   (0, i), 4, 1, fo); fwrite(&p1	 (1, i), 4, 1, fo); fwrite(&p1	   (2, i), 4, 1, fo);
+		fwrite(&p2	   (0, i), 4, 1, fo); fwrite(&p2	 (1, i), 4, 1, fo); fwrite(&p2	   (2, i), 4, 1, fo);
+		fwrite(&p3	   (0, i), 4, 1, fo); fwrite(&p3	 (1, i), 4, 1, fo); fwrite(&p3	   (2, i), 4, 1, fo);
+		fwrite(attribute.data + i, 2, 1, fo);
 	}
 	fclose(fo);
 }

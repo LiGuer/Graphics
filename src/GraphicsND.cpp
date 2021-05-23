@@ -90,16 +90,16 @@ void GraphicsND::setAxisLim(Mat<>& pMin, Mat<>& pMax) {
 /*--------------------------------[ 写模型文件 ]--------------------------------*/
 void GraphicsND::writeModel(const char* fileName) {
 	if (isLineTriangleSet == 0) exit(-1);
-	char head[80];
-	Mat<> p[3], fv;
+	char head[80] = { 0 };
+	Mat<float> p[3], fv;
 	p[0].alloc(TriangleSet[0].rows, TriangleSet.size() / 3), 
 	p[1].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
 	p[2].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
-	fv  .alloc(TriangleSet[0].rows, TriangleSet.size() / 3);
+	fv  .alloc(TriangleSet[0].rows, TriangleSet.size() / 3).fill(1).normalized();
 	Mat<short> attr(TriangleSet.size() / 3);
-	for (int i = 0; i < TriangleSet.size(); i++) 
+	for (int i = 0; i < TriangleSet.size(); i++)
 		for (int j = 0; j < TriangleSet[i].rows; j++)
-			p[i % 3][j] = TriangleSet[i][j];
+			p[i % 3](j, i / 3) = TriangleSet[i][j];
 	GraphicsFileCode::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
 }
 /******************************************************************************
@@ -321,28 +321,26 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool L
 	}
 }
 /*--------------------------------[ 画三角形集 ]--------------------------------*/
-void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE = false, bool LINE = true) {
+void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool LINE) {
 	Mat<> pt1(p1.rows), 
 		  pt2(p2.rows), 
 		  pt3(p3.rows), 
 		  fvt(p1.rows),
 		light(p1.rows),tmp; light.fill(1).normalized();
-	if (FACE) {
-		for (int i = 0; i < p1.cols; i++) {
-			pt1.getCol(i, pt1);
-			pt2.getCol(i, pt2);
-			pt3.getCol(i, pt3);
-			fvt.crossProduct(
-				fvt.sub(pt2, pt1),
-				tmp.sub(pt3, pt1)
-			).normalized();
-			double t = (fvt.dot(light) + 1) / 2;
-			FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-			drawTriangle(pt1, pt2, pt3, 1, 0);
-		}
+	for (int i = 0; i < 1; i++) {
+		p1.		getCol(i, pt1);
+		p2.		getCol(i, pt2);
+		p3.		getCol(i, pt3);
+		fvt.crossProduct(
+			fvt.sub(pt2, pt1),
+			tmp.sub(pt3, pt1)
+		).normalized();
+		double t = (fvt.dot(light) + 1) / 2;
+		FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
+		drawTriangle(pt1, pt2, pt3, FACE, LINE);
 	}
 }
-void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec, bool FACE = false, bool LINE = true) {
+void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec, bool FACE, bool LINE) {
 	Mat<> pt1(p1	 .rows), 
 		  pt2(p2	 .rows), 
 		  pt3(p3	 .rows), 
@@ -350,10 +348,10 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 		light(FaceVec.rows); light.fill(1).normalized();
 	if (FACE) {
 		for (int i = 0; i < p1.cols; i++) {
-			pt1.getCol(i, pt1);
-			pt2.getCol(i, pt2);
-			pt3.getCol(i, pt3);
-			fvt.getCol(i, FaceVec);
+			p1.		getCol(i, pt1);
+			p2.		getCol(i, pt2);
+			p3.		getCol(i, pt3);
+			FaceVec.getCol(i, fvt);
 			double t = (fvt.dot(light) / fvt.norm() + 1) / 2;
 			FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
 			drawTriangle(pt1, pt2, pt3, 1, 0);
