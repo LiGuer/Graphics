@@ -327,7 +327,7 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, boo
 		  pt3(p3.rows), 
 		  fvt(p1.rows),
 		light(p1.rows),tmp; light.fill(1).normalized();
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < p1.cols; i++) {
 		p1.		getCol(i, pt1);
 		p2.		getCol(i, pt2);
 		p3.		getCol(i, pt3);
