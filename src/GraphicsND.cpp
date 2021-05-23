@@ -31,6 +31,9 @@ void GraphicsND::clear(ARGB color) {
 		for (int j = 0; j < Z_Buffer[i].size(); j++)
 			Z_Buffer[i].data[j] = -0x7FFFFFFF;
 	TransformMat.E(Z_Buffer.rows + 2 + 1);
+	if(isLineTriangleSet)
+		LineSet.	clear(),
+		TriangleSet.clear();
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
@@ -83,6 +86,21 @@ void GraphicsND::setAxisLim(Mat<>& pMin, Mat<>& pMax) {
 	}
 	translate(tmp.mul(1.0 / 2, tmp.add(pMin, pMax)).negative(tmp));
 	scale(redio, tmp.zero());
+}
+/*--------------------------------[ 写模型文件 ]--------------------------------*/
+void GraphicsND::writeModel(const char* fileName) {
+	if (isLineTriangleSet == 0) exit(-1);
+	char head[80];
+	Mat<> p[3], fv;
+	p[0].alloc(TriangleSet[0].rows, TriangleSet.size() / 3), 
+	p[1].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
+	p[2].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
+	fv  .alloc(TriangleSet[0].rows, TriangleSet.size() / 3);
+	Mat<short> attr(TriangleSet.size() / 3);
+	for (int i = 0; i < TriangleSet.size(); i++) 
+		for (int j = 0; j < TriangleSet[i].rows; j++)
+			p[i % 3][j] = TriangleSet[i][j];
+	GraphicsFileCode::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
 }
 /******************************************************************************
 
@@ -151,6 +169,12 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 			}
 		}
 	}
+	//LineSet
+	if (isLineTriangleSet) {
+		Mat<> tmp(3);
+		LineSet.push_back(tmp.getData(sx0, sy0, sz0));
+		LineSet.push_back(tmp.getData(ex0, ey0, ez0));
+	}
 }
 void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
 	Mat<int> sp, ep;
@@ -173,6 +197,11 @@ void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
 				point[dim] += inc[dim]; 
 			}
 		}
+	}
+	//LineSet
+	if (isLineTriangleSet) {
+		LineSet.push_back(sp0);
+		LineSet.push_back(ep0);
 	}
 }
 /*--------------------------------[ 画折线 ]--------------------------------*/
@@ -283,6 +312,12 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool L
 		drawLine(p1, p2); 
 		drawLine(p2, p3); 
 		drawLine(p3, p1);
+	}
+	//TriangleSet
+	if (isLineTriangleSet) {
+		TriangleSet.push_back(p1);
+		TriangleSet.push_back(p2);
+		TriangleSet.push_back(p3);
 	}
 }
 /*--------------------------------[ 画三角形集 ]--------------------------------*/

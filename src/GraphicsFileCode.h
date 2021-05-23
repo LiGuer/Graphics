@@ -68,7 +68,7 @@ void stlRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& 
 	}
 	fclose(fi);
 }
-void stlWrite(const char* fileName, const char* head, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& attribute) {
+void stlWrite(const char* fileName, const char* head, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<short>& attribute) {
 	FILE* fo = fopen(fileName, "wb");
 	unsigned int  N = p1.rows;
 	fwrite(head, 80, 1, fo);

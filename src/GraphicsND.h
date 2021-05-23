@@ -13,6 +13,7 @@ limitations under the License.
 #ifndef GRAPHICS_ND_H
 #define GRAPHICS_ND_H
 #include "Graphics.h"
+#include "GraphicsFileCode.h"
 #define PI 3.141592653589
 class GraphicsND
 {
@@ -22,7 +23,9 @@ public:
 	Mat<Mat<int>> Z_Buffer;
 	Mat<> WindowSize{ 2,1 };											//窗口尺寸
 	static Mat<> TransformMat;											//变换矩阵
-	unsigned int FaceColor;
+	unsigned int FaceColor = 0xFFFFFF;
+	std::vector<Mat<>> LineSet, TriangleSet;
+	bool isLineTriangleSet = 0;
 	/*---------------- 底层 ----------------*/
 	GraphicsND() { ; }																//构造函数
    ~GraphicsND() { ; }																//析构函数
@@ -34,6 +37,7 @@ public:
 	bool setPix		(int x, int y, int z = 0, int size = -1);				//写像素 (正投影) (<=3D)
 	bool setPix		(Mat<int>& p0, int size = -1);							//写像素 (正投影) (anyD)
 	void setAxisLim	(Mat<>& pMin, Mat<>& pMax);								//设置坐标范围
+	void writeModel (const char* fileName);									//写模型文件
 	/*---------------- DRAW ----------------*/
 	// 0-D
 	void drawPoint		(double x0 = 0, double y0 = 0, double z0 = 0);	//画点 (<=3D)
