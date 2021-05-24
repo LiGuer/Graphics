@@ -235,7 +235,7 @@ void GraphicsND::drawPolyline(Mat<>& y, double xmin, double xmax) {
 			[4] 若到达三角形第三顶点，则短边转换至该点方程
 			[5] 画线
 -----------------------------------------------------------------------------*/
-void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool LINE) {
+void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	if (FACE) {
 		//[1]
 		Mat<int> pt[3], tmp;
@@ -321,7 +321,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool L
 	}
 }
 /*--------------------------------[ 画三角形集 ]--------------------------------*/
-void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, bool LINE) {
+void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	Mat<> pt1(p1.rows), 
 		  pt2(p2.rows), 
 		  pt3(p3.rows), 
@@ -337,10 +337,10 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, bool FACE, boo
 		).normalized();
 		double t = (fvt.dot(light) + 1) / 2;
 		FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-		drawTriangle(pt1, pt2, pt3, FACE, LINE);
+		drawTriangle(pt1, pt2, pt3);
 	}
 }
-void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec, bool FACE, bool LINE) {
+void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec) {
 	Mat<> pt1(p1	 .rows), 
 		  pt2(p2	 .rows), 
 		  pt3(p3	 .rows), 
@@ -354,12 +354,12 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 			FaceVec.getCol(i, fvt);
 			double t = (fvt.dot(light) / fvt.norm() + 1) / 2;
 			FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-			drawTriangle(pt1, pt2, pt3, 1, 0);
+			drawTriangle(pt1, pt2, pt3);
 		}
 	}
 }
 /*--------------------------------[ 画矩形 ]--------------------------------*/
-void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct, bool FACE, bool LINE) {
+void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct) {
 	if (direct == NULL) {
 		Mat<> pt(2);
 		pt.getData(sp[0], ep[1]); drawLine(sp, pt); drawLine(pt, ep);
@@ -369,9 +369,9 @@ void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct, bool FACE, b
 		// 计算 Rotate Matrix
 	}
 }
-void GraphicsND::drawQuadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, bool FACE, bool LINE) {
+void GraphicsND::drawQuadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
 	if (FACE) {
-		drawTriangle(p1, p2, p3, true, false); drawTriangle(p1, p3, p4, FACE, false);
+		drawTriangle(p1, p2, p3); drawTriangle(p1, p3, p4);
 	}
 	if (LINE) {
 		drawLine(p1, p2); 
@@ -392,11 +392,11 @@ void GraphicsND::drawQuadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, bool
 	五边形:	[1] 1 2 3, 3 4 5 [2] 1 3 5
 		  
 -----------------------------------------------------------------------------*/
-void GraphicsND::drawPolygon(Mat<> p[], int n, bool FACE, bool LINE) { 
+void GraphicsND::drawPolygon(Mat<> p[], int n) { 
 	if (FACE) 
 		for (int k = 1; k <= (n + 2) / 3; k++) 
 			for (int i = 0; i <= n - 2 * k; i += 2 * k) 
-				drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n], FACE, false);
+				drawTriangle(p[i], p[i + k], p[(i + 2 * k) % n]);
 	if (LINE) drawPolyline(p, n, true);
 }
 /*--------------------------------[ 画圆 ]--------------------------------
@@ -414,7 +414,7 @@ void GraphicsND::drawPolygon(Mat<> p[], int n, bool FACE, bool LINE) {
 		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct, bool FACE, bool LINE) {
+void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct) {
 	//计算 Rotate Matrix
 	//画圆
 }
@@ -436,7 +436,7 @@ void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct, bool FACE, b
 void GraphicsND::drawEllipse(Mat<>& center, double rx, double ry, Mat<>* direct) {
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
-void GraphicsND::drawSurface(Mat<> z, double xs, double xe, double ys, double ye, bool FACE, bool LINE) {
+void GraphicsND::drawSurface(Mat<> z, double xs, double xe, double ys, double ye) {
 	Mat<> p(3), pl(3), pu(3); Mat<> FaceVec, tmp, light(3); light.fill(1).normalized();
 	double dx = (xe - xs) / z.rows, 
 		   dy = (ye - ys) / z.cols;
@@ -462,14 +462,14 @@ void GraphicsND::drawSurface(Mat<> z, double xs, double xe, double ys, double ye
 					FaceColor = (int)(t * 0xFF) * 0x10000 
 							  + (int)(t * 0xFF) * 0x100 
 							  + (int)(t * 0xFF);
-					drawTriangle(p, pl, pu, 1, 0);		
+					drawTriangle(p, pl, pu);		
 				}
 			}
 		}
 	}
 }
 /*--------------------------------[ 画四面体 ]--------------------------------*/
-void GraphicsND::drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, bool FACE, bool LINE) {
+void GraphicsND::drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
 	if (FACE) {
 		drawTriangle(p1, p2, p3); 
 		drawTriangle(p2, p3, p4); 
@@ -491,7 +491,7 @@ void GraphicsND::drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4, boo
 		(x0,y1,z0)&(x0,y0,z1)  (x0,y1,z0)&(x1,y0,z0)
 		(x0,y0,z1)&(x1,y0,z0)  (x0,y0,z1)&(x0,y1,z1)
 **------------------------------------------------------------------------*/
-void GraphicsND::drawCuboid(Mat<>& pMin, Mat<>& pMax, bool FACE, bool LINE) {
+void GraphicsND::drawCuboid(Mat<>& pMin, Mat<>& pMax) {
 	Mat<> pMinTmp[3], pMaxTmp[3];
 	for (int i = 0; i < 3; i++) {
 		pMinTmp[i] = pMin; pMinTmp[i][i] = pMax[i];
@@ -499,8 +499,8 @@ void GraphicsND::drawCuboid(Mat<>& pMin, Mat<>& pMax, bool FACE, bool LINE) {
 	}
 	if (FACE) {
 		for (int i = 0; i < 3; i++) {
-			drawQuadrangle(pMin, pMinTmp[i], pMaxTmp[(i + 2) % 3], pMinTmp[(i + 1) % 3], true, false);
-			drawQuadrangle(pMax, pMaxTmp[i], pMinTmp[(i + 2) % 3], pMaxTmp[(i + 1) % 3], true, false);
+			drawQuadrangle(pMin, pMinTmp[i], pMaxTmp[(i + 2) % 3], pMinTmp[(i + 1) % 3]);
+			drawQuadrangle(pMax, pMaxTmp[i], pMinTmp[(i + 2) % 3], pMaxTmp[(i + 1) % 3]);
 		}
 	}
 	if (LINE) {
@@ -517,7 +517,7 @@ void GraphicsND::drawCuboid(Mat<>& pMin, Mat<>& pMax, bool FACE, bool LINE) {
 		[1] 计算旋转矩阵
 		[2] 根据旋转矩阵, 计算绘制点坐标, 完成绘制
 **------------------------------------------------------------------------*/
-void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta, bool FACE, bool LINE) {
+void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta) {
 	// 计算 Rotate Matrix
 	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
@@ -531,7 +531,7 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 	} else rotateMat.E(3);
 	// 画圆台
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
-	for (int i = 0; i <= 360 / delta; i++) {
+	for (int i = 0; i <= delta; i++) {
 		deltaVector.getData(
 			cos(i * delta * 2.0 * PI / 360), 
 			sin(i * delta * 2.0 * PI / 360), 
@@ -542,8 +542,8 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 		edPoint.add(ed, edPoint.mul(Red, deltaVector));
 		if (i != 0) {
 			if (FACE) {
-				drawTriangle(stPoint, preStPoint, edPoint, true, false);
-				drawTriangle(preStPoint, preEdPoint, edPoint, true, false);
+				drawTriangle(   stPoint, preStPoint, edPoint);
+				drawTriangle(preStPoint, preEdPoint, edPoint);
 			}
 			if (LINE) {
 				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
@@ -556,8 +556,8 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 	}
 }
 /*--------------------------------[ 画圆柱 ]--------------------------------*/
-void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta, bool FACE, bool LINE) {
-	drawFrustum(st, ed, r, r, delta, FACE, LINE);
+void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta) {
+	drawFrustum(st, ed, r, r, delta);
 }
 /*--------------------------------[ 画球 ]--------------------------------
 *	[公式]: x² + y² + z² = R²
@@ -569,7 +569,7 @@ void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta, bool
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawSphere(Mat<>& center, double r, int delta, bool FACE, bool LINE) {
+void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
 	// 经纬度法
 	Mat<> point(3);
 	for (int i = 0; i < 360 / delta; i++) {
@@ -630,11 +630,71 @@ void GraphicsND::drawEllipsoid(Mat<>& center, Mat<>& r) {
 		}
 	}
 }
+/******************************************************************************
+*                    画阶梯
+******************************************************************************/
+void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta) {
+	if (Red == -1)Red = Rst;
+	// 计算 Rotate Matrix
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	direction.sub(ed, st);
+	if (direction[0] != 0 || direction[1] != 0) {
+		rotate(
+			rotateAxis.crossProduct(direction, zAxis),
+			-acos(tmp.dot(direction, zAxis) / direction.norm()),
+			tmp.zero(3), rotateMat.E(4)
+		); 
+		rotateMat.block(1, 3, 1, 3, rotateMat);
+	} else rotateMat.E(3);
+	// 画圆台
+	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
+	for (int i = 0; i <= delta; i++) {
+		deltaVector.getData(
+			cos(i * delta * 2.0 * PI / 360), 
+			sin(i * delta * 2.0 * PI / 360), 
+			0
+		);
+		deltaVector.mul(rotateMat, deltaVector);
+		stPoint.add(st, stPoint.mul(Rst, deltaVector));
+		edPoint.add(ed, edPoint.mul(Red, deltaVector));
+		if (i != 0) {
+			if (FACE) {
+				drawTriangle(   stPoint, preStPoint, edPoint);
+				drawTriangle(preStPoint, preEdPoint, edPoint);
+			}
+			if (LINE) {
+				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
+				drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
+				drawLine(stPoint, edPoint);
+			}
+		}
+		preStPoint = stPoint;
+		preEdPoint = edPoint;
+	}
+}
+void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double R, int delta) {
+	drawPipe(st, ed, R, R, delta);
+}
+void GraphicsND::drawPipe(Mat<>* p, int N, double R, int delta) {
+	for (int i = 0; i < N - 1; i++) drawPipe(p[i], p[i + 1], R, R, delta);
+}
+/******************************************************************************
+*                    画阶梯
+******************************************************************************/
+void GraphicsND::drawStairs(Mat<>& zero, double Length, double Width, double Height, int StairsNum) {
+	Mat<> p1(3), p2(3);
+	for (int i = 0; i < StairsNum; i++)
+		drawCuboid(
+			p1.getData(0,       i      * Width / StairsNum,  i      * Height / StairsNum) += zero,
+			p2.getData(Length, (i + 1) * Width / StairsNum, (i + 1) * Height / StairsNum) += zero
+		);
+}
 /*--------------------------------[ 画线 any-D ]--------------------------------*/
-void GraphicsND::drawSuperLine(Mat<>* p0, bool FACE, bool LINE) {
+void GraphicsND::drawSuperLine(Mat<>* p0) {
 
 }
-/*--------------------------------[ 画立方体 any-D ]--------------------------------
+/******************************************************************************
+*                    画立方体 any-D
 *	[算法]: 利用二进制表示各顶点的坐标位置，
 			最小顶点为全0，最大顶点为全1
 			0: 该维度坐标值 == 最小顶点对应值
@@ -642,8 +702,8 @@ void GraphicsND::drawSuperLine(Mat<>* p0, bool FACE, bool LINE) {
 *	[流程]:
 		[1] 以二进制顺序遍历所有顶点
 			[2] 连接该点和所有比该点编码多1的点
----------------------------------------------------------------------------*/
-void GraphicsND::drawSuperCuboid(Mat<>& pMin, Mat<>& pMax, bool FACE, bool LINE) {
+******************************************************************************/
+void GraphicsND::drawSuperCuboid(Mat<>& pMin, Mat<>& pMax) {
 	unsigned int Dim = pMin.rows, maxCode = 0;
 	Mat<> st, ed;
 	for (int i = 0; i < Dim; i++) maxCode += 1 << i;
@@ -666,7 +726,7 @@ void GraphicsND::drawSuperCuboid(Mat<>& pMin, Mat<>& pMax, bool FACE, bool LINE)
 *	[定义]: 球: 距离圆心距离为R的点的集合. Σdim_i² = R²
 *	[算法]: 计算正象限的点坐标，然后通过取负绘制其他象限.
 ---------------------------------------------------------------------------*/
-void GraphicsND::drawSuperSphere(Mat<>& center, double r, bool FACE, bool LINE) {
+void GraphicsND::drawSuperSphere(Mat<>& center, double r) {
 	unsigned int Dim = center.rows, maxCode = 0, times = 1, cur;
 	double delta = 0.1, tmp;
 	Mat<> point(Dim), tmpMat;
@@ -695,7 +755,7 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r, bool FACE, bool LINE) 
 		[1] 计算每一个格点的坐标
 		[2] 绘制该格点对应的, 各维度方向的从min[dim] -> max[dim]的直线段
 ---------------------------------------------------------------------------*/
-void GraphicsND::drawGrid(Mat<>& delta, Mat<>& max, Mat<>& min, bool LINE) {
+void GraphicsND::drawGrid(Mat<>& delta, Mat<>& max, Mat<>& min) {
 	int times = 1, cur;
 	for (int dim = 0; dim < min.rows; dim++) times *= (max[dim] - min[dim]) / delta[dim] + 1;
 	Mat<> point(min), st, ed; point[0] -= delta[0];

@@ -26,6 +26,7 @@ public:
 	unsigned int FaceColor = 0xFFFFFF;
 	std::vector<Mat<>> LineSet, TriangleSet;
 	bool isLineTriangleSet = 0;
+	bool FACE = true, LINE = false;
 	/*---------------- 底层 ----------------*/
 	GraphicsND() { ; }																//构造函数
    ~GraphicsND() { ; }																//析构函数
@@ -51,38 +52,40 @@ public:
 	void drawPolyline	(Mat<>& y, double xmin, double xmax);			//画折线
 	void drawBezierLine	(Mat<> p[], int n);								//画贝塞尔曲线
 	// 2-D
-	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,				bool FACE = false, bool LINE = true);		//画三角形
-	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3,				bool FACE = false, bool LINE = true);		//画三角形集
-	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>&FaceVec,bool FACE = false, bool LINE = true);		//画三角形集
-	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL,	bool FACE = false, bool LINE = true);		//画矩形
-	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4,	bool FACE = false, bool LINE = true);		//画四边形
-	void drawPolygon	(Mat<> p[], int n,								bool FACE = false, bool LINE = true);		//画多边形
-	void drawCircle		(Mat<>& center, double r, Mat<>* direct = NULL, bool FACE = false, bool LINE = true);		//画圆
-	void drawEllipse	(Mat<>& center, double rx, double ry, Mat<>* direct = NULL);								//画椭圆
-	void drawSurface	(Mat<> z, double xs, double xe, double ys, double ye, 
-																		bool FACE = false, bool LINE = true);		//画曲面
-	void drawBezierFace	(Mat<> p[], int n);																			//画贝塞尔曲面
+	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3);						//画三角形
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3);						//画三角形集
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>&FaceVec);		//画三角形集
+	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL);			//画矩形
+	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);			//画四边形
+	void drawPolygon	(Mat<> p[], int n);										//画多边形
+	void drawCircle		(Mat<>& center, double r, Mat<>* direct = NULL);		//画圆
+	void drawEllipse	(Mat<>& center, double rx, double ry, Mat<>* direct = NULL);	//画椭圆
+	void drawSurface	(Mat<> z, double xs, double xe, double ys, double ye);	//画曲面
+	void drawBezierFace	(Mat<> p[], int n);										//画贝塞尔曲面
 	// 3-D
-	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4,	bool FACE = false, bool LINE = true);		//画四面体
-	void drawCuboid		(Mat<>&pMin,Mat<>& pMax,						bool FACE = false, bool LINE = true);		//画矩体
-	void drawPolyhedron	(Mat<>* p, int n,								bool FACE = false, bool LINE = true);		//画多面体
-	void drawFrustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta = 5, 
-																		bool FACE = false, bool LINE = true);		//画圆台
-	void drawCylinder	(Mat<>& st, Mat<>& ed, double r, double delta=5,bool FACE = false, bool LINE = true);		//画圆柱
-	void drawSphere		(Mat<>& center, double r, int delta = 5,		bool FACE = false, bool LINE = true);		//画球
-	void drawSphere2	(Mat<>& center, double r, int n     = 300);													//画球
-	void drawEllipsoid	(Mat<>& center, Mat<>& r);																	//画椭球
-	void drawBody		(Mat<>& center, Mat<>& r);																	//画曲体
-	void drawBezierBody	(Mat<> p[], int n);																			//画贝塞尔曲体
+	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);		//画四面体
+	void drawCuboid		(Mat<>&pMin,Mat<>& pMax);							//画矩体
+	void drawPolyhedron	(Mat<>* p, int n);									//画多面体
+	void drawFrustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta = 36);	//画圆台
+	void drawCylinder	(Mat<>& st, Mat<>& ed, double r, double delta = 36);//画圆柱
+	void drawSphere		(Mat<>& center, double r, int delta = 5);			//画球
+	void drawSphere2	(Mat<>& center, double r, int n = 300);				//画球
+	void drawEllipsoid	(Mat<>& center, Mat<>& r);							//画椭球
+	void drawBody		(Mat<>& center, Mat<>& r);							//画曲体
+	void drawBezierBody	(Mat<> p[], int n);									//画贝塞尔曲体
+	void drawPipe		(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta = 36);		//画管道
+	void drawPipe		(Mat<>& st, Mat<>& ed, double R, int delta = 36);	//画管道
+	void drawPipe		(Mat<>* p, int N, double R, int delta = 36);		//画管道
+	void drawStairs		(Mat<>& zero, double Length, double Width, double Height, int Num);	//画阶梯
 	// Word
 	void drawChar	(Mat<>& p0, char charac);							//显示字符
 	void drawString	(Mat<>& p0, const char* str, int n);				//显示字符串
 	void drawNum	(Mat<>& p0, double num);							//显示数字
 	// any-D
-	void drawSuperLine	(Mat<>* p0,										bool FACE = false, bool LINE = true);		//画线 any-D
-	void drawSuperCuboid(Mat<>& pMin, Mat<>& pMax,						bool FACE = false, bool LINE = true);		//画立方体 any-D
-	void drawSuperSphere(Mat<>& center, double r,						bool FACE = false, bool LINE = true);		//画球体 any-D
-	void drawGrid		(Mat<>& delta, Mat<>& max, Mat<>& min							 , bool LINE = true);		//画网格
+	void drawSuperLine	(Mat<>* p0);								//画线 any-D
+	void drawSuperCuboid(Mat<>& pMin, Mat<>& pMax);					//画立方体 any-D
+	void drawSuperSphere(Mat<>& center, double r);					//画球体 any-D
+	void drawGrid		(Mat<>& delta, Mat<>& max, Mat<>& min);		//画网格
 	// Other
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);						//画坐标轴
 	void contour	(Mat<>& map, const int N);																		//画等高线
