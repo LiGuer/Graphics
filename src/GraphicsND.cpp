@@ -12,11 +12,11 @@ limitations under the License.
 ==============================================================================*/
 #include "GraphicsND.h"
 Mat<> GraphicsND::TransformMat;											//变换矩阵
-/******************************************************************************
+/*#############################################################################
 
 *                    底层函数
 
-******************************************************************************/
+##############################################################################*/
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void GraphicsND::init(int width, int height, int Dim) { 
 	g.init(width, height);  
@@ -102,16 +102,17 @@ void GraphicsND::writeModel(const char* fileName) {
 			p[i % 3](j, i / 3) = TriangleSet[i][j];
 	GraphicsFileCode::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
 }
-/******************************************************************************
+/*#############################################################################
 
 *                    Draw
 
-******************************************************************************/
-/*--------------------------------[ 画点 ]--------------------------------
+##############################################################################*/
+/******************************************************************************
+*                    画点
 *	[过程]:
 		[1] 原坐标转换至世界参考系的像素坐标
 		[2] 绘制像素
-------------------------------------------------------------------------*/
+******************************************************************************/
 void GraphicsND::drawPoint(double x0, double y0, double z0) {
 	int x, y, z;
 	value2pix(x0, y0, z0, x, y, z);
@@ -122,7 +123,8 @@ void GraphicsND::drawPoint(Mat<>& p0) {
 	value2pix(p0, p);
 	setPix(p);
 }
-/*--------------------------------[ 画直线 ]--------------------------------
+/******************************************************************************
+*                    画直线
 *	[算法]: Bresenham
 *	[特点]:
 		1. 化[浮点运算]为[整数运算]：err[]
@@ -130,7 +132,7 @@ void GraphicsND::drawPoint(Mat<>& p0) {
 *	[原理]:
 		设维度边长最大方向 M  (因为设维度长最大方向为扫描方向，才能保证线像素全部填充)
 		Δx = (x_max - x_min) / (M_max - M_min) = x_delta / M_delta
-		x = x + Δx 
+		x = x + Δx
 		∵ 离散化只有整数
 		若 x = x + 1, 则 1 = n·Δx = n·x_delta / M_delta => n·x_delta = M_delta
 		即 x_err 加 x_delta， 直至大于等于 M_delta, 此时 x = x + 1
@@ -141,7 +143,7 @@ void GraphicsND::drawPoint(Mat<>& p0) {
 		[3] 以 M 维度, 从M_min 至 M_max, 逐像素扫描 (M_i++)
 			[4] 画点
 			[5] 累计 x_err, 进位 x
----------------------------------------------------------------------------*/
+******************************************************************************/
 void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double sz0, double ez0) {
 	//[1]
 	int sx, sy, sz, ex, ey, ez;
@@ -204,24 +206,52 @@ void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
 		LineSet.push_back(ep0);
 	}
 }
-/*--------------------------------[ 画折线 ]--------------------------------*/
+/******************************************************************************
+*                    画折线
+******************************************************************************/
 void GraphicsND::drawPolyline(Mat<> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
 void GraphicsND::drawPolyline(Mat<>& y, double xmin, double xmax) {
-	Mat<> point(2), prePoint(2);
-	point.   getData(xmin, y[0]); 
-	prePoint.getData(xmin, y[0]);
-	double delta = (xmax - xmin) / (y.cols - 1);
-	for (int i = 1; i < y.cols; i++) {
-		point[0] += delta; 
-		point[1] = y[i];
-		drawLine(prePoint, point);
-		prePoint = point;
+	Mat<> p(2), preP(2);
+	p.   getData(xmin, y[0]); 
+	preP = p;
+	double delta = (xmax - xmin) / (y.size() - 1);
+	for (int i = 1; i < y.size(); i++) {
+		p[0] += delta; 
+		p[1] = y[i];
+		drawLine(preP, p);
+		preP = p;
 	}
 }
-/*--------------------------------[ 画三角形 ]--------------------------------
+/******************************************************************************
+*                    画Bezier曲线
+******************************************************************************/
+void GraphicsND::drawBezierLine(Mat<> p[], int n) {
+	/*
+	int N = 1000;					//#待优化
+	FP64 C[50];
+	for (int i = 0; i < n; i++)
+		setPoint(xCtrl[i], yCtrl[i], 0xFFFFFF);
+	for (INT32S i = 0; i < n; i++) {
+		C[i] = 1;
+		for (INT32S j = n - 1; j >= i + 1; j--) C[i] *= j;
+		for (INT32S j = n - 1 - i; j >= 2; j--) C[i] /= j;
+	}
+	for (INT32S k = 0; k < N; k++) {
+		FP64 u = (FP64)k / N;
+		INT32S x = 0, y = 0;
+		for (INT32S i = 0; i < n; i++) {
+			FP64 bezBlendFcn = C[i] * pow(u, i) * pow(1 - u, n - 1 - i);
+			x += xCtrl[i] * bezBlendFcn;
+			y += yCtrl[i] * bezBlendFcn;
+		}
+		drawPoint(x, y);
+	}*/
+}
+/******************************************************************************
+*                    画三角形
 *	[算法]: Bresenham
 *	[原理]:
 		从 x 最小的顶点 p_x_min 开始,
@@ -234,7 +264,7 @@ void GraphicsND::drawPolyline(Mat<>& y, double xmin, double xmax) {
 		[3] 类似直线算法, 以 x 方向为基准, 跟踪以 p_x_min 为顶点两条边
 			[4] 若到达三角形第三顶点，则短边转换至该点方程
 			[5] 画线
------------------------------------------------------------------------------*/
+******************************************************************************/
 void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	if (FACE) {
 		//[1]
@@ -328,9 +358,9 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		  fvt(p1.rows),
 		light(p1.rows),tmp; light.fill(1).normalized();
 	for (int i = 0; i < p1.cols; i++) {
-		p1.		getCol(i, pt1);
-		p2.		getCol(i, pt2);
-		p3.		getCol(i, pt3);
+		p1.getCol(i, pt1);
+		p2.getCol(i, pt2);
+		p3.getCol(i, pt3);
 		fvt.crossProduct(
 			fvt.sub(pt2, pt1),
 			tmp.sub(pt3, pt1)
@@ -533,8 +563,8 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= delta; i++) {
 		deltaVector.getData(
-			cos(i * delta * 2.0 * PI / 360), 
-			sin(i * delta * 2.0 * PI / 360), 
+			cos(i * 2.0 * PI / delta),
+			sin(i * 2.0 * PI / delta),
 			0
 		);
 		deltaVector.mul(rotateMat, deltaVector);
@@ -571,21 +601,31 @@ void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta) {
 **-----------------------------------------------------------------------*/
 void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
 	// 经纬度法
-	Mat<> point(3);
-	for (int i = 0; i < 360 / delta; i++) {
-		double theta = (i * delta) * 2.0 * PI / 360;
-		for (int j = -90 / delta; j <= 90 / delta; j++) {
-			double phi = (j * delta) * 2.0 * PI / 360;
-			point[0] = r * cos(phi) * cos(theta) + center[0];
-			point[1] = r * cos(phi) * sin(theta) + center[1];
-			point[2] = r * sin(phi) + center[2];
-			drawPoint(point);
-			if (FACE) {
-
-			}
-			if (LINE) {
-
-			}
+	Mat<> point(3), pointU(3), pointL(3);
+	double dAngle = 2.0 * PI / delta;
+	for (double theta = 0; theta <= 2 * PI; theta += dAngle) {
+		for (double phi = -PI / 2; phi <= PI / 2; phi += dAngle) {
+			point [0] = r * cos(phi) * cos(theta) + center[0];
+			point [1] = r * cos(phi) * sin(theta) + center[1];
+			point [2] = r * sin(phi)			  + center[2];
+			//U
+			pointU[0] = r * cos(phi - dAngle) * cos(theta) + center[0];
+			pointU[1] = r * cos(phi - dAngle) * sin(theta) + center[1];
+			pointU[2] = r * sin(phi - dAngle)              + center[2];
+			//L
+			pointL[0] = r * cos(phi) * cos(theta - dAngle) + center[0];
+			pointL[1] = r * cos(phi) * sin(theta - dAngle) + center[1];
+			pointL[2] = r * sin(phi)                       + center[2];
+			drawTriangle(point, pointU, pointL);
+			//U
+			pointU[0] = r * cos(phi + dAngle) * cos(theta) + center[0];
+			pointU[1] = r * cos(phi + dAngle) * sin(theta) + center[1];
+			pointU[2] = r * sin(phi + dAngle)              + center[2];
+			//L
+			pointL[0] = r * cos(phi) * cos(theta + dAngle) + center[0];
+			pointL[1] = r * cos(phi) * sin(theta + dAngle) + center[1];
+			pointL[2] = r * sin(phi)                       + center[2];
+			drawTriangle(point, pointU, pointL);
 		}
 	}
 }
@@ -631,7 +671,7 @@ void GraphicsND::drawEllipsoid(Mat<>& center, Mat<>& r) {
 	}
 }
 /******************************************************************************
-*                    画阶梯
+*                    画管道
 ******************************************************************************/
 void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta) {
 	if (Red == -1)Red = Rst;
@@ -650,8 +690,8 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delt
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= delta; i++) {
 		deltaVector.getData(
-			cos(i * delta * 2.0 * PI / 360), 
-			sin(i * delta * 2.0 * PI / 360), 
+			cos(i * 2.0 * PI / delta),
+			sin(i * 2.0 * PI / delta),
 			0
 		);
 		deltaVector.mul(rotateMat, deltaVector);
@@ -873,24 +913,18 @@ ARGB GraphicsND::colorlist(double index, int model)
 	A *= 0xFF, R *= 0xFF, G *= 0xFF, B *= 0xFF;
 	return (ARGB)A * 0x1000000 + (ARGB)R * 0x10000 + (ARGB)G * 0x100 + (ARGB)B;
 }
-
-/******************************************************************************
+/*#############################################################################
 
 *                    Transformation - 3D
 
+##############################################################################*/
+/******************************************************************************
+*					平移
+	[1 ]   [ 1  0  0  0 ] [1]
+	[x'] = [dx  1  0  0 ] [x]
+	|y'|   |dy  0  1  0 | |y|
+	|z'|   |dz  0  0  1 | |z|
 ******************************************************************************/
-/*--------------------------------[ 平移 ]--------------------------------
-[1 ]   [ 1  0  0  0 ] [1]
-[x'] = [dx  1  0  0 ] [x]
-|y'|   |dy  0  1  0 | |y|
-|z'|   |dz  0  0  1 | |z|
-**-----------------------------------------------------------------------*/
-/*--------------------------------[ 平移 ]--------------------------------
-[1 ]   [ 1  0  0  0 ] [1]
-[x'] = [dx  1  0  0 ] [x]
-|y'|   |dy  0  1  0 | |y|
-|z'|   |dz  0  0  1 | |z|
-**-----------------------------------------------------------------------*/
 Mat<>& GraphicsND::translate(Mat<>& delta, Mat<>& transMat) {
 	Mat<> translateMat; translateMat.E(transMat.rows);
 	for (int i = 0; i < delta.rows; i++) translateMat(i + 1, 0) = delta[i];

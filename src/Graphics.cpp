@@ -295,7 +295,7 @@ void Graphics::fillRectangle(INT32S sx, INT32S sy, INT32S ex, INT32S ey, ARGB co
 		for (INT32S x = sx; x <= ex; x++)
 			setPoint(x, y, color);
 }
-/*----------------[ FLOOD FILL ----------------
+/*----------------[ FLOOD FILL ]----------------
 *	广度优先搜索	队列
 ** ----------------------------------------*/
 void Graphics::fillFlood(INT32S x0, INT32S y0, ARGB color)
