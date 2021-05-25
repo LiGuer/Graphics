@@ -671,7 +671,7 @@ void GraphicsND::drawEllipsoid(Mat<>& center, Mat<>& r) {
 	}
 }
 /******************************************************************************
-*                    画管道
+*                    画平移体
 ******************************************************************************/
 void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta) {
 	if (Red == -1)Red = Rst;
@@ -692,8 +692,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delt
 		deltaVector.getData(
 			cos(i * 2.0 * PI / delta),
 			sin(i * 2.0 * PI / delta),
-			0
-		);
+		0);
 		deltaVector.mul(rotateMat, deltaVector);
 		stPoint.add(st, stPoint.mul(Rst, deltaVector));
 		edPoint.add(ed, edPoint.mul(Red, deltaVector));
@@ -705,7 +704,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delt
 			if (LINE) {
 				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
 				drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
-				drawLine(stPoint, edPoint);
+				drawLine(stPoint,    edPoint);
 			}
 		}
 		preStPoint = stPoint;
@@ -717,6 +716,94 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double R, int delta) {
 }
 void GraphicsND::drawPipe(Mat<>* p, int N, double R, int delta) {
 	for (int i = 0; i < N - 1; i++) drawPipe(p[i], p[i + 1], R, R, delta);
+}
+void GraphicsND::drawPipe(Mat<>& path, double R, int delta) {
+	Mat<> p1, p2; path.getCol(0, p1); p2 = p1;
+	for (int i = 0; i < path.cols; i++, p2 = p1) drawPipe(path.getCol(i, p1), p2, R, R, delta);
+}
+void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, Mat<>& f) {
+	// 计算 Rotate Matrix
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	direction.sub(ed, st);
+	if (direction[0] != 0 || direction[1] != 0) {
+		rotate(
+			rotateAxis.crossProduct(direction, zAxis),
+			-acos(tmp.dot(direction, zAxis) / direction.norm()),
+			tmp.zero(3), rotateMat.E(4)
+		); 
+		rotateMat.block(1, 3, 1, 3, rotateMat);
+	} else rotateMat.E(3);
+	// 画圆台
+	Mat<> stPoint, edPoint, preStPoint, preEdPoint; tmp.alloc(3);
+	for (int i = 0; i <= f.cols; i++) {
+		tmp.mul(rotateMat, tmp.getData(f(0, i), f(1, i), 0));
+		stPoint.add(st, tmp);
+		edPoint.add(ed, tmp);
+		if (i != 0) {
+			if (FACE) {
+				drawTriangle(   stPoint, preStPoint, edPoint);
+				drawTriangle(preStPoint, preEdPoint, edPoint);
+			}
+			if (LINE) {
+				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
+				drawLine(edPoint, preEdPoint); drawLine(ed, edPoint);
+				drawLine(stPoint,    edPoint);
+			}
+		}
+		preStPoint = stPoint;
+		preEdPoint = edPoint;
+	}
+}
+void GraphicsND::drawPipe(Mat<>& path, Mat<>& f) {
+	Mat<> p1, p2; path.getCol(0, p1); p2 = p1;
+	for (int i = 0; i < path.cols; i++, p2 = p1) drawPipe(path.getCol(i, p1), p2, f);
+}
+/******************************************************************************
+*                    画旋转体
+******************************************************************************/
+void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, double st, double ed) {
+	double dAngle = 2 * PI / delta;
+	Mat<> p1(3), p2(3), p3(3), p4(3), ft = f, RotateMat, preRotateMat, RotateMat0;
+	//Rotate f
+	Mat<> rotateAxis, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	if (axis[0] != 0 || axis[1] != 0) {
+		rotate(
+			rotateAxis.crossProduct(axis, zAxis),
+			-acos(tmp.dot(axis, zAxis) / axis.norm()),
+			tmp.zero(3), RotateMat0.E(4)
+		); RotateMat0.block(1, 3, 1, 3, RotateMat);
+	} else RotateMat.E(3);
+	for (int i = 0; i < ft.cols; i++) {
+		p1.mul(RotateMat, p1.getData(ft(0, i), ft(1, i), 0));
+		ft[0] = p1[0];
+		ft[1] = p1[1];
+	}
+	//main
+	for (double angle = st; angle <= ed; angle += dAngle) {
+		// 计算 Rotate Matrix
+		rotate(axis, angle, zero, RotateMat0.E(4));
+		RotateMat.block(1, 3, 1, 3, RotateMat0);
+		// 画旋转体
+		if (angle != st) {
+			for (int i = 1; i < ft.cols; i++) {
+				p1.getData(ft(0, i - 1), ft(1, i - 1), 0); p3 = p1;
+				p2.getData(ft(0, i),     ft(1, i),     0); p4 = p2;
+				p1.mul(   RotateMat, p1);
+				p2.mul(   RotateMat, p1);
+				p3.mul(preRotateMat, p1);
+				p4.mul(preRotateMat, p1);
+				if (FACE) {
+					drawTriangle(p1, p2, p3);
+					drawTriangle(p3, p4, p2);
+				}
+				if (LINE) {
+					drawLine(p1, p3);
+					drawLine(p2, p4);
+				}
+			}
+		}
+		preRotateMat = RotateMat;
+	}
 }
 /******************************************************************************
 *                    画阶梯
