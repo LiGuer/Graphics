@@ -599,12 +599,13 @@ void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta) {
 		[1] 画纬度线
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
-	// 经纬度法
-	Mat<> point(3), pointU(3), pointL(3);
+void GraphicsND::drawSphere(Mat<>& center, double r, 
+	double thetaSt, double thetaEd, double phiSt, double phiEd, int delta
+) {
+	Mat<> point(3), pointU(3), pointL(3), pointUL(3);
 	double dAngle = 2.0 * PI / delta;
-	for (double theta = 0; theta <= 2 * PI; theta += dAngle) {
-		for (double phi = -PI / 2; phi <= PI / 2; phi += dAngle) {
+	for (double theta = thetaSt + dAngle; theta <= thetaEd; theta += dAngle) {
+		for (double phi = phiSt + dAngle; phi <= phiEd; phi += dAngle) {
 			point [0] = r * cos(phi) * cos(theta) + center[0];
 			point [1] = r * cos(phi) * sin(theta) + center[1];
 			point [2] = r * sin(phi)			  + center[2];
@@ -617,17 +618,16 @@ void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
 			pointL[1] = r * cos(phi) * sin(theta - dAngle) + center[1];
 			pointL[2] = r * sin(phi)                       + center[2];
 			drawTriangle(point, pointU, pointL);
-			//U
-			pointU[0] = r * cos(phi + dAngle) * cos(theta) + center[0];
-			pointU[1] = r * cos(phi + dAngle) * sin(theta) + center[1];
-			pointU[2] = r * sin(phi + dAngle)              + center[2];
-			//L
-			pointL[0] = r * cos(phi) * cos(theta + dAngle) + center[0];
-			pointL[1] = r * cos(phi) * sin(theta + dAngle) + center[1];
-			pointL[2] = r * sin(phi)                       + center[2];
-			drawTriangle(point, pointU, pointL);
+			//UL
+			pointUL[0] = r * cos(phi - dAngle) * cos(theta - dAngle) + center[0];
+			pointUL[1] = r * cos(phi - dAngle) * sin(theta - dAngle) + center[1];
+			pointUL[2] = r * sin(phi - dAngle)                       + center[2];
+			drawTriangle(pointL, pointU, pointUL);
 		}
 	}
+}
+void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
+	drawSphere(center, r, 0, 2 * PI, -PI / 2, PI / 2, delta);
 }
 /*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
 *	[Referance]:
