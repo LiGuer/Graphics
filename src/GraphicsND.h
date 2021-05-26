@@ -81,7 +81,7 @@ public:
 	void drawPipe		(Mat<>& path,		   double R,			   int delta = 36);	//画平移体(正多边形截面,any路径)
 	void drawPipe		(Mat<>& st, Mat<>& ed, Mat<>& f);								//画平移体(any截面,线段路径)
 	void drawPipe		(Mat<>& path, Mat<>& f);										//画平移体(any截面,any路径)
-	void drawRotator	(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta = 5, double st = 0, double ed = 0);			//画旋转体
+	void drawRotator	(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta = 36, double st = 0, double ed = 2 * PI);	//画旋转体
 	void drawStairs		(Mat<>& zero, double Length, double Width, double Height, int Num);	//画阶梯
 	// Word
 	void drawChar	(Mat<>& p0, char charac);					//显示字符

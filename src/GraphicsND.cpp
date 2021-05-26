@@ -762,39 +762,34 @@ void GraphicsND::drawPipe(Mat<>& path, Mat<>& f) {
 *                    画旋转体
 ******************************************************************************/
 void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, double st, double ed) {
-	double dAngle = 2 * PI / delta;
-	Mat<> p1(3), p2(3), p3(3), p4(3), ft = f, RotateMat, preRotateMat, RotateMat0;
 	//Rotate f
-	Mat<> rotateAxis, zAxis(3), tmp; zAxis.getData(0, 0, 1);
-	if (axis[0] != 0 || axis[1] != 0) {
+	Mat<> p1(3), p2(3), p3(3), p4(3), ft = f, RotateMat, preRotateMat, RotateMat0, RotateMatTmp;
+	Mat<> rotateAxis, fAxis(3), tmp; fAxis.getData(0, 1, 0);
+	if (axis[0] != 0 || axis[2] != 0) {
 		rotate(
-			rotateAxis.crossProduct(axis, zAxis),
-			-acos(tmp.dot(axis, zAxis) / axis.norm()),
-			tmp.zero(3), RotateMat0.E(4)
-		); RotateMat0.block(1, 3, 1, 3, RotateMat);
-	} else RotateMat.E(3);
-	for (int i = 0; i < ft.cols; i++) {
-		p1.mul(RotateMat, p1.getData(ft(0, i), ft(1, i), 0));
-		ft[0] = p1[0];
-		ft[1] = p1[1];
-	}
+			rotateAxis.crossProduct(axis, fAxis),
+			-acos(tmp.dot(axis, fAxis) / axis.norm()),
+			tmp.zero(3), RotateMatTmp.E(4)
+		); RotateMatTmp.block(1, 3, 1, 3, RotateMat0);
+	} else RotateMat0.E(3);
 	//main
-	for (double angle = st; angle <= ed; angle += dAngle) {
+	for (int i = 0; i <= delta; i++) {
 		// 计算 Rotate Matrix
-		rotate(axis, angle, zero, RotateMat0.E(4));
-		RotateMat.block(1, 3, 1, 3, RotateMat0);
+		double angle = i * 2 * PI / delta;
+		rotate(axis, angle, zero, RotateMatTmp.E(4));
+		RotateMatTmp.block(1, 3, 1, 3, RotateMat) *= RotateMat0;
 		// 画旋转体
-		if (angle != st) {
+		if (i != 0) {
 			for (int i = 1; i < ft.cols; i++) {
 				p1.getData(ft(0, i - 1), ft(1, i - 1), 0); p3 = p1;
 				p2.getData(ft(0, i),     ft(1, i),     0); p4 = p2;
 				p1.mul(   RotateMat, p1);
-				p2.mul(   RotateMat, p1);
-				p3.mul(preRotateMat, p1);
-				p4.mul(preRotateMat, p1);
+				p2.mul(   RotateMat, p2);
+				p3.mul(preRotateMat, p3);
+				p4.mul(preRotateMat, p4);
 				if (FACE) {
 					drawTriangle(p1, p2, p3);
-					drawTriangle(p3, p4, p2);
+					drawTriangle(p4, p3, p2);
 				}
 				if (LINE) {
 					drawLine(p1, p3);
