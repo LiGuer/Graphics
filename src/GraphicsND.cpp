@@ -775,18 +775,17 @@ void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, doub
 	//main
 	for (int i = 0; i <= delta; i++) {
 		// 计算 Rotate Matrix
-		double angle = i * 2 * PI / delta;
-		rotate(axis, angle, zero, RotateMatTmp.E(4));
+		rotate(axis, i * 2 * PI / delta, tmp.zero(3), RotateMatTmp.E(4));
 		RotateMatTmp.block(1, 3, 1, 3, RotateMat) *= RotateMat0;
 		// 画旋转体
 		if (i != 0) {
 			for (int i = 1; i < ft.cols; i++) {
 				p1.getData(ft(0, i - 1), ft(1, i - 1), 0); p3 = p1;
 				p2.getData(ft(0, i),     ft(1, i),     0); p4 = p2;
-				p1.mul(   RotateMat, p1);
-				p2.mul(   RotateMat, p2);
-				p3.mul(preRotateMat, p3);
-				p4.mul(preRotateMat, p4);
+				p1.mul(   RotateMat, p1) += zero;
+				p2.mul(   RotateMat, p2) += zero;
+				p3.mul(preRotateMat, p3) += zero;
+				p4.mul(preRotateMat, p4) += zero;
 				if (FACE) {
 					drawTriangle(p1, p2, p3);
 					drawTriangle(p4, p3, p2);
@@ -794,10 +793,10 @@ void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, doub
 				if (LINE) {
 					drawLine(p1, p3);
 					drawLine(p2, p4);
+					drawLine(p1, p2);
 				}
 			}
-		}
-		preRotateMat = RotateMat;
+		} preRotateMat = RotateMat;
 	}
 }
 /******************************************************************************
