@@ -165,7 +165,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		traceRay(intersection, reflect(Ray, FaceVec, RayTmp), color.zero(), level + 1);
 		color *= minDisTri->material->reflectRate;
 	}
-	return color.elementMult(tmp.mul(level > maxRayLevel ? 1 / maxRayLevelPR : 1, minDisTri->material->color));
+	return color.elementMul(tmp.mul(level > maxRayLevel ? 1 / maxRayLevelPR : 1, minDisTri->material->color));
 }
 /*--------------------------------[ 求交点 ]--------------------------------
 *	[算法]:

@@ -466,7 +466,7 @@ void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct) {
 void GraphicsND::drawEllipse(Mat<>& center, double rx, double ry, Mat<>* direct) {
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
-void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double ye) {
+void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double ye, Mat<>* direct) {
 	Mat<> p(3), pl(3), pu(3), plu(3); Mat<> FaceVec, tmp, light(3); light.fill(1).normalized();
 	double dx = (xe - xs) / z.rows, 
 		   dy = (ye - ys) / z.cols;
@@ -481,7 +481,7 @@ void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double y
 			if (FACE) {
 				if (z(x - 1, y)		== HUGE_VAL 
 				||  z(x,     y - 1)	== HUGE_VAL 
-				||  z(x - 1, y - 1) == HUGE_VAL)continue;
+				||  z(x - 1, y - 1) == HUGE_VAL) continue;
 				pl. getData(xs + (x - 1) * dx,	ys +  y      * dy,	z(x - 1, y    ));
 				pu. getData(xs +  x      * dx,	ys + (y - 1) * dy,	z(x,     y - 1));
 				plu.getData(xs + (x - 1) * dx,	ys + (y - 1) * dy,	z(x - 1, y - 1));
@@ -579,6 +579,8 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 			if (FACE) {
 				drawTriangle(   stPoint, preStPoint, edPoint);
 				drawTriangle(preStPoint, preEdPoint, edPoint);
+				drawTriangle(st, stPoint, preStPoint);
+				drawTriangle(ed, edPoint, preEdPoint);
 			}
 			if (LINE) {
 				drawLine(stPoint, preStPoint); drawLine(st, stPoint);
@@ -609,8 +611,12 @@ void GraphicsND::drawSphere(Mat<>& center, double r,
 ) {
 	Mat<> point(3), pointU(3), pointL(3), pointUL(3);
 	double dAngle = 2.0 * PI / delta;
-	for (double theta = thetaSt + dAngle; theta <= thetaEd; theta += dAngle) {
-		for (double phi = phiSt + dAngle; phi <= phiEd; phi += dAngle) {
+	int ThetaNum = (thetaEd - thetaSt) / (2 * PI) * delta,
+		  PhiNum = (  phiEd -   phiSt) / (2 * PI) * delta;
+	for (int i = 1; i <= ThetaNum; i++) {
+		double theta = thetaSt + i * dAngle;
+		for (int j = 1; j <= PhiNum; j++) {
+			double phi = phiSt + j * dAngle;
 			point [0] = r * cos(phi) * cos(theta) + center[0];
 			point [1] = r * cos(phi) * sin(theta) + center[1];
 			point [2] = r * sin(phi)			  + center[2];
@@ -679,7 +685,7 @@ void GraphicsND::drawEllipsoid(Mat<>& center, Mat<>& r) {
 *                    画平移体
 ******************************************************************************/
 void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta) {
-	if (Red == -1)Red = Rst;
+	if (Red == -1) Red = Rst;
 	// 计算 Rotate Matrix
 	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
 	direction.sub(ed, st);
@@ -778,9 +784,10 @@ void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, doub
 		); RotateMatTmp.block(1, 3, 1, 3, RotateMat0);
 	} else RotateMat0.E(3);
 	//main
-	for (int i = 0; i <= delta; i++) {
+	int angleNum = (ed - st) / (2 * PI) * delta;
+	for (int i = 0; i <= angleNum; i++) {
 		// 计算 Rotate Matrix
-		rotate(axis, i * 2 * PI / delta, tmp.zero(3), RotateMatTmp.E(4));
+		rotate(axis, st + i * 2 * PI / delta, tmp.zero(3), RotateMatTmp.E(4));
 		RotateMatTmp.block(1, 3, 1, 3, RotateMat) *= RotateMat0;
 		// 画旋转体
 		if (i != 0) {

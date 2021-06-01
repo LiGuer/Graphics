@@ -14,10 +14,7 @@ limitations under the License.
 #define DIGITAL_IMAGE_PROCESSING_H
 #include "../../LiGu_AlgorithmLib/Mat.h"
 #include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
-#include <stdlib.h>
-#include <time.h>
 #define PI 3.141592653589
-
 namespace DigitalImageProcessing {
 
 struct RGB { double R, G, B; };
@@ -90,10 +87,9 @@ Mat<>* ColorCluster(Mat<>* input, Mat<>* output, int K = 3, int TimesMax = 0x7FF
 				data(k, i * input[0].cols + j) = (input[k])(i, j);
 	for (int k = 0; k < 3; k++) output[k].zero(input[0].rows, input[0].cols);
 	// Color Cluster
-	time_t now; srand((unsigned)time(&now));
 	Mat<> Center;
 	Mat<int> Cluster, Cluster_Cur;
-	BasicMachineLearning::K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
+	//BasicMachineLearning::K_Mean(data, K, Center, Cluster, Cluster_Cur, TimesMax);
 	for (int i = 0; i < K; i++)
 		for (int j = 0; j < Cluster_Cur[i]; j++)
 			for (int dim = 0; dim < 3; dim++)
@@ -194,17 +190,4 @@ Mat<>* Invert(Mat<>* input, Mat<>* output) {
 	for (int k = 0; k < 3; k++)  Invert(input[k], output[k]); return output;
 }
 }
-/*//Example
-int main() {
-	Mat<> img[3];
-	DigitalImageProcessing::Input("IMG01.jpg", img);
-	Mat<> colorclusterImg[3];
-	DigitalImageProcessing::ColorCluster(img, colorclusterImg, 3, 20);
-	Mat<> grayImg;
-	DigitalImageProcessing::Gray(colorclusterImg, grayImg);
-	Mat<> edgedetectionImg;
-	DigitalImageProcessing::EdgeDetection(grayImg, edgedetectionImg);
-	DigitalImageProcessing::Output("img.ppm", edgedetectionImg);
-}
-*/
 #endif

@@ -28,9 +28,8 @@ public:
 	bool isLineTriangleSet = 0;
 	bool FACE = true, LINE = false;
 	/*---------------- 底层 ----------------*/
-	GraphicsND() { ; }																//构造函数
    ~GraphicsND() { ; }																//析构函数
-	GraphicsND(int width, int height, int Dim = 3) { init(width, height , Dim); }	//构造函数
+	GraphicsND(int width = 500, int height = 500, int Dim = 3) { init(width, height , Dim); }	//构造函数
 	void init (int width, int height, int Dim = 3);							//初始化
 	void clear(ARGB color);													//清屏
 	void value2pix	(int x0, int y0, int z0, int& x, int& y, int& z);		//点To像素 (<=3D)
@@ -58,9 +57,10 @@ public:
 	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL);			//画矩形
 	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);			//画四边形
 	void drawPolygon	(Mat<> p[], int n);										//画多边形
-	void drawCircle		(Mat<>& center, double r, Mat<>* direct = NULL);		//画圆
-	void drawEllipse	(Mat<>& center, double rx, double ry, Mat<>* direct = NULL);	//画椭圆
-	void drawSurface	(Mat<>& z, double xs, double xe, double ys, double ye);	//画曲面
+	void drawCircle		(Mat<>& center, double r,				Mat<>* direct = NULL);		//画圆
+	void drawEllipse	(Mat<>& center, double rx, double ry,	Mat<>* direct = NULL);		//画椭圆
+	void drawSurface	(Mat<>& z, double xs, double xe, double ys, double ye, 
+																Mat<>* direct = NULL);		//画曲面
 	void drawBezierFace	(Mat<> p[], int n);										//画贝塞尔曲面
 	// 3-D
 	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);		//画四面体

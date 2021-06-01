@@ -141,8 +141,8 @@ T	 dot		(Mat& a, Mat& b);			//点乘 [dot ·]
 T	 dot		(Mat& a);
 Mat& crossProduct	(Mat& a, Mat& b);		//叉乘 [crossProduct ×]
 Mat& crossProduct_	(Mat& a, Mat& b);
-Mat& elementMult(Mat& a, Mat& b);			//元素乘 [elementMult ×]
-Mat& elementMult(Mat& a);
+Mat& elementMul(Mat& a, Mat& b);			//元素乘 [elementMul ×]
+Mat& elementMul(Mat& a);
 Mat& elementDiv	(Mat& a, Mat& b);			//元素除 [elementDiv /]
 Mat& elementDiv	(Mat& a);
 Mat& negative	(Mat& ans);					//负 [negative -]
@@ -329,15 +329,15 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		data[2] = a[0] * b[1] - a[1] * b[0];
 		return *this;
 	}
-	/*----------------元素乘 [ elementMult × ]----------------
+	/*----------------元素乘 [ elementMul × ]----------------
 	**------------------------------------------------*/
-	Mat& elementMult(Mat& a, Mat& b) {
+	Mat& elementMul(Mat& a, Mat& b) {
 		if (a.rows != b.rows || a.cols != b.cols) error();
 		alloc(a.rows, a.cols);
 		for (int i = 0; i < size(); i++) data[i] = a[i] * b[i];
 		return*this;
 	}
-	Mat& elementMult(Mat& a) {
+	Mat& elementMul(Mat& a) {
 		if (rows != a.rows || cols != a.cols) error();
 		for (int i = 0; i < size(); i++) data[i] *= a[i];
 		return *this;
