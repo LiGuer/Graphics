@@ -18,10 +18,14 @@ namespace GraphicsFileCode {
 /******************************************************************************
 *					.PPM 文件编码/解码
 *	[格式]:
-		[1] P6 + 图片格式 + 宽高 + 最大像素值
+		[1] P() + 图片格式 + 宽高 + 最大像素值
 		[2] RGB像素数据
+*	[头格式]:
+		P1	Bitmap	ASCII			P4	Bitmap	Binary
+		P2	Graymap	ASCII			P5	Graymap	Binary
+		P3	Pixmap	ASCII			P6	Pixmap	Binary
 ******************************************************************************/
-static void ppmRead(const char* fileName, Mat<RGB>& image) {
+	static void ppmRead(const char* fileName, Mat<RGB>& image) {
 	FILE* fi = fopen(fileName, "rb");
 	int rows, cols;
 	fscanf(fi, "P6\n%d %d\n255\n", &cols, &rows);						// 读图片格式、宽高、最大像素值
@@ -34,6 +38,17 @@ static void ppmWrite(const char* fileName, Mat<RGB>& image) {
 	fprintf(fo, "P6\n%d %d\n255\n", image.cols, image.rows);			// 写图片格式、宽高、最大像素值
 	fwrite(image.data, 1, image.size() * 3, fo);						// 写RGB数据
 	fclose(fo);
+}
+static void ppmWrite(const char* fileName, Mat<unsigned char>& image) {
+	FILE* fo = fopen(fileName, "wb");
+	fprintf(fo, "P5\n%d %d\n255\n", image.cols, image.rows);			// 写图片格式、宽高、最大像素值
+	fwrite(image.data, 1, image.size(), fo);							// 写RGB数据
+	fclose(fo);
+}
+static void ppmWrite(const char* fileName, Mat<double>& image) {
+	Mat<unsigned char> t(image.rows, image.cols);
+	for (int i = 0; i < image.size(); i++) t[i] = image[i] * 0xFF;
+	ppmWrite(fileName, t);
 }
 /******************************************************************************
 *					.STL 文件编码/解码
@@ -86,4 +101,3 @@ static void stlWrite(const char* fileName, const char* head, Mat<float>& faceVec
 
 }
 #endif
-
