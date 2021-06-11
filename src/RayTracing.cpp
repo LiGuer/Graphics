@@ -87,37 +87,38 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	if (material->rediateRate != 0)	return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color.zero();			//Max Ray Level
 	//[4] RaySt & FaceVec
-	Mat<> rayTmp; static Mat<> faceVec, tmp;
+	static Mat<> faceVec, RayTmp, tmp;
 	{
 		RaySt += (tmp.mul(minDis, Ray));
 		if (minDisTri->p[2][0] == DBL_MAX)
 			 faceVec.sub(RaySt, minDisTri->p[0]).normalized();
 		else faceVec.crossProduct_(
 				   tmp.sub(minDisTri->p[1], minDisTri->p[0]), 
-				rayTmp.sub(minDisTri->p[2], minDisTri->p[0])
+				RayTmp.sub(minDisTri->p[2], minDisTri->p[0])
 			 ).normalized();
 	}
 	//[5]
+	RayTmp = Ray;
 	if (material->quickReflect != 0) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
-			t = (faceVec.dot(rayTmp.sub(PointLight[i], RaySt).normalized()) + 1) / 2;
+			t = (faceVec.dot(tmp.sub(PointLight[i], RaySt).normalized()) + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
 		} color.ones(3) *= lightCos;
 	}
 	else if (material->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(RaySt, diffuseReflect(Ray, faceVec, rayTmp),	color.zero(), level + 1);
+		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray),	color.zero(), level + 1);
 		color *= material->reflectRate;
 	}
 	else if (material->refractRate != 0) {					//Refract
 		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate ? 1 : material->refractRate;
-		refract(Ray, faceVec, rayTmp, t, refractRateBuf);
-		traceRay(RaySt += (tmp.mul(eps, rayTmp)), rayTmp, color.zero(), level + 1);
+		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
+		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color.zero(), level + 1);
 		refractRateBuf = t;
 	}
 	else if (material->reflectRate != 0) {					//Reflect
-		traceRay(RaySt, reflect(Ray, faceVec, rayTmp),			color.zero(), level + 1);
+		traceRay(RaySt, reflect(RayTmp, faceVec, Ray),			color.zero(), level + 1);
 		color *= material->reflectRate;
 	}
 	return color.elementMul(material->color);
