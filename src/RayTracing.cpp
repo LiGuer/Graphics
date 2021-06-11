@@ -86,12 +86,12 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	Material* material = minDisTri->material;
 	if (material->rediateRate != 0)	return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color.zero();			//Max Ray Level
-	//[4] intersection & FaceVec
-	Mat<> intersection, faceVec, tmp, rayTmp;
+	//[4] RaySt & FaceVec
+	Mat<> rayTmp; static Mat<> faceVec, tmp;
 	{
-		intersection.add(RaySt, intersection.mul(minDis, Ray));
+		RaySt += (tmp.mul(minDis, Ray));
 		if (minDisTri->p[2][0] == DBL_MAX)
-			 faceVec.sub(intersection, minDisTri->p[0]).normalized();
+			 faceVec.sub(RaySt, minDisTri->p[0]).normalized();
 		else faceVec.crossProduct_(
 				   tmp.sub(minDisTri->p[1], minDisTri->p[0]), 
 				rayTmp.sub(minDisTri->p[2], minDisTri->p[0])
@@ -102,22 +102,22 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
-			t = (faceVec.dot(rayTmp.sub(PointLight[i], intersection).normalized()) + 1) / 2;
+			t = (faceVec.dot(rayTmp.sub(PointLight[i], RaySt).normalized()) + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
 		} color.ones(3) *= lightCos;
 	}
 	else if (material->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(intersection, diffuseReflect(Ray, faceVec, rayTmp),	color.zero(), level + 1);
+		traceRay(RaySt, diffuseReflect(Ray, faceVec, rayTmp),	color.zero(), level + 1);
 		color *= material->reflectRate;
 	}
 	else if (material->refractRate != 0) {					//Refract
 		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate ? 1 : material->refractRate;
 		refract(Ray, faceVec, rayTmp, t, refractRateBuf);
-		traceRay(tmp.add(tmp.mul(eps, rayTmp), intersection), rayTmp,	color.zero(), level + 1);
+		traceRay(RaySt += (tmp.mul(eps, rayTmp)), rayTmp, color.zero(), level + 1);
 		refractRateBuf = t;
 	}
 	else if (material->reflectRate != 0) {					//Reflect
-		traceRay(intersection, reflect(Ray, faceVec, rayTmp),			color.zero(), level + 1);
+		traceRay(RaySt, reflect(Ray, faceVec, rayTmp),			color.zero(), level + 1);
 		color *= material->reflectRate;
 	}
 	return color.elementMul(material->color);
@@ -219,8 +219,8 @@ Mat<>& RayTracing::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rate
 	double k    = rateI / rateO,
 		   CosI = faceVec.dot(RayI),
 		   CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
-	if (CosO < 0) return reflect(RayI, faceVec, RayO);			//全反射
-	return RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1) * sqrt(CosO) / k, faceVec)).normalized();
+	return CosO < 0 ? reflect(RayI, faceVec, RayO) :				//全反射
+		   RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1) * sqrt(CosO) / k, faceVec)).normalized();
 }
 /******************************************************************************
 *						漫反射
