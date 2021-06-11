@@ -87,7 +87,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	if (material->rediateRate != 0)	return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color.zero();			//Max Ray Level
 	//[4] intersection & FaceVec
-	Mat<> intersection; static Mat<> faceVec, tmp, rayTmp;
+	Mat<> intersection, faceVec, tmp, rayTmp;
 	{
 		intersection.add(RaySt, intersection.mul(minDis, Ray));
 		if (minDisTri->p[2][0] == DBL_MAX)
@@ -209,21 +209,18 @@ Mat<>& RayTracing::reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 *						折射
 *	[折射定律]: n1·sinθ1 = n2·sinθ2
 			设面矢F, 入射光L
-			=> sin α =  n·sin <L,F>  ,  n = n入 / n折
-			Lz = L + F·sin(α - <L,F>) / sinα
-			   = L + F·( cos<L,F> - sqrt( 1/n² - 1 + cos²<L,F> ) )
+			=> sin θo =  n·sin θi  ,  n = n入 / n折, θi = <L,F>
+			Lo = Li + F·sin(θo - θi) / sinθo
+			   = Li + F·( cosθi·sinθo - cosθo·sinθi) / sinθo
+			   = Li + F·( cosθi - cosθo / n )
+			   = Li + F·( cosθi - sqrt(1 - n²·sin²θi) / n )
 ******************************************************************************/
 Mat<>& RayTracing::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
 	double k    = rateI / rateO,
 		   CosI = faceVec.dot(RayI),
 		   CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
 	if (CosO < 0) return reflect(RayI, faceVec, RayO);			//全反射
-	static Mat<> tmp;
-	CosO = (CosI > 0 ? 1 : -1) * sqrt(CosO);
-	return RayO.add(
-		RayO.mul(k, RayI), 
-		tmp. mul(CosO - k * CosI, faceVec)
-	).normalized();
+	return RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1) * sqrt(CosO) / k, faceVec)).normalized();
 }
 /******************************************************************************
 *						漫反射
