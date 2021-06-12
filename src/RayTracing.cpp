@@ -84,7 +84,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	}
 	if (minDis == DBL_MAX)			return color;					//Miss intersect
 	Material* material = minDisTri->material;
-	if (material->rediate != 0)	return color = material->color;	//Light Source
+	if (material->rediate != 0)		return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color;					//Max Ray Level
 	//[4] RaySt & FaceVec
 	static Mat<> faceVec, RayTmp, tmp;
@@ -98,6 +98,8 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 			 ).normalized();
 	}
 	//[5]
+	static int refractColorIndex; static double refractRateBuf; static bool isrefract; 
+	if (level == 0) refractColorIndex = RAND_DBL * 3, refractRateBuf = 1, isrefract = 0;
 	RayTmp = Ray;
 	if (material->quickReflect) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
 		double lightCos = 0, t;
@@ -109,19 +111,19 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	}
 	else if (material->diffuseReflect) {					//Diffuse Reflect
 		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray),	color, level + 1);
-		color *= material->reflectRate;
+		color *= material->reflectLossRate;
 	}
 	else if (RAND_DBL < material->reflect) {					//Reflect
 		traceRay(RaySt, reflect(RayTmp, faceVec, Ray), color, level + 1);
-		color *= material->reflectRate;
+		color *= material->reflectLossRate;
 	}
 	else{														//Refract
-		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate ? 1 : material->refractRate;
+		double t; t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 1 : material->refractRate[refractColorIndex];
 		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
 		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color, level + 1);
-		refractRateBuf = t;
+		color *= material->refractLossRate; isrefract = 1;
 	}
-
+	if (level == 0 && isrefract) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
 	return color.elementMul(material->color);
 }
 /******************************************************************************

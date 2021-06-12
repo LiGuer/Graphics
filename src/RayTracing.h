@@ -22,24 +22,22 @@ limitations under the License.
 class RayTracing {
 public:
 	struct Material {															//材质
-		Mat<> color{ 3 };
+		Mat<> color{ 3 }, refractRate{ 3 };
 		bool 
 			rediate        = 0,
 			quickReflect   = 0,
 			diffuseReflect = 0;
 		double
-			reflect = 1,
-			refract = 0,
-			reflectRate = 1, 
-			refractRate = 1;
+			reflect = 1, reflectLossRate = 1,
+			refract = 0, refractLossRate = 1;
 	};
 	struct Triangle { Mat<> p[3]; Material* material = NULL; };					//三角形
 	/*---------------- 基础参数 ----------------*/
-	Mat<> Eye{ 3,1 }, gCenter{ 3,1 };
+	Mat<> Eye{ 3 }, gCenter{ 3 };
 	Mat<RGB>	ScreenPix;
 	Mat<Mat<>>	Screen;
 	int maxRayLevel = 5;
-	double refractRateBuf = 1, eps = 1e-4;
+	double eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Mat<>>    PointLight;											//点光源集(QuickReflect专用)
 	/*---------------- 底层 ----------------*/
