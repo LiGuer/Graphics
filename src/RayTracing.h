@@ -24,12 +24,14 @@ public:
 	struct Material {															//材质
 		Mat<> color{ 3 };
 		bool 
-			rediateRate    = 0, 
-			diffuseReflect = 0, 
-			quickReflect   = 0;
-		double 
+			rediate        = 0,
+			quickReflect   = 0,
+			diffuseReflect = 0;
+		double
+			reflect = 1,
+			refract = 0,
 			reflectRate = 1, 
-			refractRate = 0;
+			refractRate = 1;
 	};
 	struct Triangle { Mat<> p[3]; Material* material = NULL; };					//三角形
 	/*---------------- 基础参数 ----------------*/

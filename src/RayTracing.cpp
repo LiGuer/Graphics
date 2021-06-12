@@ -76,16 +76,16 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 ******************************************************************************/
 Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	//[1][2][3]
-	double minDis = DBL_MAX, dis;
+	double    minDis = DBL_MAX, dis;
 	Triangle* minDisTri = NULL;
 	for (int i = 0; i < TriangleSet.size(); i++) {
 		dis    = seekIntersection(TriangleSet[i], RaySt, Ray);
 		minDis = (dis > eps && dis < minDis) ? minDisTri = &TriangleSet[i], dis : minDis;
 	}
-	if (minDis == DBL_MAX)			return color.zero();			//Miss intersect
+	if (minDis == DBL_MAX)			return color;					//Miss intersect
 	Material* material = minDisTri->material;
-	if (material->rediateRate != 0)	return color = material->color;	//Light Source
-	if (level > maxRayLevel)		return color.zero();			//Max Ray Level
+	if (material->rediate != 0)	return color = material->color;	//Light Source
+	if (level > maxRayLevel)		return color;					//Max Ray Level
 	//[4] RaySt & FaceVec
 	static Mat<> faceVec, RayTmp, tmp;
 	{
@@ -99,7 +99,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	}
 	//[5]
 	RayTmp = Ray;
-	if (material->quickReflect != 0) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
+	if (material->quickReflect) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
@@ -107,20 +107,21 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 			lightCos = t > lightCos ? t : lightCos;
 		} color.ones(3) *= lightCos;
 	}
-	else if (material->diffuseReflect != 0) {				//Diffuse Reflect
-		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray),	color.zero(), level + 1);
+	else if (material->diffuseReflect) {					//Diffuse Reflect
+		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray),	color, level + 1);
 		color *= material->reflectRate;
 	}
-	else if (material->refractRate != 0) {					//Refract
+	else if (RAND_DBL < material->reflect) {					//Reflect
+		traceRay(RaySt, reflect(RayTmp, faceVec, Ray), color, level + 1);
+		color *= material->reflectRate;
+	}
+	else{														//Refract
 		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate ? 1 : material->refractRate;
 		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
-		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color.zero(), level + 1);
+		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color, level + 1);
 		refractRateBuf = t;
 	}
-	else if (material->reflectRate != 0) {					//Reflect
-		traceRay(RaySt, reflect(RayTmp, faceVec, Ray),			color.zero(), level + 1);
-		color *= material->reflectRate;
-	}
+
 	return color.elementMul(material->color);
 }
 /******************************************************************************
