@@ -98,32 +98,33 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 			 ).normalized();
 	}
 	//[5]
-	static int refractColorIndex; static double refractRateBuf; static bool isrefract; 
-	if (level == 0) refractColorIndex = RAND_DBL * 3, refractRateBuf = 1, isrefract = 0;
+	static int refractColorIndex; static double refractRateBuf; static bool isChromaticDisperson;
+	if (level == 0) refractColorIndex = RAND_DBL * 3, refractRateBuf = 1, isChromaticDisperson = 0;
 	RayTmp = Ray;
-	if (material->quickReflect) {						//Quick Reflect: 若该点处的表面是(快速)散射面，计算点光源直接照射该点产生的颜色
+	if (material->quickReflect) {								//Reflect Quick: 计算点光源直接照射该点产生的颜色
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
 			t = (faceVec.dot(tmp.sub(PointLight[i], RaySt).normalized()) + 1) / 2;
 			lightCos = t > lightCos ? t : lightCos;
-		} color.ones(3) *= lightCos;
+		} color.fill(1) *= lightCos;
 	}
-	else if (material->diffuseReflect) {					//Diffuse Reflect
-		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray),	color, level + 1);
+	else if (material->diffuseReflect) {						//Reflect Diffuse
+		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray), color, level + 1);
 		color *= material->reflectLossRate;
 	}
 	else if (RAND_DBL < material->reflect) {					//Reflect
-		traceRay(RaySt, reflect(RayTmp, faceVec, Ray), color, level + 1);
+		traceRay(RaySt, reflect       (RayTmp, faceVec, Ray), color, level + 1);
 		color *= material->reflectLossRate;
 	}
 	else{														//Refract
-		double t; t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 1 : material->refractRate[refractColorIndex];
+		if(material->refractRate [0] != material->refractRate[1] || material->refractRate[0] != material->refractRate[2]) isChromaticDisperson = 1;
+		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 1 : material->refractRate[refractColorIndex];
 		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
 		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color, level + 1);
-		color *= material->refractLossRate; isrefract = 1;
+		color *= material->refractLossRate; 
 	}
-	if (level == 0 && isrefract) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
+	if (level == 0 && isChromaticDisperson) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
 	return color.elementMul(material->color);
 }
 /******************************************************************************
