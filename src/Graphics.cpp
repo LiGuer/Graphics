@@ -60,7 +60,7 @@ void Graphics::writeImg(const char* filename) {
 }
 /*----------------[ 判断过界 ]----------------*/
 bool Graphics::judgeOutRange(INT32S x0, INT32S y0){
-	return (x0 < 0 || x0 >= Canvas.cols) || (y0 < 0 || y0 >= Canvas.rows) ? true : false;
+	return (x0 < 0 || x0 >= Canvas.rows) || (y0 < 0 || y0 >= Canvas.cols) ? true : false;
 }
 /*----------------[ 全图变换 ]----------------*/
 void Graphics::transSelf() {

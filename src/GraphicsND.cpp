@@ -971,12 +971,9 @@ void GraphicsND::contour(Mat<>& map) {
 }
 void GraphicsND::contour(Mat<>& mapX, Mat<>& mapY, Mat<>& mapZ) {
 	double 
-		minX = mapX.min(),
-		minY = mapY.min(),
-		minZ = mapZ.min(),
-		maxX = mapX.max(),
-		maxY = mapY.max(),
-		maxZ = mapZ.max();
+		minX = mapX.min(), maxX = mapX.max(),
+		minY = mapY.min(), maxY = mapY.max(),
+		minZ = mapZ.min(), maxZ = mapZ.max();
 	for (int i = 0; i < mapX.size(); i++) {
 		ARGB color = 0;
 		color += (ARGB)((mapX[i] - minX) / (maxX - minX) * 0xFF) * 0x10000;
