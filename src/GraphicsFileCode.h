@@ -25,7 +25,7 @@ namespace GraphicsFileCode {
 		P2	Graymap	ASCII			P5	Graymap	Binary
 		P3	Pixmap	ASCII			P6	Pixmap	Binary
 ******************************************************************************/
-	static void ppmRead(const char* fileName, Mat<RGB>& image) {
+static void ppmRead(const char* fileName, Mat<RGB>& image) {
 	FILE* fi = fopen(fileName, "rb");
 	int rows, cols;
 	fscanf(fi, "P6\n%d %d\n255\n", &cols, &rows);						// 读图片格式、宽高、最大像素值

@@ -191,5 +191,65 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 		FractalTree3D(linesSt, linesEd, level - 1, alpha);
 	}
 }
+/******************************************************************************
+*                    Boids 鸟群
+*	[Rule]:
+		[1] Collision Avoidance: avoid collisions with nearby flockmates
+		[2] Velocity Matching  : attmpt to match velocity with nearby flockmates
+		[3] Flock Centering    : attmpt to stay close to nearby flockmates
+*	[过程]:
+		[可见域内]:
+			[1] 可见距离判定
+			[2] 可见角度判定
+		[Rule 1]: 可见域内，同各个个体的反向方向，除以距离，作为加速度 a1
+		[Rule 2]: 可见域内, 质心速度, 作为加速度 a2
+		[Rule 3]: 可见域内, 质心位置方向, 作为加速度 a3
+		[障碍规避]:
+			[1] 生成均匀球面点分布
+			[2] 依次从速度方向,向四周,发出射线进行障碍检测,射线距离在可见域内
+			[3] 选择第一束探测无障碍的射线, 作为避障加速度 a4
+		[ v ]: v = (Σwi·ai)·dt
+			   v 归一化单位矢量: ^v  =>  v = v0·^v
+		[ r ]: r = v·dt = v0·dt·^v
+*	[Referance]:
+		[1] Thanks for https://github.com/SebLague/Boids
+******************************************************************************/
+struct BoidsBird { Mat<> r{ 3 }, v{ 3 }, a{ 3 }; };
+//[ play 运行 ]
+void Boids(std::vector<BoidsBird>& birds, void(*obstacleAvoidance)(BoidsBird& birds),
+	double visualField, double visualAngle, double* weight, double dt = 1, double speed = 3 // 能见范围、能见角度cos、各规则权值
+) {
+	for (int i = 0; i < birds.size(); i++) BoidsRule(birds, i, visualField, visualAngle, weight, obstacleAvoidance);
+	Mat<> tmp(3);
+	for (int i = 0; i < birds.size(); i++) {
+		birds[i].v += (tmp.mul(dt,         birds[i].a));
+		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalized()));
+	}
+}
+//[ rule 规则 ]
+void BoidsRule(std::vector<BoidsBird>& birds, int index, 
+	double visualField, double visualAngle, double* weight, void(*obstacleAvoidance)(BoidsBird& birds)
+) {
+	Mat<> distance(3), avoidDirection(3), groupVelocity(3), groupCenter(3), tmp;
+	int groupNum = 0;
+	for (int i = 0; i < birds.size(); i++) {
+		if ( i == index
+		|| distance.add(birds[i].r,birds[index].r.negative(distance)).norm()                   > visualField
+		|| distance.dot(distance,  birds[index].v) / (distance.norm() * birds[index].v.norm()) < visualAngle
+		) continue;
+		groupNum++;
+		//[Rule 1]: collisionAvoid  [Rule 2]: velocityMatching  [Rule 3]: flockCentering
+		avoidDirection+=(tmp.mul(1 / distance.norm(), distance));
+		groupVelocity += birds[i].v;
+		groupCenter   += distance;
+	}
+	avoidDirection *= -1;
+	// Update Acceleration
+	birds[index].a.zero(); if (groupNum == 0) return;
+	birds[index].a += (avoidDirection.mul(weight[0], avoidDirection.normalized()));
+	birds[index].a += (groupVelocity .mul(weight[1], groupVelocity .normalized()));
+	birds[index].a += (groupCenter   .mul(weight[2], groupCenter   .normalized()));
+	obstacleAvoidance(birds[index]);
+}
 }
 #endif
