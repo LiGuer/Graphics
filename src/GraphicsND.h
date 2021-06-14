@@ -14,6 +14,7 @@ limitations under the License.
 #define GRAPHICS_ND_H
 #include "Graphics.h"
 #include "GraphicsFileCode.h"
+#include <conio.h>
 #define PI 3.141592653589
 class GraphicsND
 {
@@ -98,11 +99,13 @@ public:
 	void contour	(Mat<>& map);																					//画等高面
 	void contour	(Mat<>& mapX, Mat<>& mapY, Mat<>& mapZ);
 	ARGB colorlist(double index, int model);																		//色谱
-	/*---------------- Transformation ----------------*/
+	/*---------------- 几何变换 Transformation ----------------*/
 	static Mat<>& translate	(Mat<>& delta,										Mat<>& transMat = TransformMat);	//平移
 	static Mat<>& rotate	(double theta, Mat<>& center,						Mat<>& transMat = TransformMat);	//旋转 2D
 	static Mat<>& rotate	(Mat<>& rotateAxis, double theta, Mat<>& center,	Mat<>& transMat = TransformMat);	//旋转 3D
 	static Mat<>& rotate	(Mat<Mat<>>& rotateAxis, Mat<>& theta,Mat<>& center,Mat<>& transMat = TransformMat);	//旋转 4D
 	static Mat<>& scale		(Mat<>& ratio, Mat<>& center,						Mat<>& transMat = TransformMat);	//缩放
+	/*---------------- 交互 ----------------*/
+	static void interactive();
 };
 #endif

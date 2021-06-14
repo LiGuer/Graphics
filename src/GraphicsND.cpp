@@ -24,16 +24,16 @@ void GraphicsND::init(int width, int height, int Dim) {
 	for (int i = 0; i < Z_Buffer.rows; i++) 
 		Z_Buffer[i].zero(g.Canvas.rows, g.Canvas.cols);
 	clear(0);
+	TransformMat.E(Z_Buffer.rows + 2 + 1);
+	if (isLineTriangleSet)
+		LineSet.clear(),
+		TriangleSet.clear();
 }
 void GraphicsND::clear(ARGB color) {
 	g.clear(color);
 	for (int i = 0; i < Z_Buffer.rows; i++)
 		for (int j = 0; j < Z_Buffer[i].size(); j++)
 			Z_Buffer[i].data[j] = -0x7FFFFFFF;
-	TransformMat.E(Z_Buffer.rows + 2 + 1);
-	if(isLineTriangleSet)
-		LineSet.	clear(),
-		TriangleSet.clear();
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
@@ -1108,4 +1108,21 @@ Mat<>& GraphicsND::scale(Mat<>& ratio, Mat<>& center, Mat<>& transMat) {
 	for (int i = 0; i < ratio.rows; i++)scaleMat(i + 1, i + 1) = ratio[i];
 	transMat.mul(scaleMat, transMat);
 	return translate(center, transMat);
+}
+void GraphicsND::interactive() {
+	int ch;
+	static Mat<> delta(3), zero(3);
+	if (_kbhit()) {
+		ch = _getch(); printf("%d ", ch);
+		if (ch == 'd') translate(delta.getData( 1, 0, 0));
+		if (ch == 'a') translate(delta.getData(-1, 0, 0));
+		if (ch == 'w') translate(delta.getData( 0, 1, 0));
+		if (ch == 's') translate(delta.getData( 0,-1, 0));
+		if (ch == 'q') rotate	(delta.getData(0, 0, 1), 2 * PI / 360, zero.zero());
+		if (ch == 'e') rotate	(delta.getData(0, 0, 1),-2 * PI / 360, zero.zero());
+		if (ch == 'z') rotate	(delta.getData(1, 0, 0), 2 * PI / 360, zero.zero());
+		if (ch == 'x') rotate	(delta.getData(1, 0, 0),-2 * PI / 360, zero.zero());
+		if (ch == 'c') rotate	(delta.getData(0, 1, 0), 2 * PI / 360, zero.zero());
+		if (ch == 'v') rotate	(delta.getData(0, 1, 0),-2 * PI / 360, zero.zero());
+	}
 }
