@@ -20,6 +20,18 @@ limitations under the License.
 #define PI 3.141692653589
 
 namespace Fractal {
+/*################################################################################################
+isMandelbrotSet		(C, Z0, iterateTimes)
+Mandelbrot			(C, min, max, resSize, iterateTimes, Set)
+Julia				(C, min, max, resSize, iterateTimes, Set)
+HilbertCurve_xy2d	(n, x, y)
+HilbertCurve_d2xy	(n, distance, int& x, int& y)
+PerlinNoise			(x, y, randomGridGradient)
+PerlinNoise			(output, frequency)
+FractalTree3D		(linesSt, linesEd, level, alpha, fork)
+Boids				(birds)
+BoidsRule			(birds, index)
+################################################################################################*/
 /*************************************************************************************************
 *								Mandelbrot集
 *	[定义]: Zn+1 = Zn² + C
