@@ -1,5 +1,5 @@
 # LiGu-Graphics 计算机图形学  
-* <Graphics.h/cpp>				图形学
+* <Graphics.h/cpp>				图形学2D-Pix
 * <GraphicsND.h/cpp>			任意维图形学 + 科学制图
 * <RayTracing.h/cpp>			光线追踪
 * <RGB.h>						像素颜色
@@ -10,7 +10,7 @@
 * <ReadImg.exe>					实时动态显示图片
 
 ## API
-### <Graphics.h> 图形学:  
+### <Graphics.h> 图形学2D-Pix:  
 ```
 /*-------------------------------- 基础参数 --------------------------------*/
 Mat<RGB>	Canvas{ 100, 100 };											//图
