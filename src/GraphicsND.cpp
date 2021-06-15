@@ -301,7 +301,6 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 				flag = false;														//关闭检测
 				int kt = 1 - dXMaxCur;
 				delta[kt].sub(pt[dXMaxCur + 1], pt[kt + 1]);
-				if (delta[kt][0] == 0) break;
 				point[kt] = pt[kt + 1];
 				for (int dim = 1; dim < Dim; dim++) {
 					inc  [kt][dim]  = delta[kt][dim] == 0 ? 0 : (delta[kt][dim] > 0 ? 1 : -1);	//符号函数(向右,垂直,向左)
@@ -331,6 +330,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 				for (int dim = 1; dim < Dim; dim++) {								//xyz走一步
 					err[k][dim] += delta[k][dim];
 					if (err[k][dim] >= delta[k][0]) { 
+						if (delta[k][0] == 0) break;
 						point[k][dim] += err[k][dim] / delta[k][0] * inc[k][dim]; 
 						err  [k][dim]  = err[k][dim] % delta[k][0];
 					}

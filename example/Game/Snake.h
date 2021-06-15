@@ -2,6 +2,7 @@
 #define  SNAKE_H
 #include <conio.h>
 #include <stdlib.h>
+#include <stdio.h>
 /******************************************************************************
 *                    Snake 贪吃蛇
 *	[算法]: 环形链表
@@ -62,6 +63,19 @@ public:
 			else cur = cur->next;
 		return false;
 	}
+	static char Snake_AI(SnakeCell* snake, SnakeCell& apple, int H, int W) {
+		// 10x10 可行
+		static bool flag = 0;
+		if (snake->x == H - 1 && snake->y == W - 2) return ' ';
+		if (snake->x == H - 1 && snake->y == W - 1) return 's';
+		if (snake->x == 0     && snake->y == W - 1) return 'a';
+		if (snake->x == 0     && snake->y == W - 2) return ' ';
+		if (flag == 0		  && snake->y == W - 2) { flag = 1; return 'w'; }
+		if (flag == 1		  && snake->y == W - 2) { flag = 0; return 'a'; }
+		if (flag == 0		  && snake->y == 0)     { flag = 1; return 'w'; }
+		if (flag == 1		  && snake->y == 0)     { flag = 0; return 'd'; }
+		return ' ';
+	}
 	void interactive() {
 		int ch;
 		if (_kbhit()) {
@@ -71,6 +85,14 @@ public:
 			if (ch == 'w') dH = 1, dW = 0;
 			if (ch == 's') dH =-1, dW = 0;
 		}
+		/*{
+			ch = Snake_AI(snake, apple, H, W); printf("%d %d %c\n", snake->x, snake->y, ch);
+			if (ch == 'd') dH = 0, dW = 1;
+			if (ch == 'a') dH = 0, dW =-1;
+			if (ch == 'w') dH = 1, dW = 0;
+			if (ch == 's') dH =-1, dW = 0;
+		}*/
+		
 	}
 };
 #endif // ! SNAKE_H

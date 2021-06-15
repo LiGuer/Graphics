@@ -178,7 +178,7 @@ Mat<>& PerlinNoise(Mat<>& output, int frequency) {
 void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int level, double alpha, int fork = 3) {
 	if (level <= 0) return;
 	// 确定旋转矩阵
-	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.get(0, 0, 1);
+	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.set(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
@@ -192,7 +192,7 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 	double Lenth = direction.norm(); 
 	Mat<> endPoint(3);
 	for (int i = 0; i < fork; i++) {
-		endPoint.get(
+		endPoint.set(
 			sin(alpha) * cos((double)i * 2 * PI / fork), 
 			sin(alpha) * sin((double)i * 2 * PI / fork), 
 			cos(alpha)
@@ -227,17 +227,6 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 		[1] Thanks for https://github.com/SebLague/Boids
 ******************************************************************************/
 struct BoidsBird { Mat<> r{ 3 }, v{ 3 }, a{ 3 }; };
-//[ play 运行 ]
-void Boids(std::vector<BoidsBird>& birds, void(*obstacleAvoidance)(BoidsBird& birds),
-	double visualField, double visualAngle, double* weight, double dt = 1, double speed = 3 // 能见范围、能见角度cos、各规则权值
-) {
-	for (int i = 0; i < birds.size(); i++) BoidsRule(birds, i, visualField, visualAngle, weight, obstacleAvoidance);
-	Mat<> tmp(3);
-	for (int i = 0; i < birds.size(); i++) {
-		birds[i].v += (tmp.mul(dt,         birds[i].a));
-		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalized()));
-	}
-}
 //[ rule 规则 ]
 void BoidsRule(std::vector<BoidsBird>& birds, int index, 
 	double visualField, double visualAngle, double* weight, void(*obstacleAvoidance)(BoidsBird& birds)
@@ -262,6 +251,17 @@ void BoidsRule(std::vector<BoidsBird>& birds, int index,
 	birds[index].a += (groupVelocity .mul(weight[1], groupVelocity .normalized()));
 	birds[index].a += (groupCenter   .mul(weight[2], groupCenter   .normalized()));
 	obstacleAvoidance(birds[index]);
+}
+//[ play 运行 ]
+void Boids(std::vector<BoidsBird>& birds, void(*obstacleAvoidance)(BoidsBird& birds),
+	double visualField, double visualAngle, double* weight, double dt = 1, double speed = 3 // 能见范围、能见角度cos、各规则权值
+) {
+	for (int i = 0; i < birds.size(); i++) BoidsRule(birds, i, visualField, visualAngle, weight, obstacleAvoidance);
+	Mat<> tmp(3);
+	for (int i = 0; i < birds.size(); i++) {
+		birds[i].v += (tmp.mul(dt,         birds[i].a));
+		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalized()));
+	}
 }
 }
 #endif
