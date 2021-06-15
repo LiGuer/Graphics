@@ -18,7 +18,7 @@ limitations under the License.
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <functional>
+#include <initializer_list>
 template<class T = double>
 class Mat
 {
@@ -163,6 +163,8 @@ Mat& solveEquations		(Mat& b, Mat& x);					//解方程组 [solveEquations]
 void LUPdecomposition	(Mat& U, Mat& L, Mat<int>& P);		//LUP分解 [LUPdecomposition]
 Mat& diag		(Mat& ans);									//构造对角矩阵 [diag]
 Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
+Mat& function	(Mat& x, T (*f)(T))			//函数操作
+Mat& function	(T (*f)(T))
 -------------------------------------------------------------------------------
 *	运算嵌套注意,Eg: b.add(b.mul(a, b), a.mul(-1, a));
 		不管括号第一二项顺序,都是数乘,乘法,加法, 问题原因暂不了解，别用该形式。
@@ -252,6 +254,11 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	}
 	Mat& operator=(T* a) { memcpy(data, a, sizeof(T) * size()); return *this; }
 	Mat& operator=(T  x) { return fill(x); }
+	Mat& operator=(std::initializer_list<T> list) { 
+		int i = 0;
+		for (auto& item : list) data[i++] = item;
+		return *this;
+	}
 	Mat& set(T x, T y) {
 		if (size() != 2) error();
 		data[0] = x;
@@ -745,6 +752,29 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		}
 		return eatMat(ansTmp);
 	}
+	/*----------------函数操作 [ function ]----------------*/
+	template<typename F>
+	Mat& function(Mat& x, F&& f) {
+		alloc(x.rows, x.cols);
+		for (int i = 0; i < x.size(); i++) data[i] = f(x[i]);
+		return *this;
+	}
+	template<typename F>
+	Mat& function(F&& f) {
+		for (int i = 0; i <   size(); i++) data[i] = f(data[i]);
+		return *this;
+	}
+	template<typename F>
+	Mat& functionIndex(Mat& x, F&& f) {
+		alloc(x.rows, x.cols);
+		for (int i = 0; i < x.size(); i++) data[i] = f(x[i], i);
+		return *this;
+	}
+	template<typename F>
+	Mat& functionIndex(F&& f) {
+		for (int i = 0; i <   size(); i++) data[i] = f(data[i], i);
+		return *this;
+	}
 /******************************************************************************
 *                    特殊操作
 -------------------------------------------------------------------------------
@@ -753,8 +783,6 @@ Mat& setCol	(int _col, Mat& a)
 Mat& getRow	(int _row, Mat& a)				//读/写一行 [getRow/setRow]
 Mat& block	(int rowSt, int rowEd, int colSt, int colEd, Mat& ans)	//子矩阵 [block]
 Mat& horizStack	(Mat& a, Mat& b)            //水平向拼接 [horizStack ]
-Mat& function	(Mat& x, T (*f)(T))			//函数操作
-Mat& function	(T (*f)(T))	
 ******************************************************************************/
 	/*----------------读/写一列 [getCol/setCol]----------------*/
 	Mat& getCol(int _col, Mat& a) {
@@ -811,29 +839,6 @@ Mat& function	(T (*f)(T))
 			for (int j = 0; j < repeatNum; j++)
 				ansTmp(i, j) = data[i];
 		return ans.eatMat(ansTmp);
-	}
-	/*----------------函数操作 []----------------*/
-	template<typename F>
-	Mat& function(Mat& x, F&& f) {
-		alloc(x.rows, x.cols);
-		for (int i = 0; i < x.size(); i++) data[i] = f(x[i]);
-		return *this;
-	}
-	template<typename F>
-	Mat& function(F&& f) {
-		for (int i = 0; i <   size(); i++) data[i] = f(data[i]);
-		return *this;
-	}
-	template<typename F>
-	Mat& functionIndex(Mat& x, F&& f) {
-		alloc(x.rows, x.cols);
-		for (int i = 0; i < x.size(); i++) data[i] = f(x[i], i);
-		return *this;
-	}
-	template<typename F>
-	Mat& functionIndex(F&& f) {
-		for (int i = 0; i <   size(); i++) data[i] = f(data[i], i);
-		return *this;
 	}
 };
 #endif
