@@ -392,8 +392,8 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct) {
 	if (direct == NULL) {
 		Mat<> pt(2);
-		pt.getData(sp[0], ep[1]); drawLine(sp, pt); drawLine(pt, ep);
-		pt.getData(sp[1], ep[0]); drawLine(sp, pt); drawLine(pt, ep);
+		drawTriangle(sp, ep, pt.getData(sp[0], ep[1]));
+		drawTriangle(sp, ep, pt.getData(ep[0], sp[1]));
 	}
 	else {
 		// 计算 Rotate Matrix
