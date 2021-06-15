@@ -174,8 +174,8 @@ void GraphicsND::drawLine(double sx0, double ex0, double sy0, double ey0, double
 	//LineSet
 	if (isLineTriangleSet) {
 		Mat<> tmp(3);
-		LineSet.push_back(tmp.getData(sx0, sy0, sz0));
-		LineSet.push_back(tmp.getData(ex0, ey0, ez0));
+		LineSet.push_back(tmp.set(sx0, sy0, sz0));
+		LineSet.push_back(tmp.set(ex0, ey0, ez0));
 	}
 }
 void GraphicsND::drawLine(Mat<>& sp0, Mat<>& ep0) {
@@ -215,7 +215,7 @@ void GraphicsND::drawPolyline(Mat<> *p, int n, bool close) {
 }
 void GraphicsND::drawPolyline(Mat<>& y, double xmin, double xmax) {
 	Mat<> p(2), preP(2);
-	p.   getData(xmin, y[0]); 
+	p.set(xmin, y[0]);
 	preP = p;
 	double delta = (xmax - xmin) / (y.size() - 1);
 	for (int i = 1; i < y.size(); i++) {
@@ -392,13 +392,14 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct) {
 	if (direct == NULL) {
 		Mat<> pt(2);
-		drawTriangle(sp, ep, pt.getData(sp[0], ep[1]));
-		drawTriangle(sp, ep, pt.getData(ep[0], sp[1]));
+		drawTriangle(sp, ep, pt.set(sp[0], ep[1]));
+		drawTriangle(sp, ep, pt.set(ep[0], sp[1]));
 	}
 	else {
 		// 计算 Rotate Matrix
 	}
 }
+/*--------------------------------[ 画四边形 ]--------------------------------*/
 void GraphicsND::drawQuadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
 	if (FACE) {
 		drawTriangle(p1, p2, p3); drawTriangle(p1, p3, p4);
@@ -473,18 +474,18 @@ void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double y
 	for (int y = 1; y < z.cols; y++) {
 		for (int x = 1; x < z.rows; x++) {
 			if (z(x, y) == HUGE_VAL) continue;
-			p.getData(xs + x * dx, ys + y * dy, z(x, y));
+			p.set(xs + x * dx, ys + y * dy, z(x, y));
 			if (LINE) {
-				if (x > 0) { pl.getData(xs + (x - 1) * dx, ys + y * dy, z(x - 1, y)); drawLine(pl, p); }
-				if (y > 0) { pu.getData(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p); }
+				if (x > 0) { pl.set(xs + (x - 1) * dx, ys + y * dy, z(x - 1, y)); drawLine(pl, p); }
+				if (y > 0) { pu.set(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p); }
 			}
 			if (FACE) {
 				if (z(x - 1, y)		== HUGE_VAL 
 				||  z(x,     y - 1)	== HUGE_VAL 
 				||  z(x - 1, y - 1) == HUGE_VAL) continue;
-				pl. getData(xs + (x - 1) * dx,	ys +  y      * dy,	z(x - 1, y    ));
-				pu. getData(xs +  x      * dx,	ys + (y - 1) * dy,	z(x,     y - 1));
-				plu.getData(xs + (x - 1) * dx,	ys + (y - 1) * dy,	z(x - 1, y - 1));
+				pl. set(xs + (x - 1) * dx,	ys +  y      * dy,	z(x - 1, y    ));
+				pu. set(xs +  x      * dx,	ys + (y - 1) * dy,	z(x,     y - 1));
+				plu.set(xs + (x - 1) * dx,	ys + (y - 1) * dy,	z(x - 1, y - 1));
 				{
 					double t = (FaceVec.crossProduct(
 						FaceVec.sub(pl, p),
@@ -554,7 +555,7 @@ void GraphicsND::drawCuboid(Mat<>& pMin, Mat<>& pMax) {
 **------------------------------------------------------------------------*/
 void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta) {
 	// 计算 Rotate Matrix
-	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.set(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
@@ -567,7 +568,7 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 	// 画圆台
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= delta; i++) {
-		deltaVector.getData(
+		deltaVector.set(
 			cos(i * 2.0 * PI / delta),
 			sin(i * 2.0 * PI / delta),
 			0
@@ -687,7 +688,7 @@ void GraphicsND::drawEllipsoid(Mat<>& center, Mat<>& r) {
 void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delta) {
 	if (Red == -1) Red = Rst;
 	// 计算 Rotate Matrix
-	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.set(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
@@ -700,7 +701,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delt
 	// 画圆台
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	for (int i = 0; i <= delta; i++) {
-		deltaVector.getData(
+		deltaVector.set(
 			cos(i * 2.0 * PI / delta),
 			sin(i * 2.0 * PI / delta),
 		0);
@@ -734,7 +735,7 @@ void GraphicsND::drawPipe(Mat<>& path, double R, int delta) {
 }
 void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, Mat<>& f) {
 	// 计算 Rotate Matrix
-	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.set(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
@@ -747,7 +748,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, Mat<>& f) {
 	// 画圆台
 	Mat<> stPoint, edPoint, preStPoint, preEdPoint; tmp.alloc(3);
 	for (int i = 0; i <= f.cols; i++) {
-		tmp.mul(rotateMat, tmp.getData(f(0, i), f(1, i), 0));
+		tmp.mul(rotateMat, tmp.set(f(0, i), f(1, i), 0));
 		stPoint.add(st, tmp);
 		edPoint.add(ed, tmp);
 		if (i != 0) {
@@ -775,7 +776,7 @@ void GraphicsND::drawPipe(Mat<>& path, Mat<>& f) {
 void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, double st, double ed) {
 	//Rotate f
 	Mat<> p1(3), p2(3), p3(3), p4(3), ft = f, RotateMat, preRotateMat, RotateMat0, RotateMatTmp;
-	Mat<> rotateAxis, fAxis(3), tmp; fAxis.getData(0, 1, 0);
+	Mat<> rotateAxis, fAxis(3), tmp; fAxis.set(0, 1, 0);
 	if (axis[0] != 0 || axis[2] != 0) {
 		rotate(
 			rotateAxis.crossProduct(axis, fAxis),
@@ -792,8 +793,8 @@ void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, doub
 		// 画旋转体
 		if (i != 0) {
 			for (int i = 1; i < ft.cols; i++) {
-				p1.getData(ft(0, i - 1), ft(1, i - 1), 0); p3 = p1;
-				p2.getData(ft(0, i),     ft(1, i),     0); p4 = p2;
+				p1.set(ft(0, i - 1), ft(1, i - 1), 0); p3 = p1;
+				p2.set(ft(0, i),     ft(1, i),     0); p4 = p2;
 				p1.mul(   RotateMat, p1) += zero;
 				p2.mul(   RotateMat, p2) += zero;
 				p3.mul(preRotateMat, p3) += zero;
@@ -818,8 +819,8 @@ void GraphicsND::drawStairs(Mat<>& zero, double Length, double Width, double Hei
 	Mat<> p1(3), p2(3);
 	for (int i = 0; i < StairsNum; i++)
 		drawCuboid(
-			p1.getData(0,       i      * Width / StairsNum,  i      * Height / StairsNum) += zero,
-			p2.getData(Length, (i + 1) * Width / StairsNum, (i + 1) * Height / StairsNum) += zero
+			p1.set(0,       i      * Width / StairsNum,  i      * Height / StairsNum) += zero,
+			p2.set(Length, (i + 1) * Width / StairsNum, (i + 1) * Height / StairsNum) += zero
 		);
 }
 /*--------------------------------[ 画线 any-D ]--------------------------------*/
@@ -924,14 +925,14 @@ void GraphicsND::drawAxis(double Xmax,double Ymax,double Zmax, bool negative) {
 	Mat<> st(3), ed(3);
 	int vectorLength = 10, 
 		vectorWidth  = vectorLength / 2.718281828456;
-	st.getData(Xmax, 0, 0);
-	ed.getData(Xmax + vectorLength, 0, 0);
+	st.set(Xmax, 0, 0);
+	ed.set(Xmax + vectorLength, 0, 0);
 	if (Xmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
-	st.getData(0, Ymax, 0);
-	ed.getData(0, Ymax + vectorLength, 0);
+	st.set(0, Ymax, 0);
+	ed.set(0, Ymax + vectorLength, 0);
 	if (Ymax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
-	st.getData(0, 0, Zmax);
-	ed.getData(0, 0, Zmax + vectorLength);
+	st.set(0, 0, Zmax);
+	ed.set(0, 0, Zmax + vectorLength);
 	if (Zmax != 0) drawFrustum(st, ed, vectorWidth, 0, 45);
 }
 /*--------------------------------[ 画等高线 ]--------------------------------*/
@@ -1050,7 +1051,7 @@ Mat<>& GraphicsND::rotate(double theta, Mat<>& center, Mat<>& transMat) {
 		0, sin(theta),  cos(theta),
 	}; 
 	transMat.mul(
-		rotateMat.E(transMat.rows).getData(t),
+		rotateMat.E(transMat.rows) = t,
 		transMat
 	);
 	return translate(center, transMat);
@@ -1091,7 +1092,7 @@ Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, M
 		0,c2,-s1, c2,-s2,
 		0,s2, c1, s2, c2
 	}; 
-	transMat.mul(rotateMat.getData(t), transMat);
+	transMat.mul(rotateMat = t, transMat);
 	return translate(center, transMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------
@@ -1114,15 +1115,15 @@ void GraphicsND::interactive() {
 	static Mat<> delta(3), zero(3);
 	if (_kbhit()) {
 		ch = _getch(); printf("%d ", ch);
-		if (ch == 'd') translate(delta.getData( 1, 0, 0));
-		if (ch == 'a') translate(delta.getData(-1, 0, 0));
-		if (ch == 'w') translate(delta.getData( 0, 1, 0));
-		if (ch == 's') translate(delta.getData( 0,-1, 0));
-		if (ch == 'q') rotate	(delta.getData(0, 0, 1), 2 * PI / 360, zero.zero());
-		if (ch == 'e') rotate	(delta.getData(0, 0, 1),-2 * PI / 360, zero.zero());
-		if (ch == 'z') rotate	(delta.getData(1, 0, 0), 2 * PI / 360, zero.zero());
-		if (ch == 'x') rotate	(delta.getData(1, 0, 0),-2 * PI / 360, zero.zero());
-		if (ch == 'c') rotate	(delta.getData(0, 1, 0), 2 * PI / 360, zero.zero());
-		if (ch == 'v') rotate	(delta.getData(0, 1, 0),-2 * PI / 360, zero.zero());
+		if (ch == 'd') translate(delta.set( 1, 0, 0));
+		if (ch == 'a') translate(delta.set(-1, 0, 0));
+		if (ch == 'w') translate(delta.set( 0, 1, 0));
+		if (ch == 's') translate(delta.set( 0,-1, 0));
+		if (ch == 'q') rotate	(delta.set(0, 0, 1), 2 * PI / 360, zero.zero());
+		if (ch == 'e') rotate	(delta.set(0, 0, 1),-2 * PI / 360, zero.zero());
+		if (ch == 'z') rotate	(delta.set(1, 0, 0), 2 * PI / 360, zero.zero());
+		if (ch == 'x') rotate	(delta.set(1, 0, 0),-2 * PI / 360, zero.zero());
+		if (ch == 'c') rotate	(delta.set(0, 1, 0), 2 * PI / 360, zero.zero());
+		if (ch == 'v') rotate	(delta.set(0, 1, 0),-2 * PI / 360, zero.zero());
 	}
 }

@@ -47,6 +47,7 @@ void swap(Mat& a);							//交换数据 [ swap ]
 	Mat(const int _rows, const int _cols) { zero(_rows, _cols); }
 	Mat(const int _rows) { zero(_rows, 1); }
 	Mat(const Mat& a) { *this = a; }
+	Mat(const int _rows, const int _cols, T* _data) { zero(_rows, _cols); set(_data); }
 	~Mat() { delete data; }
 	/*---------------- 报错  ----------------*/
 	static void error() { exit(-1); }
@@ -125,9 +126,9 @@ T	 min();
 T	 min(int& index);
 bool operator==	(const Mat& a);			//判断相等 [==]
 Mat& operator=	(const Mat& a);			//赋矩阵 [=] //不能赋值自己
-Mat& getData	(T* a);
-Mat& getData	(T x, T y);
-Mat& getData	(T x, T y, T z);
+Mat& set	(T* a);
+Mat& set	(T x, T y);
+Mat& set	(T x, T y, T z);
 Mat& operator+=	(Mat& a);					//加法 [add +]
 Mat& add		(Mat& a, Mat& b);
 Mat& operator-=	(Mat& a);					//减法 [sub -]
@@ -171,8 +172,8 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 	* 索引方向: 先纵再横.
 	---------------------------------------------*/
 	T& operator[](int i)		{ return data[i]; }
+	T& operator()(int x)		{ return data[x]; }
 	T& operator()(int x, int y) { return data[x * cols + y]; }
-	T& operator()(int i)		{ return data[i]; }
 	inline void i2xy(int& i, int& x, int& y) { x = i / cols ; y = i % cols; }
 	inline int  i2x (int i)			{ return i / cols; }
 	inline int  i2y (int i)			{ return i % cols; }
@@ -200,6 +201,43 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 			if (mindata > data[i]) { mindata = data[i]; index = i; }
 		return mindata;
 	}
+	// 行/列
+	Mat& max(int index, Mat& ans) {
+		if (index == 0) {
+			ans.alloc(rows);
+			for (int x = 0; x < rows; x++) ans[x] = (*this)(x, 0);
+			for (int x = 0; x < rows; x++)
+				for (int y = 0; y < cols; y++)
+					ans(x) = ans(x) >= (*this)(x, y) ? ans(x) : (*this)(x, y);
+			return ans;
+		}
+		else {
+			ans.alloc(1, cols);
+			for (int y = 0; y < cols; y++) ans[y] = (*this)(0, y);
+			for (int x = 0; x < rows; x++)
+				for (int y = 0; y < cols; y++)
+					ans(y) = ans(y) >= (*this)(x, y) ? ans(y) : (*this)(x, y);
+			return ans;
+		}
+	}
+	Mat& min(int index, Mat& ans) {
+		if (index == 0) {
+			ans.alloc(rows);
+			for (int x = 0; x < rows; x++) ans[x] = (*this)(x, 0);
+			for (int x = 0; x < rows; x++)
+				for (int y = 0; y < cols; y++)
+					ans(x) = ans(x) <= (*this)(x, y) ? ans(x) : (*this)(x, y);
+			return ans;
+		}
+		else {
+			ans.alloc(1, cols);
+			for (int y = 0; y < cols; y++) ans[y] = (*this)(0, y);
+			for (int x = 0; x < rows; x++)
+				for (int y = 0; y < cols; y++)
+					ans(y) = ans(y) <= (*this)(x, y) ? ans(y) : (*this)(x, y);
+			return ans;
+		}
+	}
 	/*----------------判断相等 [ ==/!= ]----------------*/
 	bool operator==(const Mat& a) {
 		if (rows != a.rows || cols != a.cols)return false;
@@ -212,28 +250,27 @@ Mat& conv		(Mat& a, Mat& b, int padding = 0, int stride = 1);	//卷积 [conv]
 		memcpy(data, a.data, sizeof(T) * size());
 		return *this;
 	}
-	Mat& getData(T* a) {
-		memcpy(data, a, sizeof(T) * size());
-		return *this;
-	}
-	Mat& getData(T x, T y) {
-		if (rows != 2 || cols != 1) error();
+	Mat& operator=(T* a) { memcpy(data, a, sizeof(T) * size()); return *this; }
+	Mat& operator=(T  x) { return fill(x); }
+	Mat& set(T x, T y) {
+		if (size() != 2) error();
 		data[0] = x;
 		data[1] = y;
 		return *this;
 	}
-	Mat& getData(T x, T y, T z) {
-		if (rows != 3 || cols != 1) error();
+	Mat& set(T x, T y, T z) {
+		if (size() != 3) error();
 		data[0] = x;
 		data[1] = y;
 		data[2] = z;
 		return *this;
 	}
-	Mat& getData(const char* fileName) {
+	Mat& set(const char* fileName) {
 		FILE* fin = fopen(fileName, "r");
 		for (int i = 0; i < size(); i++) fscanf(fin, "%lf", &data[i]);
 		return *this;
 	}
+	Mat& set_(const int _rows, const int _cols, T* _data) { rows = _rows; cols = _cols; data = _data; return *this; }
 	/*----------------加法 [ add + ]----------------*/
 	Mat& operator+=(Mat& a) {
 		if (a.rows != rows || a.cols != cols) error();
@@ -732,7 +769,7 @@ Mat& function	(T (*f)(T))
 	}
 	Mat& setCol(int _col, Mat& a) {
 		for (int i = 0; i < rows; i++) (*this)(i, _col) = a[i];
-		return a;
+		return *this;
 	}
 	/*----------------子矩阵 [block]----------------*/
 	Mat& block(int rowSt, int rowEd, int colSt, int colEd, Mat& ans) {

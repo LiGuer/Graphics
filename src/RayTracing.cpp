@@ -40,7 +40,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
-	ScreenYVec.getData(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);

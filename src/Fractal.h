@@ -178,7 +178,7 @@ Mat<>& PerlinNoise(Mat<>& output, int frequency) {
 void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int level, double alpha, int fork = 3) {
 	if (level <= 0) return;
 	// 确定旋转矩阵
-	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.getData(0, 0, 1);
+	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.get(0, 0, 1);
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
@@ -192,7 +192,7 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 	double Lenth = direction.norm(); 
 	Mat<> endPoint(3);
 	for (int i = 0; i < fork; i++) {
-		endPoint.getData(
+		endPoint.get(
 			sin(alpha) * cos((double)i * 2 * PI / fork), 
 			sin(alpha) * sin((double)i * 2 * PI / fork), 
 			cos(alpha)

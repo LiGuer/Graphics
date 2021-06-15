@@ -142,7 +142,7 @@ Mat<>& Geometry::ThreePoints2Circle(Mat<> Points[], Mat<>& center, double& R) {
 		c =  mat.comi(0, 2), 
 		d = -mat.comi(0, 3);
 	R = sqrt(-d / a + b * b / (4 * a * a) + c * c / (4 * a * a));
-	return center.zero(2, 1).getData(-b / (2 * a), -c / (2 * a));
+	return center.zero(2, 1).set(-b / (2 * a), -c / (2 * a));
 }
 /*************************************************************************************************
 						ConvexHull 凸包

@@ -1,5 +1,7 @@
 #ifndef  SNAKE_H
 #define  SNAKE_H
+#include <conio.h>
+#include <stdlib.h>
 /******************************************************************************
 *                    Snake 贪吃蛇
 *	[算法]: 环形链表
@@ -63,7 +65,7 @@ public:
 	void interactive() {
 		int ch;
 		if (_kbhit()) {
-			ch = _getch(); printf("%d ", ch);
+			ch = _getch();
 			if (ch == 'd') dH = 0, dW = 1;
 			if (ch == 'a') dH = 0, dW =-1;
 			if (ch == 'w') dH = 1, dW = 0;
