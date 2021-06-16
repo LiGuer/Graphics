@@ -21,10 +21,12 @@ public:
 	Plot() { 
 		G.init(700, 500); G.clear(0xFFFFFF); G.g.PaintColor = 0; G.FACE = 0; G.LINE = 1;
 	};
+	void init		(Mat<>& x, Mat<>& y);
 	/*---------------- ÏßÍ¼ ----------------*/
 	void plot		(Mat<>& x, Mat<>& y);
 	void plot		(Mat<>& x, Mat<>& y, Mat<>& z);
-	void statirs	(Mat<>& x, Mat<>& y);
+	void stairs		(Mat<>& y);
+	void stairs		(Mat<>& x, Mat<>& y);
 	void loglog		(Mat<>& x, Mat<>& y);
 	void semilogx	(Mat<>& x, Mat<>& y);
 	void semilogy	(Mat<>& x, Mat<>& y);

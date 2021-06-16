@@ -435,9 +435,35 @@ void GraphicsND::drawPolygon(Mat<> p[], int n) {
 		sin(Φ + α) = 0    α = arcsin(C1 / sqrt(C1² + C²))
 		Φ = - arcsin(C1 / sqrt(C1² + C²))
 **-----------------------------------------------------------------------*/
-void GraphicsND::drawCircle(Mat<>& center, double r, Mat<>* direct) {
-	//计算 Rotate Matrix
-	//画圆
+void GraphicsND::drawCircle(Mat<>& center, double r, double delta, Mat<>* direct) {
+	if (direct == NULL) {
+		double dAngle = 2 * PI / delta;
+		Mat<> ps(2), pe(2);
+		for (int i = 0; i < delta; i++) {
+			double theta = i * dAngle;
+			ps = { r * cos(theta),          r * sin(theta) };
+			pe = { r * cos(theta + dAngle), r * sin(theta + dAngle) };
+			if (LINE) drawLine    (ps += center, pe += center);
+			if (FACE) drawTriangle(ps += center, pe += center, center);
+		}
+	}
+}
+void GraphicsND::drawSector(Mat<>& center, double r, double angleSt, double angleEd, double delta, Mat<>* direct) {
+	if (direct == NULL) {
+		double dAngle = (angleEd - angleSt) / delta;
+		Mat<> ps(2), pe(2);
+		for (int i = 0; i < delta; i++) {
+			double theta = angleSt + i * dAngle;
+			ps = { r * cos(theta),          r * sin(theta) };
+			pe = { r * cos(theta + dAngle), r * sin(theta + dAngle) };
+			if (LINE) drawLine    (ps += center, pe += center);
+			if (FACE) drawTriangle(ps += center, pe += center, center);
+		}
+		if (LINE) {
+			drawLine(center, (pe = { r * cos(angleSt), r * sin(angleSt) }) += center);
+			drawLine(center, (pe = { r * cos(angleEd), r * sin(angleEd) }) += center);
+		}
+	}
 }
 /*--------------------------------[ 画椭圆 ]--------------------------------
 *	[约束方程]:
@@ -602,8 +628,8 @@ void GraphicsND::drawSphere(Mat<>& center, double r,
 ) {
 	Mat<> point(3), pointU(3), pointL(3), pointUL(3);
 	double dAngle = 2.0 * PI / delta;
-	int ThetaNum = (thetaEd - thetaSt) / (2 * PI) * delta,
-		  PhiNum = (  phiEd -   phiSt) / (2 * PI) * delta;
+	int ThetaNum = (thetaEd - thetaSt) / dAngle,
+		  PhiNum = (  phiEd -   phiSt) / dAngle;
 	for (int i = 1; i <= ThetaNum; i++) {
 		double theta = thetaSt + i * dAngle;
 		for (int j = 1; j <= PhiNum; j++) {

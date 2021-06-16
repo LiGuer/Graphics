@@ -11,9 +11,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 #include "Plot.h"
-
-/*--------------------------------[ plot ]--------------------------------*/
-void Plot::plot(Mat<>& x, Mat<>& y) {
+/*--------------------------------[ init ]--------------------------------*/
+void Plot::init(Mat<>& x, Mat<>& y) {
 	static bool isinit = true;
 	if (isinit) {
 		isinit = false;
@@ -24,11 +23,16 @@ void Plot::plot(Mat<>& x, Mat<>& y) {
 		Mat<> tmp; (tmp.alloc(2) = { 100 / 2, 100 / 2 }).elementMul(p2v);
 		G.setAxisLim(pmin -= tmp, pmax += tmp); pmin += tmp; pmax -= tmp;
 	}
-	for (int i = 0; i < x.size() - 1; i++) 
-		G.drawLine(
-			x[i], x[i + 1],
-			y[i], y[i + 1]
-		);
+}
+/*--------------------------------[ plot ]--------------------------------*/
+void Plot::plot(Mat<>& x, Mat<>& y) {
+	init(x, y);
+	for (int k = 0; k < y.cols; k++) 
+		for (int i = 0; i < y.rows - 1; i++) 
+			G.drawLine(
+				x[i], x[i + 1],
+				y[i], y[i + 1]
+			);
 }
 void Plot::plot(Mat<>& x, Mat<>& y, Mat<>& z) {
 	for (int i = 0; i < x.size() - 1; i++)
@@ -37,6 +41,44 @@ void Plot::plot(Mat<>& x, Mat<>& y, Mat<>& z) {
 			y[i], y[i + 1],
 			z[i], z[i + 1]
 		);
+}
+/*--------------------------------[ statirs ]--------------------------------*/
+void Plot::stairs(Mat<>& y) {
+	Mat<> ps(2), pe(2);
+	for (int k = 0; k < y.cols; k++) {
+		for (int i = 0; i < y.rows - 1; i++) {
+			ps = { (double)i,     y[i] };
+			pe = { (double)i + 1, y[i] };
+			G.drawLine(ps, pe);
+			ps = { (double)i + 1, y[i + 1] };
+			G.drawLine(ps, pe);
+		}
+	}
+}
+void Plot::stairs(Mat<>& x, Mat<>& y) {
+	init(x, y);
+	Mat<> ps(2), pe(2);
+	for (int k = 0; k < y.cols; k++) {
+		for (int i = 0; i < y.rows - 1; i++) {
+			ps = { x[i],     y[i] };
+			pe = { x[i + 1], y[i] };
+			G.drawLine(ps, pe);
+			ps = { x[i + 1], y[i + 1] };
+			G.drawLine(ps, pe);
+		}
+	}
+}
+/*--------------------------------[ pie ]--------------------------------*/
+void Plot::pie(Mat<>& x) {
+	Mat<> zero(2);
+	double xsum = x.sum(), angle = 0;
+	for (int i = 0; i < x.size(); i++) {
+		G.FACE = true;  G.LINE = false; G.FaceColor = G.colorlist(1.0 * i / x.size(), 1);
+		G.drawSector(zero, 100, angle, angle + x[i] / xsum * 2 * PI);
+		G.FACE = false; G.LINE = true;
+		G.drawSector(zero, 100, angle, angle + x[i] / xsum * 2 * PI);
+		angle += x[i] / xsum * 2 * PI;
+	}
 }
 /*--------------------------------[ ±ê¼Ç ]--------------------------------*/
 //×ø±êÖá
