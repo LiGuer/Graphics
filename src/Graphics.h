@@ -69,7 +69,7 @@ public:
 	void fillFlood		(INT32S x0, INT32S y0, ARGB color);					//泛滥填充
 	void fillPolygon	(INT32S x[],INT32S y[],INT32S n);					//多边形填充
 	void drawChar		(INT32S x0, INT32S y0, char charac);				//显示字符
-	void drawString		(INT32S x0, INT32S y0, const char* str, INT32S n);	//显示字符串
+	void drawString		(INT32S x0, INT32S y0, const char* str);			//显示字符串
 	void drawNum		(INT32S x0, INT32S y0, FP64 num);					//显示数字
 	/*-------------------------------- 二维变换 --------------------------------*/
 	void translate		(INT32S dx, INT32S dy);								//平移

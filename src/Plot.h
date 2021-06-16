@@ -17,9 +17,9 @@ limitations under the License.
 class Plot {
 public:
 	GraphicsND G;
-	Mat<> pmin, pmax, pdiff;
+	Mat<> pmin, pmax, pdiff, p2v;
 	Plot() { 
-		G.clear(0xFFFFFF); G.g.PaintColor = 0; G.FACE = 0; G.LINE = 1;
+		G.init(700, 500); G.clear(0xFFFFFF); G.g.PaintColor = 0; G.FACE = 0; G.LINE = 1;
 	};
 	/*---------------- ÏßÍ¼ ----------------*/
 	void plot		(Mat<>& x, Mat<>& y);
@@ -50,6 +50,6 @@ public:
 	/*---------------- ±ê¼Ç ----------------*/
 	void axis		();
 	void grid		();
-	void title		(const char* words, int n);
+	void title		(const char* words);
 };
 #endif // !PLOT_H

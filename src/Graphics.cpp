@@ -435,9 +435,9 @@ void Graphics::drawChar(INT32S x0, INT32S y0, char charac)
 	}
 }
 /*----------------[ DRAW STRING ]----------------*/
-void Graphics::drawString(INT32S x0, INT32S y0, const char* str, INT32S n)
+void Graphics::drawString(INT32S x0, INT32S y0, const char* str)
 {
-	for (int i = 0; i < n; i++) drawChar(x0, y0 + FontSize * i, str[i]);
+	for (int i = 0; str[i] != '\0'; i++) drawChar(x0, y0 + FontSize * i, str[i]);
 }
 /*----------------[ DRAW NUMBER ]----------------*/
 void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
@@ -455,12 +455,9 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 		numstr[cur++] = integer % 10 + '0';
 		integer /= 10;
 	}
-	if (num < 0)numstr[cur++] = '-';
-	//反转一下
-	for (INT32S i = 0; i <= cur / 2; i++) {
-		char t = numstr[i];
-		numstr[i] = numstr[cur - i - 1]; numstr[cur - i - 1] = t;
-	}
+	if (num < 0) numstr[cur++] = '-';
+	for (INT32S i = 0; i < cur / 2; i++)			//反转一下
+		std::swap(numstr[i], numstr[cur - i - 1]);
 	/*------ 小数部分 ------*/
 	FP64 accur = 1E-10;								//精度
 	if (decimal > accur) {
@@ -470,8 +467,8 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 			numstr[cur++] = (char)decimal + '0';
 			decimal -= (INT32S)decimal;
 		}
-	}
-	drawString(x0, y0, numstr, cur);
+	} numstr[cur] = '\0'; 
+	drawString(x0, y0, numstr);
 }
 /******************************************************************************
 

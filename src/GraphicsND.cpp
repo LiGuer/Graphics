@@ -54,16 +54,16 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 /*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z, int size) {
 	int t = x;
-	x = g.Canvas.cols / 2 - y;
-	y = g.Canvas.rows / 2 + t;
+	x = g.Canvas.rows / 2 - y;
+	y = g.Canvas.cols / 2 + t;
 	if (g.judgeOutRange(x, y) || z < Z_Buffer[0](x, y))return false;
 	if		(size ==-1)	g.drawPoint(x, y);
 	else if (size == 0) g. setPoint(x, y, FaceColor); 
 	Z_Buffer[0](x, y) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size) {
-	int x = g.Canvas.cols / 2 - p0[1],
-		y = g.Canvas.rows / 2 + p0[0];
+	int x = g.Canvas.rows / 2 - p0[1],
+		y = g.Canvas.cols / 2 + p0[0];
 	if (g.judgeOutRange(x, y)) return false;
 	for (int i = 2; i < p0.rows; i++)
 		if (p0[i] < Z_Buffer[i - 2](x, y)) 
@@ -817,13 +817,13 @@ void GraphicsND::drawStairs(Mat<>& zero, double Length, double Width, double Hei
 *                    画阶梯
 ******************************************************************************/
 void GraphicsND::drawChar(Mat<>& p0, char charac) {
-	Mat<int> p; value2pix(p0, p);	g.drawChar	(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], charac);
+	Mat<int> p; value2pix(p0, p);	g.drawChar	(g.Canvas.rows / 2 - p[1], g.Canvas.cols / 2 + p[0], charac);
 }
-void GraphicsND::drawString(Mat<>& p0, const char* str, int n) {
-	Mat<int> p; value2pix(p0, p);	g.drawString(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], str, n);
+void GraphicsND::drawString(Mat<>& p0, const char* str) {
+	Mat<int> p; value2pix(p0, p);	g.drawString(g.Canvas.rows / 2 - p[1], g.Canvas.cols / 2 + p[0], str);
 }
 void GraphicsND::drawNum(Mat<>& p0, double num) {
-	Mat<int> p; value2pix(p0, p);	g.drawNum	(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], num);
+	Mat<int> p; value2pix(p0, p);	g.drawNum	(g.Canvas.rows / 2 - p[1], g.Canvas.cols / 2 + p[0], num);
 }
 /*--------------------------------[ 画线 any-D ]--------------------------------*/
 void GraphicsND::drawSuperLine(Mat<>* p0) {

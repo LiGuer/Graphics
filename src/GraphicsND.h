@@ -84,7 +84,7 @@ public:
 	void drawStairs		(Mat<>& zero, double Length, double Width, double Height, int Num);	//画阶梯
 	// Word
 	void drawChar		(Mat<>& p0, char charac);				//显示字符
-	void drawString		(Mat<>& p0, const char* str, int n);	//显示字符串
+	void drawString		(Mat<>& p0, const char* str);			//显示字符串
 	void drawNum		(Mat<>& p0, double num);				//显示数字
 	// any-D
 	void drawSuperLine	(Mat<>* p0);							//画线 any-D

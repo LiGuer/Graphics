@@ -20,7 +20,8 @@ void Plot::plot(Mat<>& x, Mat<>& y) {
 		pmin.alloc(2) = { x.min(),y.min() }; 
 		pmax.alloc(2) = { x.max(),y.max() };
 		pdiff.sub(pmax, pmin);
-		Mat<> tmp; tmp.mul(0.1, pdiff);
+		p2v.elementDiv(pdiff, p2v.alloc(2) = { (double)G.g.Canvas.cols - 100,(double)G.g.Canvas.rows - 100 });
+		Mat<> tmp; (tmp.alloc(2) = { 100 / 2, 100 / 2 }).elementMul(p2v);
 		G.setAxisLim(pmin -= tmp, pmax += tmp); pmin += tmp; pmax -= tmp;
 	}
 	for (int i = 0; i < x.size() - 1; i++) 
@@ -42,14 +43,16 @@ void Plot::axis() {
 	Mat<> p(2);
 	G.drawRectangle(pmin, pmax); 
 	G.g.FontSize = 10;
+	G.drawLine(0, 0, pmin[1], pmax[1]),
+	G.drawLine(pmin[0], pmax[0], 0, 0);
 	for (int y = pmin[1]; y <= pmax[1]; y++)
 		for (int x = pmin[0]; x <= pmax[0]; x++)
-			G.drawLine(x, x, pmin[1], pmin[1] + pdiff[1] / 100),
-			G.drawLine(x, x, pmax[1] - pdiff[1] / 100, pmax[1]),
-			G.drawLine(pmin[0], pmin[0] + pdiff[0] / 100, y, y),
-			G.drawLine(pmax[0] - pdiff[0] / 100, pmax[0], y, y),
-			G.drawNum(p = { (double)x, pmin[1] - pdiff[1] / 100 }, x),
-			G.drawNum(p = { pmin[0] - pdiff[0] / 20, (double)y }, y);
+			G.drawLine(x, x, pmin[1], pmin[1] + p2v[1] * 10),
+			G.drawLine(x, x, pmax[1] - p2v[1] * 10, pmax[1]),
+			G.drawLine(pmin[0], pmin[0] + p2v[0] * 10, y, y),
+			G.drawLine(pmax[0] - p2v[0] * 10, pmax[0], y, y),
+			G.drawNum(p = { x - p2v[0] * G.g.FontSize / 2, pmin[1] - p2v[1] * 8 }, x),
+			G.drawNum(p = { pmin[0] - p2v[0] *20, y + p2v[0]*(G.g.FontSize* 1.5)}, y);
 }
 void Plot::grid() {
 	G.g.PaintColor = 0xFC000000;
@@ -59,7 +62,7 @@ void Plot::grid() {
 			G.drawLine(pmin[0], pmax[0], y, y);
 	G.g.PaintColor = 0x0;
 }
-void Plot::title(const char* words, int n) {
+void Plot::title(const char* words) {
 	Mat<> p(2);
-	G.drawString(p = { (pmin[0] + pmax[0]) / 2 - pdiff[0] / 100 * n, pmax[1] + pdiff[1] / 20 }, words, n);
+	G.drawString(p = { (pmin[0] + pmax[0]) / 2 - p2v[0] * strlen(words) * 5, pmax[1] + p2v[1] * 20 }, words);
 }
