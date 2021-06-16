@@ -446,9 +446,8 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 	INT32S cur = 0;
 	INT32S integer = num;							//整数部分
 	FP64 decimal = num - integer;					//小数部分
-	if (num < 0) {
-		integer *= -1; decimal *= -1;
-	}
+	if (num < 0) 
+		integer *= -1, decimal *= -1;
 	/*------ 整数部分 ------*/
 	if (integer == 0) numstr[cur++] = '0';
 	while (integer > 0) {

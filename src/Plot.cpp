@@ -38,31 +38,47 @@ void Plot::plot(Mat<>& x, Mat<>& y, Mat<>& z) {
 			z[i], z[i + 1]
 		);
 }
-/*--------------------------------[ drawAxis ]--------------------------------*/
+/*--------------------------------[ 标记 ]--------------------------------*/
+//坐标轴
 void Plot::axis() {
-	Mat<> p(2);
 	G.drawRectangle(pmin, pmax); 
+	Mat<> p(pmin.size()), ps(pmin.size()), pe(pmin.size()), diff;
+	for (int dim = 0; dim < pmin.size(); dim++) {
+		ps.zero(); ps[dim] = pmin[dim]; 
+		pe.zero(); pe[dim] = pmax[dim];
+		G.drawLine(ps, pe);
+	}
 	G.g.FontSize = 10;
-	G.drawLine(0, 0, pmin[1], pmax[1]),
-	G.drawLine(pmin[0], pmax[0], 0, 0);
-	for (int y = pmin[1]; y <= pmax[1]; y++)
-		for (int x = pmin[0]; x <= pmax[0]; x++)
-			G.drawLine(x, x, pmin[1], pmin[1] + p2v[1] * 10),
-			G.drawLine(x, x, pmax[1] - p2v[1] * 10, pmax[1]),
-			G.drawLine(pmin[0], pmin[0] + p2v[0] * 10, y, y),
-			G.drawLine(pmax[0] - p2v[0] * 10, pmax[0], y, y),
-			G.drawNum(p = { x - p2v[0] * G.g.FontSize / 2, pmin[1] - p2v[1] * 8 }, x),
-			G.drawNum(p = { pmin[0] - p2v[0] *20, y + p2v[0]*(G.g.FontSize* 1.5)}, y);
+	diff.function(pdiff, [](double x) { 
+		int ex = log10(x); return x / pow(10, ex) < 2 ? pow(10, ex - 1) : pow(10, ex);
+	});
+	for (double x = ((int)(pmin[0] / diff[0])) * diff[0]; x <= pmax[0]; x += diff[0])
+		G.drawLine(x, x, pmin[1], pmin[1] + p2v[1] * 10),
+		G.drawLine(x, x, pmax[1] - p2v[1] * 10, pmax[1]),
+		G.drawNum(p = { x - p2v[0] * G.g.FontSize / 2, pmin[1] - p2v[1] * 8 }, x);
+	for (double y = ((int)(pmin[1] / diff[1])) * diff[1]; y <= pmax[1]; y += diff[1])
+		G.drawLine(pmin[0], pmin[0] + p2v[0] * 10, y, y),
+		G.drawLine(pmax[0] - p2v[0] * 10, pmax[0], y, y),
+		G.drawNum(p = { pmin[0] - p2v[0] * 20, y + p2v[1] * G.g.FontSize }, y);
 }
+//网格
 void Plot::grid() {
-	G.g.PaintColor = 0xFC000000;
-	for (int y = pmin[1]; y <= pmax[1]; y++)
-		for (int x = pmin[0]; x <= pmax[0]; x++)
-			G.drawLine(x, x, pmin[1], pmax[1]),
-			G.drawLine(pmin[0], pmax[0], y, y);
+	G.g.PaintColor = 0xD0000000;
+	Mat<> ps, pe, diff;
+	diff.function(pdiff, [](double x) {
+		int ex = log10(x); return x / pow(10, ex) < 2 ? pow(10, ex - 1) : pow(10, ex);
+	});
+	for (int dim = 0; dim < pmin.size(); dim++) {
+		for (double x = ((int)(pmin[dim] / diff[dim])) * diff[dim]; x <= pmax[dim]; x += diff[dim]) {
+			ps = pmin; pe = pmax; ps[dim] = pe[dim] = x;
+			G.drawLine(ps, pe);
+		}
+	}
 	G.g.PaintColor = 0x0;
 }
-void Plot::title(const char* words) {
+//标题
+void Plot::title(const char* words) 
+{
 	Mat<> p(2);
 	G.drawString(p = { (pmin[0] + pmax[0]) / 2 - p2v[0] * strlen(words) * 5, pmax[1] + p2v[1] * 20 }, words);
 }
