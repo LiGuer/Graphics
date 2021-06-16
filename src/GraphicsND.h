@@ -1,5 +1,5 @@
 ﻿/*
-Copyright 2020 LiGuer. All Rights Reserved.
+Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,20 +20,19 @@ class GraphicsND
 {
 public:
 	/*---------------- 基础参数 ----------------*/
-	Graphics g;															//核心图形学类
+	Graphics g;																//核心图形学类
 	Mat<Mat<int>> Z_Buffer;
-	Mat<> WindowSize{ 2,1 };											//窗口尺寸
-	static Mat<> TransformMat;											//变换矩阵
+	static Mat<> TransformMat;												//变换矩阵
 	unsigned int FaceColor = 0xFFFFFF;
 	std::vector<Mat<>> LineSet, TriangleSet;
-	bool isLineTriangleSet = 0;
-	bool FACE = true, LINE = false;
+	bool FACE = true, LINE = false,
+		 isLineTriangleSet = false;
 	/*---------------- 底层 ----------------*/
-   ~GraphicsND() { ; }																//析构函数
+   ~GraphicsND() { ; }														//析构函数
 	GraphicsND(int width = 500, int height = 500, int Dim = 3) { init(width, height , Dim); }	//构造函数
 	void init (int width, int height, int Dim = 3);							//初始化
 	void clear(ARGB color);													//清屏
-	void value2pix	(int x0, int y0, int z0, int& x, int& y, int& z);		//点To像素 (<=3D)
+	void value2pix	(double x0, double y0, double z0, int& x, int& y, int& z);//点To像素 (<=3D)
 	void value2pix	(Mat<>& p0, Mat<int>& pAns);							//点To像素 (anyD)
 	bool setPix		(int x, int y, int z = 0, int size = -1);				//写像素 (正投影) (<=3D)
 	bool setPix		(Mat<int>& p0, int size = -1);							//写像素 (正投影) (anyD)
@@ -41,28 +40,27 @@ public:
 	void writeModel (const char* fileName);									//写模型文件
 	/*---------------- DRAW ----------------*/
 	// 0-D
-	void drawPoint		(double x0 = 0, double y0 = 0, double z0 = 0);	//画点 (<=3D)
-	void drawPoint		(Mat<>& p0);									//画点 (anyD)
+	void drawPoint		(double x0 = 0, double y0 = 0, double z0 = 0);		//画点 (<=3D)
+	void drawPoint		(Mat<>& p0);										//画点 (anyD)
 	// 1-D
 	void drawLine		(double sx0 = 0, double ex0 = 0, 
 						 double sy0 = 0, double ey0 = 0, 
-						 double sz0 = 0, double ez0 = 0);				//画直线 (<=3D)
-	void drawLine		(Mat<>& sp0, Mat<>& ep0);						//画直线 (anyD)
-	void drawPolyline	(Mat<>* p, int n, bool close = false);			//画折线
-	void drawPolyline	(Mat<>& y, double xmin, double xmax);			//画折线
-	void drawBezierLine	(Mat<> p[], int n);								//画Bezier曲线
+						 double sz0 = 0, double ez0 = 0);					//画直线 (<=3D)
+	void drawLine		(Mat<>& sp0, Mat<>& ep0);							//画直线 (anyD)
+	void drawPolyline	(Mat<>* p, int n, bool close = false);				//画折线
+	void drawBezierLine	(Mat<> p[], int n);									//画Bezier曲线
 	// 2-D
-	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3);						//画三角形
-	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3);						//画三角形集
-	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>&FaceVec);		//画三角形集
-	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL);			//画矩形
-	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);			//画四边形
-	void drawPolygon	(Mat<> p[], int n);										//画多边形
+	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3);					//画三角形
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3);					//画三角形集
+	void drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>&FaceVec);	//画三角形集
+	void drawRectangle	(Mat<>& sp, Mat<>& ep, Mat<>* direct = NULL);		//画矩形
+	void drawQuadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);		//画四边形
+	void drawPolygon	(Mat<> p[], int n);									//画多边形
 	void drawCircle		(Mat<>& center, double r,				Mat<>* direct = NULL);		//画圆
 	void drawEllipse	(Mat<>& center, double rx, double ry,	Mat<>* direct = NULL);		//画椭圆
 	void drawSurface	(Mat<>& z, double xs, double xe, double ys, double ye, 
 																Mat<>* direct = NULL);		//画曲面
-	void drawBezierFace	(Mat<> p[], int n);										//画贝塞尔曲面
+	void drawBezierFace	(Mat<> p[], int n);									//画贝塞尔曲面
 	// 3-D
 	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);		//画四面体
 	void drawCuboid		(Mat<>&pMin,Mat<>& pMax);							//画矩体
@@ -85,9 +83,9 @@ public:
 	void drawRotator	(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta = 36, double st = 0, double ed = 2 * PI);	//画旋转体
 	void drawStairs		(Mat<>& zero, double Length, double Width, double Height, int Num);	//画阶梯
 	// Word
-	void drawChar	(Mat<>& p0, char charac);					//显示字符
-	void drawString	(Mat<>& p0, const char* str, int n);		//显示字符串
-	void drawNum	(Mat<>& p0, double num);					//显示数字
+	void drawChar		(Mat<>& p0, char charac);				//显示字符
+	void drawString		(Mat<>& p0, const char* str, int n);	//显示字符串
+	void drawNum		(Mat<>& p0, double num);				//显示数字
 	// any-D
 	void drawSuperLine	(Mat<>* p0);							//画线 any-D
 	void drawSuperCuboid(Mat<>& pMin, Mat<>& pMax);				//画立方体 any-D

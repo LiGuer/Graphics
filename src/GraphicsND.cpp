@@ -1,5 +1,5 @@
 ﻿/*
-Copyright 2020 LiGuer. All Rights Reserved.
+Copyright 2020,2021 LiGuer. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -36,12 +36,9 @@ void GraphicsND::clear(ARGB color) {
 			Z_Buffer[i].data[j] = -0x7FFFFFFF;
 }
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
-void GraphicsND::value2pix(int x0, int y0, int z0, int& x, int& y, int& z) {
-	Mat<> point(TransformMat.rows);
-	point[0] = 1; 
-	point[1] = x0; 
-	point[2] = y0; 
-	point[3] = z0;
+void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int& z) {
+	Mat<> point(TransformMat.rows); 
+	point = { 1,x0,y0,z0 };
 	point.mul(TransformMat, point);
 	x = point[1]; 
 	y = point[2]; 
@@ -213,18 +210,6 @@ void GraphicsND::drawPolyline(Mat<> *p, int n, bool close) {
 	for (int i = 0; i < n - 1; i++) drawLine(p[i], p[i + 1]);
 	if (close) drawLine(p[0], p[n - 1]);
 }
-void GraphicsND::drawPolyline(Mat<>& y, double xmin, double xmax) {
-	Mat<> p(2), preP(2);
-	p.set(xmin, y[0]);
-	preP = p;
-	double delta = (xmax - xmin) / (y.size() - 1);
-	for (int i = 1; i < y.size(); i++) {
-		p[0] += delta; 
-		p[1] = y[i];
-		drawLine(preP, p);
-		preP = p;
-	}
-}
 /******************************************************************************
 *                    画Bezier曲线
 ******************************************************************************/
@@ -391,9 +376,14 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 /*--------------------------------[ 画矩形 ]--------------------------------*/
 void GraphicsND::drawRectangle(Mat<>& sp, Mat<>& ep, Mat<>* direct) {
 	if (direct == NULL) {
-		Mat<> pt(2);
-		drawTriangle(sp, ep, pt.set(sp[0], ep[1]));
-		drawTriangle(sp, ep, pt.set(ep[0], sp[1]));
+		Mat<> pt = sp;
+		if(FACE)
+			drawTriangle(sp, ep, pt = { sp[0], ep[1] }),
+			drawTriangle(sp, ep, pt = { ep[0], sp[1] });
+		if (LINE) {
+			drawLine(sp, pt = { sp[0], ep[1] }), drawLine(ep, pt);
+			drawLine(sp, pt = { ep[0], sp[1] }), drawLine(ep, pt);
+		}
 	}
 	else {
 		// 计算 Rotate Matrix
@@ -823,6 +813,18 @@ void GraphicsND::drawStairs(Mat<>& zero, double Length, double Width, double Hei
 			p2.set(Length, (i + 1) * Width / StairsNum, (i + 1) * Height / StairsNum) += zero
 		);
 }
+/******************************************************************************
+*                    画阶梯
+******************************************************************************/
+void GraphicsND::drawChar(Mat<>& p0, char charac) {
+	Mat<int> p; value2pix(p0, p);	g.drawChar	(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], charac);
+}
+void GraphicsND::drawString(Mat<>& p0, const char* str, int n) {
+	Mat<int> p; value2pix(p0, p);	g.drawString(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], str, n);
+}
+void GraphicsND::drawNum(Mat<>& p0, double num) {
+	Mat<int> p; value2pix(p0, p);	g.drawNum	(g.Canvas.cols / 2 - p[1], g.Canvas.rows / 2 + p[0], num);
+}
 /*--------------------------------[ 画线 any-D ]--------------------------------*/
 void GraphicsND::drawSuperLine(Mat<>* p0) {
 
@@ -1045,15 +1047,11 @@ Mat<>& GraphicsND::rotate(double theta, Mat<>& center, Mat<>& transMat) {
 	Mat<> tmp, rotateMat;
 	translate(center.negative(tmp), transMat);
 	// rotate
-	double t[] = {
+	transMat.mul( rotateMat.E(transMat.rows) = {
 		1, 0, 0,
 		0, cos(theta), -sin(theta),
 		0, sin(theta),  cos(theta),
-	}; 
-	transMat.mul(
-		rotateMat.E(transMat.rows) = t,
-		transMat
-	);
+	}, transMat);
 	return translate(center, transMat);
 }
 //3D S03·四元数
@@ -1085,14 +1083,13 @@ Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, M
 	translate(center.negative(tmp), transMat);
 	double c1 = cos(theta[0]), s1 = sin(theta[0]),
 	       c2 = cos(theta[1]), s2 = sin(theta[1]);
-	double t[] = {
+	transMat.mul( rotateMat = {
 		1,0,0,0,0,
 		0,c1,-s1, c2,-s2,
 		0,s1, c1, s1, c1,
 		0,c2,-s1, c2,-s2,
 		0,s2, c1, s2, c2
-	}; 
-	transMat.mul(rotateMat = t, transMat);
+	}, transMat);
 	return translate(center, transMat);
 }
 /*--------------------------------[ 缩放 ]--------------------------------

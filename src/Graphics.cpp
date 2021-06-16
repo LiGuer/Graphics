@@ -482,24 +482,22 @@ void Graphics::drawNum(INT32S x0, INT32S y0, FP64 num)
 void Graphics::translate(INT32S dx, INT32S dy)
 {
 	Mat<FP64> M;
-	FP64 t[] = {
-		1, 0, dx,
-		0, 1, dy,
+	TransMat.mul(M.E(3) = {
+		1, 0, (double)dx,
+		0, 1, (double)dy,
 		0, 0, 1
-	};
-	TransMat.mul(M.E(3) = t, TransMat);
+	}, TransMat);
 }
 /*----------------[ ROMOTE ]----------------*/
 void Graphics::rotate(FP64 theta, INT32S x0, INT32S y0) 
 {
 	translate(-x0, -y0);
 	Mat<FP64> M;
-	FP64 t[] = {
+	TransMat.mul(M.E(3) = {
 		cos(theta), -sin(theta), 0,
 		sin(theta),  cos(theta), 0,
 		0, 0, 1
-	};
-	TransMat.mul(M.E(3) = t, TransMat);
+	}, TransMat);
 	translate(x0, y0);
 }
 /*----------------[ scale ]----------------*/
@@ -507,11 +505,10 @@ void Graphics::scale(FP64 sx, FP64 sy, INT32S x0, INT32S y0)
 {
 	translate(-x0, -y0);
 	Mat<FP64> M;
-	FP64 t[] = {
+	TransMat.mul(M.E(3) = {
 		sx,  0,  0,
 		 0, sy,  0,
 		 0,  0,  1
-	};
-	TransMat.mul(M.E(3) = t, TransMat);
+	}, TransMat);
 	translate(x0, y0);
 }

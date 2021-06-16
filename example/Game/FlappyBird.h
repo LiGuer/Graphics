@@ -5,23 +5,24 @@
 ******************************************************************************/
 class FlappyBird {
 public:
-	int W, H;
+	int W, H, birdX, birdY, pillarsX, pillarsY,
+		pillarsW = 80, holeH = 100, pillarsSpeed = 10, birdSpeed = 20;
 	FlappyBird(int _W = 400, int _H = 600) { W = _W, H = _H; init();}
-	int birdY = H / 2, birdX = 100, pillarsWidth = 80, holeHeight = 100, pillarsX = W, pillarsY = 0;
-	int pillarsSpeed = 10, birdSpeed = 20;
 	void init() {
-		birdY = H / 2; initPillars();
+		birdY = H / 2, birdX = 100;
 		pillarsX = W;
-		pillarsY = rand() / double(RAND_MAX) * (H - 100 - 100) + 100;	//[st,ed)
+		pillarsY = rand() / double(RAND_MAX) * (H - 100 - 100) + 100;
 	}
 	void play(bool action) {
 		pillarsX -= pillarsSpeed;
-		birdY    -= birdSpeed;
-		if (action) birdY += 3 * birdSpeed;
+		birdY    +=   -birdSpeed + (action ? 3 * birdSpeed : 0);
+		if (pillarsX < 0) 
+			pillarsX = W, 
+			pillarsY = rand() / double(RAND_MAX) * (H - 100 - 100) + 100;
 		//judgeLose
 		if (birdY <= 0 || birdY >= H
-		|| (pillarsX < birdX && pillarsX + pillarsWidth > birdX && (birdY < pillarsY || birdY > pillarsY + holeHeight))
-		) return true;
+		||((birdX > pillarsX && birdX < pillarsX + pillarsW) 
+		&& (birdY < pillarsY || birdY > pillarsY + holeH))) return true;
 		return false;
 	}
 };
