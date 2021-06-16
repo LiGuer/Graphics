@@ -42,6 +42,15 @@ void Plot::plot(Mat<>& x, Mat<>& y, Mat<>& z) {
 			z[i], z[i + 1]
 		);
 }
+/*--------------------------------[ scatter ]--------------------------------*/
+void Plot::scatter(Mat<>& x, Mat<>& y) {
+	init(x, y);
+	for (int i = 0; i < x.size(); i++) G.drawPoint(x[i], y[i]);
+}
+void Plot::scatter(Mat<>& x, Mat<>& y, Mat<>& z) {
+	init(x, y);
+	for (int i = 0; i < x.size(); i++) G.drawPoint(x[i], y[i], z[i]);
+}
 /*--------------------------------[ statirs ]--------------------------------*/
 void Plot::stairs(Mat<>& y) {
 	Mat<> ps(2), pe(2);
@@ -69,14 +78,24 @@ void Plot::stairs(Mat<>& x, Mat<>& y) {
 	}
 }
 /*--------------------------------[ pie ]--------------------------------*/
-void Plot::pie(Mat<>& x) {
+void Plot::pie(Mat<>& x, bool* explode) {
 	Mat<> zero(2);
 	double xsum = x.sum(), angle = 0;
 	for (int i = 0; i < x.size(); i++) {
-		G.FACE = true;  G.LINE = false; G.FaceColor = G.colorlist(1.0 * i / x.size(), 1);
-		G.drawSector(zero, 100, angle, angle + x[i] / xsum * 2 * PI);
-		G.FACE = false; G.LINE = true;
-		G.drawSector(zero, 100, angle, angle + x[i] / xsum * 2 * PI);
+		if (explode != NULL && explode[i]) {
+			zero = { 30 * cos(angle + x[i] / xsum * PI), 30 * sin(angle + x[i] / xsum * PI) };
+			G.FACE = true;  G.LINE = false; G.FaceColor = G.colorlist(1.0 * i / x.size(), 1);
+			G.drawSector(zero, 200, angle, angle + x[i] / xsum * 2 * PI, 256);
+			G.FACE = false; G.LINE = true;
+			G.drawSector(zero, 200, angle, angle + x[i] / xsum * 2 * PI, 256);
+			zero.zero();
+		}
+		else {
+			G.FACE = true;  G.LINE = false; G.FaceColor = G.colorlist(1.0 * i / x.size(), 1);
+			G.drawSector(zero, 200, angle, angle + x[i] / xsum * 2 * PI, 256);
+			G.FACE = false; G.LINE = true;
+			G.drawSector(zero, 200, angle, angle + x[i] / xsum * 2 * PI, 256);
+		}
 		angle += x[i] / xsum * 2 * PI;
 	}
 }

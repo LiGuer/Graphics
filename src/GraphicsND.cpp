@@ -314,8 +314,8 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 				point[k][0]++;
 				for (int dim = 1; dim < Dim; dim++) {								//xyz走一步
 					err[k][dim] += delta[k][dim];
-					if (err[k][dim] >= delta[k][0]) { 
-						if (delta[k][0] == 0) break;
+					if (delta[k][0] == 0) break;
+					if (err[k][dim] >= delta[k][0]) {
 						point[k][dim] += err[k][dim] / delta[k][0] * inc[k][dim]; 
 						err  [k][dim]  = err[k][dim] % delta[k][0];
 					}

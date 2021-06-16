@@ -31,18 +31,24 @@ public:
 	void semilogx	(Mat<>& x, Mat<>& y);
 	void semilogy	(Mat<>& x, Mat<>& y);
 	void polarplot	(Mat<>& x, Mat<>& y);
-	void contour	(Mat<>& x, Mat<>& y);
+	void polarscatter(Mat<>& x, Mat<>& y);
+	void contour	(Mat<>& x, int n)	{ G.contour(x, n); }
+	void contour	(Mat<>& x)			{ G.contour(x); }
+	void contour3	(Mat<>& x);
+	void image		(const char* fileName);
 	/*---------------- 面图 ----------------*/
 	void surf		(Mat<>& x, Mat<>& z);
 	void mesh		(Mat<>& x, Mat<>& z);
 	/*---------------- 三维可视化 ----------------*/
-	void coneplot		(Mat<>& x, Mat<>& z);
+	void coneplot	(Mat<>& x, Mat<>& z);
+	void quiver		(Mat<>& x, Mat<>& y);
+	void quiver		(Mat<>& x, Mat<>& y, Mat<>& z);
 	/*---------------- 数据分布图 ----------------*/
 	void histogram	(Mat<>& x);
-	void pie		(Mat<>& x);
+	void pie		(Mat<>& x, bool* explode = NULL);
 	void scatter	(Mat<>& x, Mat<>& y);
 	void scatter	(Mat<>& x, Mat<>& y, Mat<>& z);
-	void hetMap		(Mat<>& x);
+	void heatmap	(Mat<>& x);
 	/*---------------- 离散图 ----------------*/
 	void bar		(Mat<>& x);
 	void barh		(Mat<>& x);
