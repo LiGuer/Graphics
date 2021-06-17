@@ -14,12 +14,11 @@ limitations under the License.
 #define PLOT_H
 #include "GraphicsND.h"
 //科学制图类
-class Plot {
+class Plot : public GraphicsND {
 public:
-	GraphicsND G;
 	Mat<> pmin, pmax, pdiff, p2v;
 	Plot() { 
-		G.init(700, 500); G.clear(0xFFFFFF); G.g.PaintColor = 0; G.FACE = 0; G.LINE = 1;
+		clear(0xFFFFFF); g.PaintColor = 0; FACE = 0; LINE = 1;
 	};
 	void init		(Mat<>& x, Mat<>& y);
 	/*---------------- 线图 ----------------*/
@@ -32,8 +31,6 @@ public:
 	void semilogy	(Mat<>& x, Mat<>& y);
 	void polarplot	(Mat<>& x, Mat<>& y);
 	void polarscatter(Mat<>& x, Mat<>& y);
-	void contour	(Mat<>& x, int n)	{ G.contour(x, n); }
-	void contour	(Mat<>& x)			{ G.contour(x); }
 	void contour3	(Mat<>& x);
 	void image		(const char* fileName);
 	/*---------------- 面图 ----------------*/
