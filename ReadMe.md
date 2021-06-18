@@ -164,10 +164,9 @@ void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		
 struct Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
 static double seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
 ```
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/色散火彩.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing-Shpere.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing-Room.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-RayTracing2.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/色散火彩.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Shpere.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room.png) 
 
 ### <Fractal.h> 分形:
 ```
