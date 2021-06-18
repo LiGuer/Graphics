@@ -48,8 +48,8 @@ public:
 	void setPix(int x, int y, Mat<>& color);									//画像素
 	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		//渲染
-	struct Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
-	static double seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
+	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
+	double seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
 	//2-D
 	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);				//画三角形
 	void drawSphere		(Mat<>& center, double r,			Material* material = NULL);				//画球

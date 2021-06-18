@@ -40,7 +40,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
-	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();	//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();		//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
@@ -234,11 +234,11 @@ Mat<>& RayTracing::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rate
 ******************************************************************************/
 Mat<>& RayTracing::diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
-	static Mat<> tmp(3), tmp1(3), tmp2(3);
+	static Mat<> t(3), u, v;
 	faceVec *= faceVec.dot(RayI) > 0 ? -1 : 1;
-	tmp[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1;
-	tmp[1] = tmp[0] == 0 ? 1 : 0;
-	tmp1.mul(cos(r1) * sqrt(r2), tmp1.crossProduct_(tmp, faceVec).normalized());
-	tmp2.mul(sin(r1) * sqrt(r2), tmp2.crossProduct_(faceVec, tmp1));
-	return RayO.add(RayO.add(RayO.mul(sqrt(1 - r2), faceVec), tmp1), tmp2).normalized();
+	t[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1;
+	t[1] = t[0] == 0 ? 1 : 0;
+	u.mul(cos(r1) * sqrt(r2), u.crossProduct_(t, faceVec).normalized());
+	v.mul(sin(r1) * sqrt(r2), v.crossProduct_(faceVec, u).normalized());
+	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalized();
 }
