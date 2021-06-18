@@ -105,7 +105,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
-			t = (faceVec.dot(tmp.sub(PointLight[i], RaySt).normalized()) + 1) / 2;
+			t = faceVec.dot(tmp.sub(PointLight[i], RaySt).normalized());
 			lightCos = t > lightCos ? t : lightCos;
 		} color.fill(1) *= lightCos;
 	}
