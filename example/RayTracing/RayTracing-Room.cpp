@@ -3,12 +3,13 @@
 #include "..\LiGu_Codes\LiGu_Graphics\src\GraphicsFileCode.h"
 #pragma GCC optimize(3,"Ofast","inline")
 int main() {
-	RayTracing ray(500, 500);
-	ray.Eye = { -200, 0, -50 };
+	srand(time(NULL));
+	RayTracing ray(1,1);
+	ray.Eye = { -400, 0, -50 };
 	ray.gCenter = { 0, 0, -50 };
 	GraphicsFileCode::ppmRead("D:/LIGU.ppm", ray.ScreenPix); ray.Screen.alloc(ray.ScreenPix.rows, ray.ScreenPix.cols);
 	for (int i = 0; i < ray.ScreenPix.size(); i++)
-		ray.Screen(ray.Screen.rows - 1 - ray.Screen.i2x(i), ray.Screen.i2y(i)) = { ray.ScreenPix[i].R / 255.0, ray.ScreenPix[i].G / 255.0, ray.ScreenPix[i].B / 255.0 };
+		ray.Screen(ray.Screen.rows - 1 - ray.Screen.i2x(i), ray.Screen.i2y(i)).zero(3) = { ray.ScreenPix[i].R / 255.0, ray.ScreenPix[i].G / 255.0, ray.ScreenPix[i].B / 255.0 };
 	{
 		RayTracing::Material* material;
 		Mat<double> p1(3), p2(3), p3(3), p4(3), p5(3);
@@ -36,5 +37,5 @@ int main() {
 			p3 = { 500 + 200, 200, 499 },
 			material);
 	}
-	ray.paint("D:/LIGU.ppm", 100);
+	ray.paint("D:/LIGU.ppm", 2630);
 }
