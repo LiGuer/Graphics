@@ -12,6 +12,7 @@ limitations under the License.
 ==============================================================================*/
 #include "GraphicsND.h"
 Mat<> GraphicsND::TransformMat;											//变换矩阵
+unsigned int GraphicsND::FaceColor = 0xFFFFFF;
 /*#############################################################################
 
 *                    底层函数
@@ -38,11 +39,14 @@ void GraphicsND::clear(ARGB color) {
 /*--------------------------------[ 点 To 像素 ]--------------------------------*/
 void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int& z) {
 	Mat<> point(TransformMat.rows); 
-	point = { 1,x0,y0,z0 };
-	point.mul(TransformMat, point);
+	point.mul(TransformMat, point = { 1,x0,y0,z0 });
 	x = point[1]; 
 	y = point[2]; 
 	z = point[3];
+	if (perspective != 0) {
+		x *= 1 / (z / perspective + 1);
+		y *= 1 / (z / perspective + 1);
+	}
 }
 void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows);
@@ -50,18 +54,22 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
 	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
+	if (perspective != 0) {
+		pAns[0] *= 1 / (pAns[2] / -perspective + 1);
+		pAns[1] *= 1 / (pAns[2] / -perspective + 1);
+	}
 }
-/*--------------------------------[ 写像素 (正投影) ]--------------------------------*/
-bool GraphicsND::setPix(int x,int y, int z, int size) {
+/*--------------------------------[ 写像素 ]--------------------------------*/
+bool GraphicsND::setPix(int x,int y, int z, int size, unsigned int color) {
 	int t = x;
 	x = g.Canvas.rows / 2 - y;
 	y = g.Canvas.cols / 2 + t;
 	if (g.judgeOutRange(x, y) || z < Z_Buffer[0](x, y))return false;
 	if		(size ==-1)	g.drawPoint(x, y);
-	else if (size == 0) g. setPoint(x, y, FaceColor); 
+	else if (size == 0) g. setPoint(x, y, color);
 	Z_Buffer[0](x, y) = z; return true;
 }
-bool GraphicsND::setPix(Mat<int>& p0, int size) {
+bool GraphicsND::setPix(Mat<int>& p0, int size, unsigned int color) {
 	int x = g.Canvas.rows / 2 - p0[1],
 		y = g.Canvas.cols / 2 + p0[0];
 	if (g.judgeOutRange(x, y)) return false;
@@ -69,7 +77,7 @@ bool GraphicsND::setPix(Mat<int>& p0, int size) {
 		if (p0[i] < Z_Buffer[i - 2](x, y)) 
 			return false;
 	if(size ==-1) g.drawPoint(x, y); 
-	if(size == 0) g. setPoint(x, y, FaceColor);
+	if(size == 0) g. setPoint(x, y, color);
 	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](x, y) = p0[i];
 	return true;
 }
@@ -98,6 +106,20 @@ void GraphicsND::writeModel(const char* fileName) {
 		for (int j = 0; j < TriangleSet[i].rows; j++)
 			p[i % 3](j, i / 3) = TriangleSet[i][j];
 	GraphicsFileCode::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
+}
+/*--------------------------------[ 着色器函数例子 ]--------------------------------*/
+unsigned int GraphicsND::FaceColorF_1(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+	static Mat<> t1, t2, faceVec, light(3); light = 1 / sqrt(3);
+	double t = (faceVec.crossProduct_(
+		t1.sub(p2, p1),
+		t2.sub(p3, p1)
+	).normalized().dot(light) + 1) / 2;
+	return (int)(t * (unsigned char)(FaceColor >> 16)) * 0x10000 
+		 + (int)(t * (unsigned char)(FaceColor >> 8)) * 0x100
+		 + (int)(t * (unsigned char)(FaceColor));
+}
+unsigned int GraphicsND::FaceColorF_2(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+	return FaceColor;
 }
 /*#############################################################################
 
@@ -258,6 +280,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		value2pix(p2, pt[1]); 
 		value2pix(p3, pt[2]);
 		int Dim = p1.rows;
+		unsigned int FaceColorTmp = FaceColorF(p1, p2, p3);
 		//[2]
 		int pXminIndex = 0;
 		for (int i = 1; i < 3; i++) pXminIndex = pt[i][0] < pt[pXminIndex][0] ? i : pXminIndex;
@@ -301,7 +324,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 			}
 			int distanceTmp = deltaTmp.max();										//总步数
 			for (int i = 0; i <= distanceTmp; i++) {								//画线
-				pointTmp[2]--; setPix(pointTmp, 0);	pointTmp[2]++;					//唯一输出：画点 (Z-1:反走样)
+				pointTmp[2]--; setPix(pointTmp, 0, FaceColorTmp); pointTmp[2]++;	//唯一输出：画点 (Z-1:反走样)
 				for (int dim = 0; dim < Dim; dim++) {								//xyz走一步
 					errTmp[dim] += deltaTmp[dim];
 					if (errTmp  [dim] >= distanceTmp) { 
@@ -341,19 +364,13 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		  pt2(p2.rows), 
 		  pt3(p3.rows), 
 		  fvt(p1.rows),
-		light(p1.rows),tmp; light.fill(1).normalized();
-	for (int i = 0; i < p1.cols; i++) {
-		p1.getCol(i, pt1);
-		p2.getCol(i, pt2);
-		p3.getCol(i, pt3);
-		fvt.crossProduct(
-			fvt.sub(pt2, pt1),
-			tmp.sub(pt3, pt1)
-		).normalized();
-		double t = (fvt.dot(light) + 1) / 2;
-		FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-		drawTriangle(pt1, pt2, pt3);
-	}
+		light(p1.rows),tmp;
+	for (int i = 0; i < p1.cols; i++) 
+		drawTriangle(
+			p1.getCol(i, pt1), 
+			p2.getCol(i, pt2), 
+			p3.getCol(i, pt3)
+		);
 }
 void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec) {
 	Mat<> pt1(p1	 .rows), 
@@ -362,14 +379,13 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 		  fvt(FaceVec.rows),
 		light(FaceVec.rows); light.fill(1).normalized();
 	if (FACE) {
-		for (int i = 0; i < p1.cols; i++) {
-			p1.		getCol(i, pt1);
-			p2.		getCol(i, pt2);
-			p3.		getCol(i, pt3);
+		for (int i = 0; i < p1.cols; i++) { //### FaceVec 未能用在着色器上
 			FaceVec.getCol(i, fvt);
-			double t = (fvt.dot(light) / fvt.norm() + 1) / 2;
-			FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-			drawTriangle(pt1, pt2, pt3);
+			drawTriangle(
+				p1.getCol(i, pt1),
+				p2.getCol(i, pt2),
+				p3.getCol(i, pt3)
+			);
 		}
 	}
 }
@@ -484,11 +500,11 @@ void GraphicsND::drawEllipse(Mat<>& center, double rx, double ry, Mat<>* direct)
 }
 /*--------------------------------[ 画曲面 ]--------------------------------*/
 void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double ye, Mat<>* direct) {
-	Mat<> p(3), pl(3), pu(3), plu(3); Mat<> FaceVec, tmp, light(3); light.fill(1).normalized();
+	Mat<> p(3), pl(3), pu(3), plu(3); Mat<> FaceVec, tmp, light(3); light = 1 / sqrt(3);
 	double dx = (xe - xs) / z.rows, 
 		   dy = (ye - ys) / z.cols;
-	for (int y = 1; y < z.cols; y++) {
-		for (int x = 1; x < z.rows; x++) {
+	for (int y = 0; y < z.cols; y++) {
+		for (int x = 0; x < z.rows; x++) {
 			if (z(x, y) == HUGE_VAL) continue;
 			p.set(xs + x * dx, ys + y * dy, z(x, y));
 			if (LINE) {
@@ -496,26 +512,15 @@ void GraphicsND::drawSurface(Mat<>& z, double xs, double xe, double ys, double y
 				if (y > 0) { pu.set(xs + x * dx, ys + (y - 1) * dy, z(x, y - 1)); drawLine(pu, p); }
 			}
 			if (FACE) {
+				if (x == 0 || y == 0) continue;
 				if (z(x - 1, y)		== HUGE_VAL 
 				||  z(x,     y - 1)	== HUGE_VAL 
 				||  z(x - 1, y - 1) == HUGE_VAL) continue;
 				pl. set(xs + (x - 1) * dx,	ys +  y      * dy,	z(x - 1, y    ));
 				pu. set(xs +  x      * dx,	ys + (y - 1) * dy,	z(x,     y - 1));
 				plu.set(xs + (x - 1) * dx,	ys + (y - 1) * dy,	z(x - 1, y - 1));
-				{
-					double t = (FaceVec.crossProduct(
-						FaceVec.sub(pl, p),
-						    tmp.sub(pu, p)
-					).normalized().dot(light) + 1) / 2;
-					FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-				} drawTriangle(p, pl, pu);
-				{
-					double t = (FaceVec.crossProduct(
-						FaceVec.sub(pl, plu),
-						    tmp.sub(pu, plu)
-					).normalized().dot(light) + 1) / 2;
-					FaceColor = (int)(t * 0xFF) * 0x10000 + (int)(t * 0xFF) * 0x100 + (int)(t * 0xFF);
-				} drawTriangle(pu, pl, plu);
+				drawTriangle(p, pl, pu);
+				drawTriangle(plu, pu, pl);
 			}
 		}
 	}
@@ -1135,18 +1140,22 @@ Mat<>& GraphicsND::scale(Mat<>& ratio, Mat<>& center, Mat<>& transMat) {
 }
 void GraphicsND::interactive() {
 	int ch;
+	static int v = 1;
 	static Mat<> delta(3), zero(3);
 	if (_kbhit()) {
 		ch = _getch(); printf("%d ", ch);
-		if (ch == 'd') translate(delta.set( 1, 0, 0));
-		if (ch == 'a') translate(delta.set(-1, 0, 0));
-		if (ch == 'w') translate(delta.set( 0, 1, 0));
-		if (ch == 's') translate(delta.set( 0,-1, 0));
-		if (ch == 'q') rotate	(delta.set(0, 0, 1), 2 * PI / 360, zero.zero());
-		if (ch == 'e') rotate	(delta.set(0, 0, 1),-2 * PI / 360, zero.zero());
-		if (ch == 'z') rotate	(delta.set(1, 0, 0), 2 * PI / 360, zero.zero());
-		if (ch == 'x') rotate	(delta.set(1, 0, 0),-2 * PI / 360, zero.zero());
-		if (ch == 'c') rotate	(delta.set(0, 1, 0), 2 * PI / 360, zero.zero());
-		if (ch == 'v') rotate	(delta.set(0, 1, 0),-2 * PI / 360, zero.zero());
+		if (ch == 'd') translate(delta.set( v, 0, 0));
+		if (ch == 'a') translate(delta.set(-v, 0, 0));
+		if (ch == 'w') translate(delta.set( 0, v, 0));
+		if (ch == 's') translate(delta.set( 0,-v, 0));
+		if (ch == 'e') translate(delta.set( 0, 0, v));
+		if (ch == 'q') translate(delta.set( 0, 0,-v));
+		if (ch == 'u') rotate	(delta.set(0, 0, 1), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'j') rotate	(delta.set(0, 0, 1),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'i') rotate	(delta.set(1, 0, 0), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'k') rotate	(delta.set(1, 0, 0),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'o') rotate	(delta.set(0, 1, 0), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'l') rotate	(delta.set(0, 1, 0),-2 * PI / 360 * v, zero.zero());
+		if (ch >= '0' && ch <= '9') v = ch - '0';
 	}
 }

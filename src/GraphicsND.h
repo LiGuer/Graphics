@@ -23,7 +23,9 @@ public:
 	Graphics g;																//核心图形学类
 	Mat<Mat<int>> Z_Buffer;
 	static Mat<> TransformMat;												//变换矩阵
-	unsigned int FaceColor = 0xFFFFFF;
+	static unsigned int FaceColor;
+	unsigned int(*FaceColorF)(Mat<>& p1, Mat<>& p2, Mat<>& p3) = FaceColorF_1;
+	double perspective = 0;
 	std::vector<Mat<>> LineSet, TriangleSet;
 	bool FACE = true, LINE = false,
 		 isLineTriangleSet = false;
@@ -34,10 +36,12 @@ public:
 	void clear(ARGB color);													//清屏
 	void value2pix	(double x0, double y0, double z0, int& x, int& y, int& z);//点To像素 (<=3D)
 	void value2pix	(Mat<>& p0, Mat<int>& pAns);							//点To像素 (anyD)
-	bool setPix		(int x, int y, int z = 0, int size = -1);				//写像素 (正投影) (<=3D)
-	bool setPix		(Mat<int>& p0, int size = -1);							//写像素 (正投影) (anyD)
+	bool setPix		(int x, int y, int z = 0, int size = -1, unsigned int color = 0);	//写像素 (<=3D)
+	bool setPix		(Mat<int>& p0,            int size = -1, unsigned int color = 0);	//写像素 (anyD)
 	void setAxisLim	(Mat<>& pMin, Mat<>& pMax);								//设置坐标范围
 	void writeModel (const char* fileName);									//写模型文件
+	static unsigned int FaceColorF_1(Mat<>& p1, Mat<>& p2, Mat<>& p3);
+	static unsigned int FaceColorF_2(Mat<>& p1, Mat<>& p2, Mat<>& p3);
 	/*---------------- DRAW ----------------*/
 	// 0-D
 	void drawPoint		(double x0 = 0, double y0 = 0, double z0 = 0);		//画点 (<=3D)
