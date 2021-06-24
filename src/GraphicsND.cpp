@@ -44,8 +44,9 @@ void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int&
 	y = point[2]; 
 	z = point[3];
 	if (perspective != 0) {
-		x *= 1 / (z / perspective + 1);
-		y *= 1 / (z / perspective + 1);
+		if (z > perspective / 2) { x = y = 0x7FFFFFFF; return; }
+		x *= 1 / (z / -perspective + 1);
+		y *= 1 / (z / -perspective + 1);
 	}
 }
 void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
@@ -55,6 +56,7 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
 	if (perspective != 0) {
+		if (pAns[2] > perspective / 2) { pAns[0] = pAns[1] = 0x7FFFFFFF; return; }
 		pAns[0] *= 1 / (pAns[2] / -perspective + 1);
 		pAns[1] *= 1 / (pAns[2] / -perspective + 1);
 	}
@@ -279,6 +281,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		value2pix(p1, pt[0]); 
 		value2pix(p2, pt[1]); 
 		value2pix(p3, pt[2]);
+		if (pt[0][0] == 0x7FFFFFFF || pt[1][0] == 0x7FFFFFFF || pt[2][0] == 0x7FFFFFFF) return;
 		int Dim = p1.rows;
 		unsigned int FaceColorTmp = FaceColorF(p1, p2, p3);
 		//[2]
