@@ -44,7 +44,7 @@ void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int&
 	y = point[2]; 
 	z = point[3];
 	if (perspective != 0) {
-		if (z > perspective / 2) { x = y = 0x7FFFFFFF; return; }
+		if (z > perspective / 3) { x = y = 0x7FFFFFFF; return; }
 		x *= 1 / (z / -perspective + 1);
 		y *= 1 / (z / -perspective + 1);
 	}
