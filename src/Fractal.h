@@ -467,20 +467,21 @@ int MarchingCubes_TriTable[256][16] = {
 	{0, 3, 8,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
 	{-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
 };
-int MarchingCubes_Point[12][3]{
-	{1, 0, 0}, {2, 1, 0}, {1, 2, 0}, {0, 1, 0},
-	{1, 0, 2}, {2, 1, 2}, {1, 2, 2}, {0, 1, 2},
-	{0, 0, 1}, {2, 0, 1}, {2, 2, 1}, {0, 2, 1}
-};
-int MarchingCubes_Vertex[8] = { 0b0, 0b1,0b11,0b10,0b100, 0b101,0b111,0b110 };
-void MarchingCubes(Tensor<>& X, Mat<>& zero, Mat<>& dx, std::vector<Mat<>>& triangleSet, double isolevel = 0.7) {
+void MarchingCubes(Tensor<>& X, Mat<>& zero, Mat<>& dx, std::vector<Mat<>>& triangleSet, double isolevel = 0.5) {
+	static int 
+		Vertex[8] = { 0b0, 0b1, 0b11, 0b10, 0b100, 0b101,0b111, 0b110 },
+		Point[12][3]{
+			{1, 0, 0}, {2, 1, 0}, {1, 2, 0}, {0, 1, 0},
+			{1, 0, 2}, {2, 1, 2}, {1, 2, 2}, {0, 1, 2},
+			{0, 0, 1}, {2, 0, 1}, {2, 2, 1}, {0, 2, 1}
+		};
 	Mat<> tri(3, 3);
 	for (int i = 0; i < X.size(); i++) {
 		int cubeindex = 0;
 		for (int j = 0; j < 8; j++) {
-			int x = X.i2x(i) +  (MarchingCubes_Vertex[j] & 0b1),
-				y = X.i2y(i) + ((MarchingCubes_Vertex[j] & 0b10) >> 1),
-				z = X.i2z(i) + ((MarchingCubes_Vertex[j] & 0b100)>> 2);
+			int x = X.i2x(i) +  (Vertex[j] & 0b1),
+				y = X.i2y(i) + ((Vertex[j] & 0b10) >> 1),
+				z = X.i2z(i) + ((Vertex[j] & 0b100)>> 2);
 			if (x < 0 || x >= X.dim[0]
 			||  y < 0 || y >= X.dim[1]
 			||  z < 0 || z >= X.dim[2]) continue;
@@ -490,9 +491,47 @@ void MarchingCubes(Tensor<>& X, Mat<>& zero, Mat<>& dx, std::vector<Mat<>>& tria
 			if (MarchingCubes_TriTable[cubeindex][j] == -1) break;
 			for (int k = 0; k < 3; k++) {
 				int point = MarchingCubes_TriTable[cubeindex][j + k]; 
-				tri(0, k) = zero[0] + (X.i2x(i) + MarchingCubes_Point[point][0] / 2.0) * dx[0],
-				tri(1, k) = zero[1] + (X.i2y(i) + MarchingCubes_Point[point][1] / 2.0) * dx[1],
-				tri(2, k) = zero[2] + (X.i2z(i) + MarchingCubes_Point[point][2] / 2.0) * dx[2];
+				tri(0, k) = zero[0] + (X.i2x(i) + Point[point][0] / 2.0) * dx[0],
+				tri(1, k) = zero[1] + (X.i2y(i) + Point[point][1] / 2.0) * dx[1],
+				tri(2, k) = zero[2] + (X.i2z(i) + Point[point][2] / 2.0) * dx[2];
+			}
+			triangleSet.push_back(tri);
+		}
+	}
+}
+template<typename F>
+void MarchingCubes(F& f, Mat<>& St, Mat<>& Ed, Mat<>& dx, std::vector<Mat<>>& triangleSet, double isolevel = 0.5) {
+	static int 
+		Vertex[8] = { 0b0, 0b1, 0b11, 0b10, 0b100, 0b101,0b111, 0b110 },
+		Point[12][3]{
+			{1, 0, 0}, {2, 1, 0}, {1, 2, 0}, {0, 1, 0},
+			{1, 0, 2}, {2, 1, 2}, {1, 2, 2}, {0, 1, 2},
+			{0, 0, 1}, {2, 0, 1}, {2, 2, 1}, {0, 2, 1}
+		};
+	Mat<> tri(3, 3), vec(3), tmp; tmp.sub(Ed, St).elementDiv(dx);
+	Mat<int> delta(3); delta.set(tmp[0], tmp[1], tmp[2]);
+	int n = delta.product();
+	for (int i = 0; i < n; i++) {
+		vec.set(i % delta[0], (i / delta[0]) % delta[1], i / (delta[0] * delta[1]));
+		vec.elementMul(dx) += St;
+		int cubeindex = 0;
+		for (int j = 0; j < 8; j++) {
+			double
+				x = vec[0] + dx[0] *  (Vertex[j] & 0b1),
+				y = vec[1] + dx[1] * ((Vertex[j] & 0b10) >> 1),
+				z = vec[2] + dx[2] * ((Vertex[j] & 0b100)>> 2);
+			if (x < St[0] || x >= Ed[0]
+			||  y < St[1] || y >= Ed[1]
+			||  z < St[2] || z >= Ed[2]) continue;
+			if (f(x, y, z) > isolevel) cubeindex |= (1 << j);
+		}
+		for (int j = 0; j < 15; j += 3) {
+			if (MarchingCubes_TriTable[cubeindex][j] == -1) break;
+			for (int k = 0; k < 3; k++) {
+				int point = MarchingCubes_TriTable[cubeindex][j + k]; 
+				tri(0, k) = vec[0] + Point[point][0] / 2.0 * dx[0],
+				tri(1, k) = vec[1] + Point[point][1] / 2.0 * dx[1],
+				tri(2, k) = vec[2] + Point[point][2] / 2.0 * dx[2];
 			}
 			triangleSet.push_back(tri);
 		}

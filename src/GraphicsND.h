@@ -42,6 +42,7 @@ public:
 	void writeModel (const char* fileName);									//写模型文件
 	static unsigned int FaceColorF_1(Mat<>& p1, Mat<>& p2, Mat<>& p3);
 	static unsigned int FaceColorF_2(Mat<>& p1, Mat<>& p2, Mat<>& p3);
+	static unsigned int FaceColorF_3(Mat<>& p1, Mat<>& p2, Mat<>& p3);
 	/*---------------- DRAW ----------------*/
 	// 0-D
 	void drawPoint		(double x0 = 0, double y0 = 0, double z0 = 0);		//画点 (<=3D)
