@@ -70,6 +70,7 @@ public:
 	void drawTetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);		//画四面体
 	void drawCuboid		(Mat<>&pMin,Mat<>& pMax);							//画矩体
 	void drawPolyhedron	(Mat<>* p, int n);									//画多面体
+	void drawGoldbergPolyhedron	(Mat<>&, int m, int n);						//画Goldberg多面体(五,六边形密铺球)
 	void drawFrustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta = 36);	//画圆台
 	void drawCylinder	(Mat<>& st, Mat<>& ed, double r, double delta = 36);//画圆柱
 	void drawSphere		(Mat<>& center, double r, int delta = 36);			//画球

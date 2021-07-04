@@ -205,7 +205,7 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 	}
 }
 /*************************************************************************************************
-*								Marching Cubes
+*							Marching Cubes 三维等高面绘制
 *	[Reference]:
 	[1] Thanks for http://paulbourke.net/geometry/polygonise/
 *************************************************************************************************/

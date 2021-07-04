@@ -51,7 +51,7 @@ void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int&
 }
 void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows);
-	Mat<> point(TransformMat.rows);
+	static Mat<> point; point.alloc(TransformMat.rows);
 	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
 	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
@@ -277,7 +277,7 @@ void GraphicsND::drawBezierLine(Mat<> p[], int n) {
 void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	if (FACE) {
 		//[1]
-		Mat<int> pt[3], tmp;
+		static Mat<int> pt[3];
 		value2pix(p1, pt[0]); 
 		value2pix(p2, pt[1]); 
 		value2pix(p3, pt[2]);
@@ -285,15 +285,11 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		int Dim = p1.rows;
 		unsigned int FaceColorTmp = FaceColorF(p1, p2, p3);
 		//[2]
-		int pXminIndex = 0;
-		for (int i = 1; i < 3; i++) pXminIndex = pt[i][0] < pt[pXminIndex][0] ? i : pXminIndex;
-		if (pXminIndex != 0) { 
-			tmp = pt[0]; 
-			pt[0] = pt[pXminIndex]; 
-			pt[pXminIndex] = tmp;
-		}
+		int pXminI = 0;
+		for (int i = 1; i < 3; i++) pXminI = pt[i][0] < pt[pXminI][0] ? i : pXminI;
+		std::swap(pt[0], pt[pXminI]);
 		//[3]
-		Mat<int> err[2], inc[2], delta[2], point[2];
+		static Mat<int> err[2], inc[2], delta[2], point[2];
 		for (int k = 0; k < 2; k++) {
 			err[k].zero(Dim);
 			inc[k].zero(Dim);
@@ -319,7 +315,7 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 				}
 			}
 			//[5]画线
-			Mat<int> errTmp(Dim), incTmp(Dim), deltaTmp, pointTmp(point[0]);
+			static Mat<int> errTmp(Dim), incTmp(Dim), deltaTmp, pointTmp; errTmp.zero(); pointTmp = point[0];
 			deltaTmp.sub(point[1], point[0]);
 			for (int dim = 0; dim < Dim; dim++) {									//设置xyz单步方向	
 				incTmp  [dim]  = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
@@ -653,12 +649,16 @@ void GraphicsND::drawSphere(Mat<>& center, double r,
 			pointL[0] = r * cos(phi) * cos(theta - dAngle) + center[0];
 			pointL[1] = r * cos(phi) * sin(theta - dAngle) + center[1];
 			pointL[2] = r * sin(phi)                       + center[2];
-			drawTriangle(point, pointU, pointL);
 			//UL
 			pointUL[0] = r * cos(phi - dAngle) * cos(theta - dAngle) + center[0];
 			pointUL[1] = r * cos(phi - dAngle) * sin(theta - dAngle) + center[1];
 			pointUL[2] = r * sin(phi - dAngle)                       + center[2];
-			drawTriangle(pointL, pointU, pointUL);
+			if (LINE)
+				drawLine(point, pointU),
+				drawLine(point, pointL);
+			if(FACE)
+				drawTriangle(point , pointU, pointL ),
+				drawTriangle(pointL, pointU, pointUL);
 		}
 	}
 }
@@ -1153,12 +1153,12 @@ void GraphicsND::interactive() {
 		if (ch == 's') translate(delta.set( 0,-v, 0));
 		if (ch == 'e') translate(delta.set( 0, 0, v));
 		if (ch == 'q') translate(delta.set( 0, 0,-v));
-		if (ch == 'u') rotate	(delta.set(0, 0, 1), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'j') rotate	(delta.set(0, 0, 1),-2 * PI / 360 * v, zero.zero());
-		if (ch == 'i') rotate	(delta.set(1, 0, 0), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'k') rotate	(delta.set(1, 0, 0),-2 * PI / 360 * v, zero.zero());
-		if (ch == 'o') rotate	(delta.set(0, 1, 0), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'l') rotate	(delta.set(0, 1, 0),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'u') rotate	(delta.set( 0, 0, 1), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'j') rotate	(delta.set( 0, 0, 1),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'i') rotate	(delta.set( 1, 0, 0), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'k') rotate	(delta.set( 1, 0, 0),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'o') rotate	(delta.set( 0, 1, 0), 2 * PI / 360 * v, zero.zero());
+		if (ch == 'l') rotate	(delta.set( 0, 1, 0),-2 * PI / 360 * v, zero.zero());
 		if (ch >= '0' && ch <= '9') v = ch - '0';
 	}
 }
