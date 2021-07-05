@@ -48,6 +48,9 @@ void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int&
 		x *= 1 / (z / -perspective + 1);
 		y *= 1 / (z / -perspective + 1);
 	}
+	std::swap(x, y);
+	x = g.Canvas.rows / 2 - x;
+	y = g.Canvas.cols / 2 + y;
 }
 void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows);
@@ -56,31 +59,29 @@ void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
 	if (perspective != 0) {
-		if (pAns[2] > perspective / 2) { pAns[0] = pAns[1] = 0x7FFFFFFF; return; }
+		if (pAns[2] >= perspective) { pAns[0] = pAns[1] = 0x7FFFFFFF; return; }
 		pAns[0] *= 1 / (pAns[2] / -perspective + 1);
 		pAns[1] *= 1 / (pAns[2] / -perspective + 1);
 	}
+	std::swap(pAns[0], pAns[1]);
+	pAns[0] = g.Canvas.rows / 2 - pAns[0];
+	pAns[1] = g.Canvas.cols / 2 + pAns[1];
 }
 /*--------------------------------[ 写像素 ]--------------------------------*/
 bool GraphicsND::setPix(int x,int y, int z, int size, unsigned int color) {
-	int t = x;
-	x = g.Canvas.rows / 2 - y;
-	y = g.Canvas.cols / 2 + t;
 	if (g.judgeOutRange(x, y) || z < Z_Buffer[0](x, y))return false;
 	if		(size ==-1)	g.drawPoint(x, y);
 	else if (size == 0) g. setPoint(x, y, color);
 	Z_Buffer[0](x, y) = z; return true;
 }
 bool GraphicsND::setPix(Mat<int>& p0, int size, unsigned int color) {
-	int x = g.Canvas.rows / 2 - p0[1],
-		y = g.Canvas.cols / 2 + p0[0];
-	if (g.judgeOutRange(x, y)) return false;
+	if (g.judgeOutRange(p0[0], p0[1])) return false;
 	for (int i = 2; i < p0.rows; i++)
-		if (p0[i] < Z_Buffer[i - 2](x, y)) 
+		if (p0[i] < Z_Buffer[i - 2](p0[0], p0[1]))
 			return false;
-	if(size ==-1) g.drawPoint(x, y); 
-	if(size == 0) g. setPoint(x, y, color);
-	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](x, y) = p0[i];
+	if(size ==-1) g.drawPoint(p0[0], p0[1]);
+	if(size == 0) g. setPoint(p0[0], p0[1], color);
+	for (int i = 2; i < p0.rows; i++) Z_Buffer[i - 2](p0[0], p0[1]) = p0[i];
 	return true;
 }
 /*--------------------------------[ 设置坐标范围 ]--------------------------------*/
@@ -281,14 +282,18 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 		value2pix(p1, pt[0]); 
 		value2pix(p2, pt[1]); 
 		value2pix(p3, pt[2]);
-		if (pt[0][0] == 0x7FFFFFFF || pt[1][0] == 0x7FFFFFFF || pt[2][0] == 0x7FFFFFFF) return;
 		int Dim = p1.rows;
-		unsigned int FaceColorTmp = FaceColorF(p1, p2, p3);
 		//[2]
+		if (pt[0][0] == 0x7FFFFFFF || pt[1][0] == 0x7FFFFFFF || pt[2][0] == 0x7FFFFFFF) return;
 		int pXminI = 0;
 		for (int i = 1; i < 3; i++) pXminI = pt[i][0] < pt[pXminI][0] ? i : pXminI;
 		std::swap(pt[0], pt[pXminI]);
+		if(pt[0][0] >= g.Canvas.rows)        return;
+		if(std::max(pt[1][0], pt[2][0]) < 0) return;
+		if(std::min(pt[0][1], std::min(pt[1][1], pt[2][1])) >=g.Canvas.cols) return;
+		if(std::max(pt[0][1], std::max(pt[1][1], pt[2][1])) < 0)             return;
 		//[3]
+		unsigned int FaceColorTmp = FaceColorF(p1, p2, p3);
 		static Mat<int> err[2], inc[2], delta[2], point[2];
 		for (int k = 0; k < 2; k++) {
 			err[k].zero(Dim);
@@ -296,8 +301,8 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 			delta[k].sub(pt[k + 1], pt[0]); 
 			point[k] = pt[0];
 			for (int dim = 0; dim < Dim; dim++) {
-				inc  [k][dim]  = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
-				delta[k][dim] *= delta[k][dim] < 0 ? -1 : 1;						//向左
+				inc  [k][dim] = delta[k][dim] == 0 ? 0 : (delta[k][dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
+				delta[k][dim] = abs(delta[k][dim]);	
 			}
 		}
 		int dXMaxCur = delta[0][0] > delta[1][0] ? 0 : 1;
@@ -318,8 +323,8 @@ void GraphicsND::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 			static Mat<int> errTmp(Dim), incTmp(Dim), deltaTmp, pointTmp; errTmp.zero(); pointTmp = point[0];
 			deltaTmp.sub(point[1], point[0]);
 			for (int dim = 0; dim < Dim; dim++) {									//设置xyz单步方向	
-				incTmp  [dim]  = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
-				deltaTmp[dim] *= deltaTmp[dim] < 0 ? -1 : 1;						//向左
+				incTmp  [dim] = deltaTmp[dim] == 0 ? 0 : (deltaTmp[dim] > 0 ? 1 : -1);//符号函数(向右,垂直,向左)
+				deltaTmp[dim] = abs(deltaTmp[dim]);	
 			}
 			int distanceTmp = deltaTmp.max();										//总步数
 			for (int i = 0; i <= distanceTmp; i++) {								//画线
