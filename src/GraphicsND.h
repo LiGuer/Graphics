@@ -110,6 +110,6 @@ public:
 	static Mat<>& rotate	(Mat<Mat<>>& rotateAxis, Mat<>& theta,Mat<>& center,Mat<>& transMat = TransformMat);	//旋转 4D
 	static Mat<>& scale		(Mat<>& ratio, Mat<>& center,						Mat<>& transMat = TransformMat);	//缩放
 	/*---------------- 交互 ----------------*/
-	static void interactive();
+	void interactive();
 };
 #endif

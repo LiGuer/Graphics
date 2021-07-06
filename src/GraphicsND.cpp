@@ -1152,18 +1152,20 @@ void GraphicsND::interactive() {
 	static Mat<> delta(3), zero(3);
 	if (_kbhit()) {
 		ch = _getch(); printf("%d ", ch);
-		if (ch == 'd') translate(delta.set( v, 0, 0));
-		if (ch == 'a') translate(delta.set(-v, 0, 0));
-		if (ch == 'w') translate(delta.set( 0, v, 0));
-		if (ch == 's') translate(delta.set( 0,-v, 0));
-		if (ch == 'e') translate(delta.set( 0, 0, v));
-		if (ch == 'q') translate(delta.set( 0, 0,-v));
-		if (ch == 'u') rotate	(delta.set( 0, 0, 1), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'j') rotate	(delta.set( 0, 0, 1),-2 * PI / 360 * v, zero.zero());
-		if (ch == 'i') rotate	(delta.set( 1, 0, 0), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'k') rotate	(delta.set( 1, 0, 0),-2 * PI / 360 * v, zero.zero());
-		if (ch == 'o') rotate	(delta.set( 0, 1, 0), 2 * PI / 360 * v, zero.zero());
-		if (ch == 'l') rotate	(delta.set( 0, 1, 0),-2 * PI / 360 * v, zero.zero());
+		if (ch == 'a') translate(delta.set( v, 0, 0));
+		if (ch == 'd') translate(delta.set(-v, 0, 0));
+		if (ch == 's') translate(delta.set( 0, v, 0));
+		if (ch == 'w') translate(delta.set( 0,-v, 0));
+		if (ch == 'q') translate(delta.set( 0, 0, v));
+		if (ch == 'e') translate(delta.set( 0, 0,-v));
+		if (ch == 'u') rotate	(delta.set( 0, 0, 1), 2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'j') rotate	(delta.set( 0, 0, 1),-2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'i') rotate	(delta.set( 1, 0, 0), 2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'k') rotate	(delta.set( 1, 0, 0),-2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'o') rotate	(delta.set( 0, 1, 0), 2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'l') rotate	(delta.set( 0, 1, 0),-2 * PI / 360 * v, zero.set(0, 0, perspective));
+		if (ch == 'n') perspective += v * 10;
+		if (ch == 'm') perspective -= v * 10;
 		if (ch >= '0' && ch <= '9') v = ch - '0';
 	}
 }
