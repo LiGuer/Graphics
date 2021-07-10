@@ -54,7 +54,7 @@ void GraphicsND::value2pix(double x0, double y0, double z0, int& x, int& y, int&
 }
 void GraphicsND::value2pix(Mat<>& p0, Mat<int>& pAns) {
 	pAns.zero(p0.rows);
-	static Mat<> point; point.alloc(TransformMat.rows);
+	static Mat<> point; point.zero(TransformMat.rows);
 	point[0] = 1; for (int i = 0; i < p0.rows; i++) point[i + 1] = p0[i];
 	point.mul(TransformMat, point); 
 	for (int i = 0; i < pAns.rows; i++) pAns[i] = point[i + 1];
@@ -897,10 +897,11 @@ void GraphicsND::drawSuperCuboid(Mat<>& pMin, Mat<>& pMax) {
 		}
 	}
 }
-/*--------------------------------[ 画球 any-D ]--------------------------------
+/******************************************************************************
+					画球 any-D
 *	[定义]: 球: 距离圆心距离为R的点的集合. Σdim_i² = R²
 *	[算法]: 计算正象限的点坐标，然后通过取负绘制其他象限.
----------------------------------------------------------------------------*/
+******************************************************************************/
 void GraphicsND::drawSuperSphere(Mat<>& center, double r) {
 	unsigned int Dim = center.rows, maxCode = 0, times = 1, cur;
 	double delta = 0.1, tmp;
@@ -909,19 +910,22 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r) {
 	for (int i = 0; i < times; i++) {
 		//[1] 计算正象限的点坐标
 		cur = 0; point[cur] += delta;
-		while (point[cur] > 1 && cur + 1 < Dim - 1) { 
+		while (point[cur] > 1 && cur < Dim - 2) { 
 			point[cur] =  0; cur++; 
 			point[cur] += delta; 
 		}
-		tmp = 1; for (int j = 0; j < Dim - 1; j++) tmp -= point[j] * point[j];
-		point[Dim - 1] = sqrt(tmp);
+		point[Dim - 1] = 0;
+		point[Dim - 1] = 1 - point.dot(point);
+		if  (point[Dim - 1] < 0) continue;
+		else point[Dim - 1] = sqrt(point[Dim - 1]);
 		//[2] 然后通过取负绘制其他象限
+		g.PaintColor = colorlist(point[Dim - 1]);
 		for (unsigned int code = 0; code <= maxCode; code++) {
 			tmpMat = point;
 			for (int j = 0; j < Dim; j++)
 				if (code & (1 << j))
 					tmpMat[j] *= -1;
-			drawPoint(tmpMat.add(center, tmpMat.mul(r, tmpMat)));
+			drawPoint((tmpMat *= r) += center);
 		}
 	}
 }
@@ -1099,11 +1103,13 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>&
 	Mat<> tmp;
 	translate(center.negative(tmp), transMat);
 	rotateAxis.normalized();
-	Mat<> q(transMat.rows);
-	q[0] = cos(theta / 2); 
-	q[1] = sin(theta / 2) * rotateAxis[0];
-	q[2] = sin(theta / 2) * rotateAxis[1];
-	q[3] = sin(theta / 2) * rotateAxis[2];
+	Mat<> q(transMat.rows);				//四元数
+	q = {
+		cos(theta / 2),
+		sin(theta / 2) * rotateAxis[0],
+		sin(theta / 2) * rotateAxis[1],
+		sin(theta / 2) * rotateAxis[2]
+	};
 	// rotate mat
 	Mat<> rotateMat; rotateMat.zero(transMat);
 	for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) rotateMat(i, j) = q[((j % 2 == 0 ? 1 : -1) * i + j + 4) % 4];
@@ -1116,20 +1122,31 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>&
 	return translate(center, transMat.mul(rotateMat, transMat));
 }
 //4D S04
-Mat<>& GraphicsND::rotate(Mat<Mat<>>& rotateAxis, Mat<>& theta, Mat<>& center, Mat<>& transMat) {
+Mat<>& GraphicsND::rotate(Mat<>& rotateAxis1, Mat<>& rotateAxis2, double theta1, double theta2, Mat<>& center, Mat<>& transMat) {
 	if (transMat.rows - 1 != 4) exit(-1);
-	Mat<> tmp, rotateMat;
+	Mat<> tmp, rotateMat; rotateMat.zero(transMat);
 	translate(center.negative(tmp), transMat);
-	double c1 = cos(theta[0]), s1 = sin(theta[0]),
-	       c2 = cos(theta[1]), s2 = sin(theta[1]);
-	transMat.mul( rotateMat = {
-		1,0,0,0,0,
-		0,c1,-s1, c2,-s2,
-		0,s1, c1, s1, c1,
-		0,c2,-s1, c2,-s2,
-		0,s2, c1, s2, c2
-	}, transMat);
-	return translate(center, transMat);
+	double c1 = cos(theta1), s1 = sin(theta1),
+	       c2 = cos(theta2), s2 = sin(theta2);
+	Mat<> q[4], t1(4);
+	q[0].zero(4) = { c1,s1,c2,s2 };
+	q[1].zero(4) = { c1,0 ,0 ,s2 };
+	q[2].zero(4) = { 0 ,s1,0 ,s2 };
+	q[3].zero(4) = { 0 ,0 ,c2,s2 };
+	q[0].normalized();
+	q[1] -= t1.mul(q[1].dot(q[0]), q[0]);	//施密特正交化
+	q[1].normalized();
+	q[2] -= t1.mul(q[2].dot(q[0]), q[0]);
+	q[2] -= t1.mul(q[2].dot(q[1]), q[1]);
+	q[2].normalized();
+	q[3] -= t1.mul(q[3].dot(q[0]), q[0]);
+	q[3] -= t1.mul(q[3].dot(q[1]), q[1]);
+	q[3] -= t1.mul(q[3].dot(q[2]), q[2]);
+	q[3].normalized();
+	for (int c = 1; c <= 4; c++)
+		for (int r = 1; r <= 4; r++)
+			rotateMat(r, c) = q[c - 1][r - 1];
+	return translate(center, transMat.mul(rotateMat, transMat));
 }
 /*--------------------------------[ 缩放 ]--------------------------------
 [1 ]   [ 1  0  0  0 ] [1]
