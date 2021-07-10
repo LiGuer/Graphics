@@ -929,6 +929,45 @@ void GraphicsND::drawSuperSphere(Mat<>& center, double r) {
 		}
 	}
 }
+void GraphicsND::draw4DSphere(Mat<>& center, double r) {
+	Mat<> point(4), pointU(4), pointL(4), pointUL(4);
+	point[3] = pointU[3] = pointL[3] = pointUL[3] = center[3] - r;
+	double delta = 36, dz = r / 3;
+	double dAngle = 2.0 * PI / delta;
+	int ThetaNum  = 2.0 * PI / dAngle,
+		PhiNum = PI / dAngle;
+	while (point[3] <= center[3] + r) {
+		for (int i = 1; i <= ThetaNum; i++) {
+			double theta = i * dAngle;
+			for (int j = 1; j <= PhiNum; j++) {
+				double phi = -PI / 2 + j * dAngle;
+				double rt = sqrt(r * r - point[3] * point[3]);
+				point[0] = rt * cos(phi) * cos(theta) + center[0];
+				point[1] = rt * cos(phi) * sin(theta) + center[1];
+				point[2] = rt * sin(phi) + center[2];
+				//U
+				pointU[0] = rt * cos(phi - dAngle) * cos(theta) + center[0];
+				pointU[1] = rt * cos(phi - dAngle) * sin(theta) + center[1];
+				pointU[2] = rt * sin(phi - dAngle) + center[2];
+				//L
+				pointL[0] = rt * cos(phi) * cos(theta - dAngle) + center[0];
+				pointL[1] = rt * cos(phi) * sin(theta - dAngle) + center[1];
+				pointL[2] = rt * sin(phi) + center[2];
+				//UL
+				pointUL[0] = rt * cos(phi - dAngle) * cos(theta - dAngle) + center[0];
+				pointUL[1] = rt * cos(phi - dAngle) * sin(theta - dAngle) + center[1];
+				pointUL[2] = rt * sin(phi - dAngle) + center[2];
+				if (LINE)
+					drawLine(point, pointU),
+					drawLine(point, pointL);
+				if (FACE)
+					drawTriangle(point,  pointU, pointL),
+					drawTriangle(pointL, pointU, pointUL);
+			}
+		}
+		point[3] = pointU[3] = pointL[3] = (pointUL[3] += dz);
+	}
+}
 /*--------------------------------[ 画网格 ]--------------------------------
 *	[过程]:
 		[1] 计算每一个格点的坐标

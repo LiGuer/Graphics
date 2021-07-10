@@ -96,6 +96,7 @@ public:
 	void drawSuperLine	(Mat<>* p0);							//画线 any-D
 	void drawSuperCuboid(Mat<>& pMin, Mat<>& pMax);				//画立方体 any-D
 	void drawSuperSphere(Mat<>& center, double r);				//画球体 any-D
+	void draw4DSphere(Mat<>& center, double r);				//画球体 any-D
 	void drawGrid		(Mat<>& delta, Mat<>& max, Mat<>& min);	//画网格
 	// Other
 	void drawAxis(double Xmax = 0, double Ymax = 0, double Zmax = 0, bool negative = false);						//画坐标轴
