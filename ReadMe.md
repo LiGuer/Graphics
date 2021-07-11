@@ -147,9 +147,10 @@ static Mat<>& rotate	(Mat<>& rotateAxis, double theta, Mat<>& center,	Mat<>& tra
 static Mat<>& rotate	(Mat<Mat<>>& rotateAxis, Mat<>& theta,Mat<>& center,Mat<>& transMat = TransformMat);	//旋转 4D
 static Mat<>& scale		(Mat<>& ratio, Mat<>& center,						Mat<>& transMat = TransformMat);	//缩放
 ```  
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/LIGU-3D-surface.jpg) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/山海树.png)
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/David.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/高维空间/四维超立方图_四维超球.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/高维空间/四维超球-纬度.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/树.jpg) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/山海人.png)
 
 ### <RayTracing.h> 光线追踪:
 * 几何光学:
