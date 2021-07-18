@@ -14,11 +14,20 @@ limitations under the License.
 ==============================================================================*/
 #ifndef RAY_TRACING_H
 #define RAY_TRACING_H
-#include "RGB.h"
-#include "GraphicsND.h"
+#include <time.h>
 #include <vector>
+#include <algorithm>
+#include "RGB.h"
+#include "GraphicsFileCode.h"
 #define PI 3.141592653589
 #define RAND_DBL (rand() / double(RAND_MAX))
+/*---------------- 几何光学 ----------------*/
+namespace GeometricalOptics {
+	Mat<>& reflect			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
+	Mat<>& refract			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
+	Mat<>& diffuseReflect	(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
+}
+/*---------------- 光线追踪 ----------------*/
 class RayTracing {
 public:
 	struct Material {															//材质
@@ -37,26 +46,22 @@ public:
 	Mat<RGB>	ScreenPix;
 	Mat<Mat<>>	Screen;
 	int maxRayLevel = 5;
-	double eps = 1e-4;
+	double ScreenXSize, ScreenYSize, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Mat<>>    PointLight;											//点光源集(QuickReflect专用)
 	/*---------------- 底层 ----------------*/
 	RayTracing() { ; }
-   ~RayTracing() { ; }															//析构函数
 	RayTracing(int width, int height) { init(width, height); }					//构造函数
 	void init (int width, int height);											//初始化
 	void setPix(int x, int y, Mat<>& color);									//画像素
 	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		//渲染
-	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
-	static double seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
+	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);					//追踪光线
+	double seekIntersection				(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
+	double seekIntersection_RaySphere	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
+	double seekIntersection_RayTriangle	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
 	//2-D
 	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);				//画三角形
 	void drawSphere		(Mat<>& center, double r,			Material* material = NULL);				//画球
-	/*---------------- 几何光学 ----------------*/
-	static Mat<>& reflect		(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
-	static Mat<>& refract		(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
-	static Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
 };
-
 #endif

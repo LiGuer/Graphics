@@ -13,8 +13,68 @@ limitations under the License.
 [1] Thanks for Kevin Beason at http://www.kevinbeason.com/smallpt/
 ==============================================================================*/
 #include "RayTracing.h"
-#include "GraphicsFileCode.h"
-#include <time.h>
+using namespace GeometricalOptics;
+/*#############################################################################
+
+*						几何光学  Geometrical Optics
+
+-------------------------------------------------------------------------------
+*	[基本定律]:
+		[1] 光沿直线传播.
+		[2] 两束光传播中互不干扰,会聚于同一点时光强简单相加.
+		[3] 介质分界面光传播:
+			[3.1] 反射. 入射角 == 反射角
+			[3.2] 折射. n1·sinθ1 = n2·sinθ2
+			[3.3] 漫反射
+		[4] 光路可逆
+##############################################################################*/
+/******************************************************************************
+*						反射
+*	[反射定律]: 入射角 == 反射角
+			设面矢F, 入射光L
+			Lf = L - F·2 cos<L,F>
+******************************************************************************/
+Mat<>& GeometricalOptics::reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
+	return RayO.add(RayO.mul(-2 * faceVec.dot(RayI), faceVec), RayI).normalized();
+}
+/******************************************************************************
+*						折射
+*	[折射定律]: n1·sinθ1 = n2·sinθ2
+			设面矢F, 入射光L
+			=> sin θo =  n·sin θi  ,  n = n入 / n折, θi = <L,F>
+			Lo = Li + F·sin(θo - θi) / sinθo
+			   = Li + F·( cosθi·sinθo - cosθo·sinθi) / sinθo
+			   = Li + F·( cosθi - cosθo / n )
+			   = Li + F·( cosθi - sqrt(1 - n²·sin²θi) / n )
+******************************************************************************/
+Mat<>& GeometricalOptics::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
+	double k = rateI / rateO,
+		CosI = faceVec.dot(RayI),
+		CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
+	return CosO < 0 ? reflect(RayI, faceVec, RayO) :				//全反射
+		RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1)* sqrt(CosO) / k, faceVec)).normalized();
+}
+/******************************************************************************
+*						漫反射
+*	[算法]: MonteCarlo: 随机持续采样
+*	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
+******************************************************************************/
+Mat<>& GeometricalOptics::diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
+	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
+	static Mat<> t(3), u, v;
+	faceVec *= faceVec.dot(RayI) > 0 ? -1 : 1;
+	t[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1;
+	t[1] = t[0] == 0 ? 1 : 0;
+	u.mul(cos(r1) * sqrt(r2), u.crossProduct_(t, faceVec).normalized());
+	v.mul(sin(r1) * sqrt(r2), v.crossProduct_(faceVec, u).normalized());
+	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalized();
+}
+
+/*#############################################################################
+
+*						光线追踪  Ray Tracing
+
+##############################################################################*/
 /*--------------------------------[ 初始化 ]--------------------------------*/
 void RayTracing::init(int width, int height) {
 	ScreenPix.zero(height, width);
@@ -153,33 +213,36 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 				u = (D×E2· T) / (D×E2·E1)
 				v = (T×E1· D) / (D×E2·E1)
 ******************************************************************************/
+double RayTracing::seekIntersection_RaySphere(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {
+	static Mat<> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
+	double R = triangle.p[1][0],
+		A = Ray.dot(Ray),
+		B = 2 * Ray.dot(RayStCenter),
+		Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+	if (Delta < 0) return -DBL_MAX;									//有无交点
+	Delta = sqrt(Delta);
+	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
+}
+double RayTracing::seekIntersection_RayTriangle(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {
+	static Mat<> edge[2], tmp, p, q;
+	edge[0].sub(triangle.p[1], triangle.p[0]);
+	edge[1].sub(triangle.p[2], triangle.p[0]);
+	// p & a & tmp
+	static double a, u, v;
+	a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
+	if (a > 0) tmp.sub(RaySt, triangle.p[0]);
+	else       tmp.sub(triangle.p[0], RaySt), a = -a;
+	if (a < 1e-4)		return -DBL_MAX;								//射线与三角面平行
+	// u & q & v
+	u = p.dot(tmp) / a;
+	if (u < 0 || u > 1)	return -DBL_MAX;
+	v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
+	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
+}
 double RayTracing::seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {
-	if (triangle.p[2][0] == DBL_MAX) { // Sphere Seek Intersection
-		static Mat<> RayStCenter; RayStCenter.sub(RaySt, triangle.p[0]);
-		double R = triangle.p[1][0], 
-			   A = Ray.dot(Ray), 
-			   B = 2 * Ray.dot(RayStCenter),
-		       Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
-		if (Delta < 0) return -DBL_MAX;									//有无交点
-		Delta = sqrt(Delta);
-		return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
-	}
-	else { // Triangle Seek Intersection
-		static Mat<> edge[2], tmp, p, q;
-		edge[0].sub(triangle.p[1], triangle.p[0]);
-		edge[1].sub(triangle.p[2], triangle.p[0]);
-		// p & a & tmp
-		static double a, u, v;
-		a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
-		if (a > 0) tmp.sub(RaySt, triangle.p[0]);
-		else       tmp.sub(triangle.p[0], RaySt), a = -a;
-		if (a < 1e-4)		return -DBL_MAX;								//射线与三角面平行
-		// u & q & v
-		u = p.dot(tmp) / a;
-		if(u < 0 || u > 1)	return -DBL_MAX;
-		v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
-		return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
-	}
+	return triangle.p[2][0] == DBL_MAX ?
+		seekIntersection_RaySphere  (triangle, RaySt, Ray) :
+		seekIntersection_RayTriangle(triangle, RaySt, Ray) ;
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
 void RayTracing::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
@@ -195,50 +258,4 @@ void RayTracing::drawSphere(Mat<>& center, double r, Material* material) {
 	Mat<> p1(3), p2(3);
 	p1[0] = p1[1] = p1[2] = r; p2[0] = DBL_MAX;
 	drawTriangle(center, p1, p2, material); 
-}
-/*#############################################################################
-
-*						几何光学  Geometrical Optics
-
-##############################################################################*/
-/******************************************************************************
-*						反射
-*	[反射定律]: 入射角 == 反射角
-			设面矢F, 入射光L
-			Lf = L - F·2 cos<L,F>
-******************************************************************************/
-Mat<>& RayTracing::reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
-	return RayO.add(RayO.mul(-2 * faceVec.dot(RayI), faceVec), RayI).normalized();
-}
-/******************************************************************************
-*						折射
-*	[折射定律]: n1·sinθ1 = n2·sinθ2
-			设面矢F, 入射光L
-			=> sin θo =  n·sin θi  ,  n = n入 / n折, θi = <L,F>
-			Lo = Li + F·sin(θo - θi) / sinθo
-			   = Li + F·( cosθi·sinθo - cosθo·sinθi) / sinθo
-			   = Li + F·( cosθi - cosθo / n )
-			   = Li + F·( cosθi - sqrt(1 - n²·sin²θi) / n )
-******************************************************************************/
-Mat<>& RayTracing::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
-	double k    = rateI / rateO,
-		   CosI = faceVec.dot(RayI),
-		   CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
-	return CosO < 0 ? reflect(RayI, faceVec, RayO) :				//全反射
-		   RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1) * sqrt(CosO) / k, faceVec)).normalized();
-}
-/******************************************************************************
-*						漫反射
-*	[算法]: MonteCarlo: 随机持续采样
-*	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
-******************************************************************************/
-Mat<>& RayTracing::diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
-	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
-	static Mat<> t(3), u, v;
-	faceVec *= faceVec.dot(RayI) > 0 ? -1 : 1;
-	t[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1;
-	t[1] = t[0] == 0 ? 1 : 0;
-	u.mul(cos(r1) * sqrt(r2), u.crossProduct_(t, faceVec).normalized());
-	v.mul(sin(r1) * sqrt(r2), v.crossProduct_(faceVec, u).normalized());
-	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalized();
 }
