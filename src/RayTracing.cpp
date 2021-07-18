@@ -35,7 +35,7 @@ using namespace GeometricalOptics;
 			Lf = L - F·2 cos<L,F>
 ******************************************************************************/
 Mat<>& GeometricalOptics::reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
-	return RayO.add(RayO.mul(-2 * faceVec.dot(RayI), faceVec), RayI).normalized();
+	return RayO.add(RayO.mul(-2 * faceVec.dot(RayI), faceVec), RayI).normalize();
 }
 /******************************************************************************
 *						折射
@@ -52,7 +52,7 @@ Mat<>& GeometricalOptics::refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, doub
 		CosI = faceVec.dot(RayI),
 		CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
 	return CosO < 0 ? reflect(RayI, faceVec, RayO) :				//全反射
-		RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1)* sqrt(CosO) / k, faceVec)).normalized();
+		RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1)* sqrt(CosO) / k, faceVec)).normalize();
 }
 /******************************************************************************
 *						漫反射
@@ -65,9 +65,9 @@ Mat<>& GeometricalOptics::diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& Ray
 	faceVec *= faceVec.dot(RayI) > 0 ? -1 : 1;
 	t[0] = fabs(faceVec[0]) > 0.1 ? 0 : 1;
 	t[1] = t[0] == 0 ? 1 : 0;
-	u.mul(cos(r1) * sqrt(r2), u.crossProduct_(t, faceVec).normalized());
-	v.mul(sin(r1) * sqrt(r2), v.crossProduct_(faceVec, u).normalized());
-	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalized();
+	u.mul(cos(r1) * sqrt(r2), u.cross_(t, faceVec).normalize());
+	v.mul(sin(r1) * sqrt(r2), v.cross_(faceVec, u).normalize());
+	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalize();
 }
 
 /*#############################################################################
@@ -100,8 +100,8 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
-	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalized();		//屏幕Y向轴始终与Z轴垂直,无z分量
-	ScreenXVec.crossProduct(ScreenVec, ScreenYVec).normalized();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalize();		//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenXVec.cross(ScreenVec, ScreenYVec).normalize();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
 	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
 	for (int sample = sampleSt; sample < sampleEd; sample++) {
@@ -115,7 +115,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 				);
 				traceRay(														//[4][5]
 					RaySt.add(gCenter,   PixVec), 
-					Ray.  add(ScreenVec, PixVec).normalized(), 
+					Ray.  add(ScreenVec, PixVec).normalize(), 
 					color.zero(), 0
 				);
 				setPix(x, y, (Screen(x, y) *= 1 - rate) += (color *= rate));
@@ -151,11 +151,11 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	{
 		RaySt += (tmp.mul(minDis, Ray));
 		if (minDisTri->p[2][0] == DBL_MAX)
-			 faceVec.sub(RaySt, minDisTri->p[0]).normalized();
-		else faceVec.crossProduct_(
+			 faceVec.sub(RaySt, minDisTri->p[0]).normalize();
+		else faceVec.cross_(
 				   tmp.sub(minDisTri->p[1], minDisTri->p[0]), 
 				RayTmp.sub(minDisTri->p[2], minDisTri->p[0])
-			 ).normalized();
+			 ).normalize();
 	}
 	//[5]
 	static int refractColorIndex; static double refractRateBuf; static bool isChromaticDisperson;
@@ -165,7 +165,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		double lightCos = 0, t;
 		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
 		for (int i = 0; i < PointLight.size(); i++) {
-			t = faceVec.dot(tmp.sub(PointLight[i], RaySt).normalized());
+			t = faceVec.dot(tmp.sub(PointLight[i], RaySt).normalize());
 			lightCos = t > lightCos ? t : lightCos;
 		} color.fill(1) *= lightCos;
 	}
@@ -229,14 +229,14 @@ double RayTracing::seekIntersection_RayTriangle(Triangle& triangle, Mat<>& RaySt
 	edge[1].sub(triangle.p[2], triangle.p[0]);
 	// p & a & tmp
 	static double a, u, v;
-	a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
+	a = p.cross_(Ray, edge[1]).dot(edge[0]);
 	if (a > 0) tmp.sub(RaySt, triangle.p[0]);
 	else       tmp.sub(triangle.p[0], RaySt), a = -a;
 	if (a < 1e-4)		return -DBL_MAX;								//射线与三角面平行
 	// u & q & v
 	u = p.dot(tmp) / a;
 	if (u < 0 || u > 1)	return -DBL_MAX;
-	v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
+	v = q.cross_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
 double RayTracing::seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {

@@ -77,7 +77,7 @@ double Geometry::RayTriIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& TriP1, Mat<
 	edge[1].sub(TriP3, TriP1);
 	// p & a & tmp
 	Mat<> p;
-	double a = p.crossProduct_(Ray, edge[1]).dot(edge[0]);
+	double a = p.cross_(Ray, edge[1]).dot(edge[0]);
 	if (a > 0) 
 		tmp.sub(RaySt, TriP1);
 	else { 
@@ -89,7 +89,7 @@ double Geometry::RayTriIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& TriP1, Mat<
 	if (u < 0 || u > 1) return -DBL_MAX;
 	// q & v
 	Mat<> q;
-	double v = q.crossProduct_(tmp, edge[0]).dot(Ray) / a;
+	double v = q.cross_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
 }
 /*************************************************************************************************

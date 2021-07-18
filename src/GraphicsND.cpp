@@ -103,7 +103,7 @@ void GraphicsND::writeModel(const char* fileName) {
 	p[0].alloc(TriangleSet[0].rows, TriangleSet.size() / 3), 
 	p[1].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
 	p[2].alloc(TriangleSet[0].rows, TriangleSet.size() / 3),
-	fv  .alloc(TriangleSet[0].rows, TriangleSet.size() / 3).fill(1).normalized();
+	fv  .alloc(TriangleSet[0].rows, TriangleSet.size() / 3).fill(1).normalize();
 	Mat<short> attr(TriangleSet.size() / 3);
 	for (int i = 0; i < TriangleSet.size(); i++)
 		for (int j = 0; j < TriangleSet[i].rows; j++)
@@ -113,10 +113,10 @@ void GraphicsND::writeModel(const char* fileName) {
 /*--------------------------------[ 着色器函数例子 ]--------------------------------*/
 unsigned int GraphicsND::FaceColorF_1(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> t1, t2, faceVec, light(3); light = 1 / sqrt(3);
-	double t = (faceVec.crossProduct_(
+	double t = (faceVec.cross_(
 		t1.sub(p2, p1),
 		t2.sub(p3, p1)
-	).normalized().dot(light) + 1) / 2;
+	).normalize().dot(light) + 1) / 2;
 	return (int)(t * (unsigned char)(FaceColor >> 16)) * 0x10000 
 		 + (int)(t * (unsigned char)(FaceColor >> 8)) * 0x100
 		 + (int)(t * (unsigned char)(FaceColor));
@@ -381,7 +381,7 @@ void GraphicsND::drawTriangleSet(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& FaceVec
 		  pt2(p2	 .rows), 
 		  pt3(p3	 .rows), 
 		  fvt(FaceVec.rows),
-		light(FaceVec.rows); light.fill(1).normalized();
+		light(FaceVec.rows); light.fill(1).normalize();
 	if (FACE) {
 		for (int i = 0; i < p1.cols; i++) { //### FaceVec 未能用在着色器上
 			FaceVec.getCol(i, fvt);
@@ -584,7 +584,7 @@ void GraphicsND::drawFrustum(Mat<>& st, Mat<>& ed, double Rst, double Red, doubl
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
-			rotateAxis.crossProduct(direction, zAxis),
+			rotateAxis.cross(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3), rotateMat.E(4)
 		); 
@@ -721,7 +721,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, double Rst, double Red, int delt
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
-			rotateAxis.crossProduct(direction, zAxis),
+			rotateAxis.cross(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3), rotateMat.E(4)
 		); 
@@ -768,7 +768,7 @@ void GraphicsND::drawPipe(Mat<>& st, Mat<>& ed, Mat<>& f) {
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		rotate(
-			rotateAxis.crossProduct(direction, zAxis),
+			rotateAxis.cross(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3), rotateMat.E(4)
 		); 
@@ -808,7 +808,7 @@ void GraphicsND::drawRotator(Mat<>& zero, Mat<>& axis, Mat<>& f, int delta, doub
 	Mat<> rotateAxis, fAxis(3), tmp; fAxis.set(0, 1, 0);
 	if (axis[0] != 0 || axis[2] != 0) {
 		rotate(
-			rotateAxis.crossProduct(axis, fAxis),
+			rotateAxis.cross(axis, fAxis),
 			-acos(tmp.dot(axis, fAxis) / axis.norm()),
 			tmp.zero(3), RotateMatTmp.E(4)
 		); RotateMatTmp.block(1, 3, 1, 3, RotateMat0);
@@ -1141,7 +1141,7 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>&
 	if (transMat.rows - 1 != 3) exit(-1);
 	Mat<> tmp;
 	translate(center.negative(tmp), transMat);
-	rotateAxis.normalized();
+	rotateAxis.normalize();
 	Mat<> q(transMat.rows);				//四元数
 	q = {
 		cos(theta / 2),
@@ -1172,16 +1172,16 @@ Mat<>& GraphicsND::rotate(Mat<>& rotateAxis1, Mat<>& rotateAxis2, double theta1,
 	q[1].zero(4) = { c1,0 ,0 ,s2 };
 	q[2].zero(4) = { 0 ,s1,0 ,s2 };
 	q[3].zero(4) = { 0 ,0 ,c2,s2 };
-	q[0].normalized();
+	q[0].normalize();
 	q[1] -= t1.mul(q[1].dot(q[0]), q[0]);	//施密特正交化
-	q[1].normalized();
+	q[1].normalize();
 	q[2] -= t1.mul(q[2].dot(q[0]), q[0]);
 	q[2] -= t1.mul(q[2].dot(q[1]), q[1]);
-	q[2].normalized();
+	q[2].normalize();
 	q[3] -= t1.mul(q[3].dot(q[0]), q[0]);
 	q[3] -= t1.mul(q[3].dot(q[1]), q[1]);
 	q[3] -= t1.mul(q[3].dot(q[2]), q[2]);
-	q[3].normalized();
+	q[3].normalize();
 	for (int c = 1; c <= 4; c++)
 		for (int r = 1; r <= 4; r++)
 			rotateMat(r, c) = q[c - 1][r - 1];

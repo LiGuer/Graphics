@@ -183,7 +183,7 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
 		GraphicsND::rotate(
-			rotateAxis.crossProduct(direction, zAxis),
+			rotateAxis.cross(direction, zAxis),
 			-acos(tmp.dot(direction, zAxis) / direction.norm()),
 			tmp.zero(3), rotateMat.E(4)
 		); rotateMat.block(1, 3, 1, 3, rotateMat);
@@ -581,9 +581,9 @@ void BoidsRule(std::vector<BoidsBird>& birds, int index,
 	avoidDirection *= -1;
 	// Update Acceleration
 	birds[index].a.zero(); if (groupNum == 0) return;
-	birds[index].a += (avoidDirection.mul(weight[0], avoidDirection.normalized()));
-	birds[index].a += (groupVelocity .mul(weight[1], groupVelocity .normalized()));
-	birds[index].a += (groupCenter   .mul(weight[2], groupCenter   .normalized()));
+	birds[index].a += (avoidDirection.mul(weight[0], avoidDirection.normalize()));
+	birds[index].a += (groupVelocity .mul(weight[1], groupVelocity .normalize()));
+	birds[index].a += (groupCenter   .mul(weight[2], groupCenter   .normalize()));
 	obstacleAvoidance(birds[index]);
 }
 //[ play 运行 ]
@@ -594,7 +594,7 @@ void Boids(std::vector<BoidsBird>& birds, void(*obstacleAvoidance)(BoidsBird& bi
 	Mat<> tmp(3);
 	for (int i = 0; i < birds.size(); i++) {
 		birds[i].v += (tmp.mul(dt,         birds[i].a));
-		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalized()));
+		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalize()));
 	}
 }
 }
