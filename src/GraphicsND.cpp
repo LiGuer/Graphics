@@ -633,10 +633,9 @@ void GraphicsND::drawCylinder(Mat<>& st, Mat<>& ed, double r, double delta) {
 		[2] 画经度线
 **-----------------------------------------------------------------------*/
 void GraphicsND::drawSphere(Mat<>& center, double r, 
-	double thetaSt, double thetaEd, double phiSt, double phiEd, int delta
+	double thetaSt, double thetaEd, double phiSt, double phiEd, double dAngle
 ) {
 	Mat<> point(3), pointU(3), pointL(3), pointUL(3);
-	double dAngle = 2.0 * PI / delta;
 	int ThetaNum = (thetaEd - thetaSt) / dAngle,
 		  PhiNum = (  phiEd -   phiSt) / dAngle;
 	for (int i = 1; i <= ThetaNum; i++) {
@@ -667,8 +666,8 @@ void GraphicsND::drawSphere(Mat<>& center, double r,
 		}
 	}
 }
-void GraphicsND::drawSphere(Mat<>& center, double r, int delta) {
-	drawSphere(center, r, 0, 2 * PI, -PI / 2, PI / 2, delta);
+void GraphicsND::drawSphere(Mat<>& center, double r, double dAngle) {
+	drawSphere(center, r, 0, 2 * PI, -PI / 2, PI / 2, dAngle);
 }
 /*--------------------------------[ getSphereFibonacciPoint 球面均匀点分布 ]--------------------------------
 *	[Referance]:

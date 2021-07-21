@@ -73,9 +73,9 @@ public:
 	void drawGoldbergPolyhedron	(Mat<>&, int m, int n);						//画Goldberg多面体(五,六边形密铺球)
 	void drawFrustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, double delta = 36);	//画圆台
 	void drawCylinder	(Mat<>& st, Mat<>& ed, double r, double delta = 36);//画圆柱
-	void drawSphere		(Mat<>& center, double r, int delta = 36);			//画球
+	void drawSphere		(Mat<>& center, double r, double dAngle = 2 * PI / 36);			//画球
 	void drawSphere		(Mat<>& center, double r, double thetaSt, double thetaEd, 
-							double phiSt = -PI / 2, double phiEd = PI / 2, int delta = 36);//画部分球
+							double phiSt = -PI / 2, double phiEd = PI / 2, double dAngle = 2*PI/36);//画部分球
 	void drawSphere2	(Mat<>& center, double r, int n = 300);				//画球
 	void drawEllipsoid	(Mat<>& center, Mat<>& r);							//画椭球
 	void drawBody		(Mat<>& center, Mat<>& r);							//画曲体

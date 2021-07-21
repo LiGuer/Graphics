@@ -60,7 +60,7 @@ public:
 	double seekIntersection				(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
 	double seekIntersection_RaySphere	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
 	double seekIntersection_RayTriangle	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
-	//2-D
+	//add
 	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);				//画三角形
 	void drawSphere		(Mat<>& center, double r,			Material* material = NULL);				//画球
 };

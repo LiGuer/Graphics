@@ -99,13 +99,13 @@ void RayTracing::setPix(int x, int y, Mat<>& color) {
 void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
-	ScreenVec. sub(gCenter, Eye);																	//屏幕轴由眼指向屏幕中心
-	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalize();		//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenVec. sub(gCenter, Eye);															//屏幕轴由眼指向屏幕中心
+	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalize();	//屏幕Y向轴始终与Z轴垂直,无z分量
 	ScreenXVec.cross(ScreenVec, ScreenYVec).normalize();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 	//[2]
-	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3);
+	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3); clock_t start;
 	for (int sample = sampleSt; sample < sampleEd; sample++) {
-		GraphicsFileCode::ppmWrite(fileName, ScreenPix); clock_t start = clock();
+		if (sample % 1 == 0) { GraphicsFileCode::ppmWrite(fileName, ScreenPix); start = clock(); }
 		double rate = 1.0 / (sample + 1);
 		for (int x = 0; x < Screen.rows; x++) {
 			for (int y = 0; y < Screen.cols; y++) {
@@ -120,7 +120,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 				);
 				setPix(x, y, (Screen(x, y) *= 1 - rate) += (color *= rate));
 			} 
-		} printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
+		} if (sample % 1 == 0) printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
 	}
 }
 /******************************************************************************

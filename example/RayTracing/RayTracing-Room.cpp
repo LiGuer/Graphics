@@ -1,6 +1,4 @@
 #include "..\LiGu_Codes\LiGu_Graphics\src\RayTracing.h"
-#include "..\LiGu_Codes\LiGu_Graphics\src\Fractal.h"
-#include "..\LiGu_Codes\LiGu_Graphics\src\GraphicsFileCode.h"
 #pragma GCC optimize(3,"Ofast","inline")
 int main() {
 	srand(time(NULL));
@@ -12,7 +10,7 @@ int main() {
 		ray.Screen(ray.Screen.rows - 1 - ray.Screen.i2x(i), ray.Screen.i2y(i)).zero(3) = { ray.ScreenPix[i].R / 255.0, ray.ScreenPix[i].G / 255.0, ray.ScreenPix[i].B / 255.0 };
 	{
 		RayTracing::Material* material;
-		Mat<double> p1(3), p2(3), p3(3), p4(3), p5(3);
+		Mat<> p1(3), p2(3), p3(3), p4(3), p5(3);
 
 		material = new RayTracing::Material; material->color.fill(1);
 		ray.drawSphere(p1 = { 600, -200, -500 + 200 }, 200, material);
