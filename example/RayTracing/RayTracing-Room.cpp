@@ -12,23 +12,23 @@ int main() {
 		RayTracing::Material* material;
 		Mat<> p1(3), p2(3), p3(3), p4(3), p5(3);
 
-		material = new RayTracing::Material; material->color.fill(1);
+		material = new RayTracing::Material; material->color = 1;
 		ray.drawSphere(p1 = { 600, -200, -500 + 200 }, 200, material);
-		material = new RayTracing::Material; material->color.fill(1);				material->refractRate = 1.6; material->reflect = 0.1;
+		material = new RayTracing::Material; material->color = 1;					material->refractRate = 1.6; material->reflect = 0.1;
 		ray.drawSphere(p1 = { 300, 100, -500 + 100 }, 100, material);
 		material = new RayTracing::Material; material->color = { 1, 1, 0 };			material->diffuseReflect = 1;
 		ray.drawSphere(p1 = { 500, 300, -500 + 100 }, 100, material);
 		//Box
 		material = new RayTracing::Material; material->color = { 1, 0.68, 0.75 };	material->diffuseReflect = 1;
 		ray.drawSphere(p1 = { 500, +1e5 + 500, 0 }, 1E5, material);
-		material = new RayTracing::Material; material->color.fill(1);				material->diffuseReflect = 1;
+		material = new RayTracing::Material; material->color = 1;					material->diffuseReflect = 1;
 		ray.drawSphere(p1 = { 1e5 + 1000, 0, 0 }, 1E5, material);
 		material = new RayTracing::Material; material->color = { 0.65, 0.62, 1 };	material->diffuseReflect = 1;
 		ray.drawSphere(p1 = { 500, -1e5 - 500, 0 }, 1E5, material);
-		material = new RayTracing::Material; material->color.fill(1);				material->diffuseReflect = 1;
+		material = new RayTracing::Material; material->color = 1;					material->diffuseReflect = 1;
 		ray.drawSphere(p1 = { 500, 0, +1e5 + 500 }, 1E5, material);
 		ray.drawSphere(p1 = { 500, 0, -1e5 - 500 }, 1E5, material);
-		material = new RayTracing::Material; material->color.fill(12);				material->rediate = 1;
+		material = new RayTracing::Material; material->color = 12;					material->rediate = 1;
 		ray.drawTriangle(
 			p1 = { 500 - 200, -200, 499 },
 			p2 = { 500 - 200, 200, 499 },

@@ -22,26 +22,28 @@ limitations under the License.
 #define PI 3.141592653589
 #define RAND_DBL (rand() / double(RAND_MAX))
 /*---------------- 几何光学 ----------------*/
-namespace GeometricalOptics {
-	Mat<>& reflect			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
-	Mat<>& refract			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
-	Mat<>& diffuseReflect	(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
-}
+Mat<>& reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
+Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
+Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);						//漫反射
+/*---------------- 求交点 ----------------*/
+double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R);	//求交点
+double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交点
 /*---------------- 光线追踪 ----------------*/
 class RayTracing {
 public:
+	// 数据结构
 	struct Material {															//材质
 		Mat<> color{ 3 }, refractRate{ 3 };
-		bool 
-			rediate        = 0,
-			quickReflect   = 0,
+		bool
+			rediate = 0,
+			quickReflect = 0,
 			diffuseReflect = 0;
 		double
 			reflect = 1, reflectLossRate = 1,
 			refract = 0, refractLossRate = 1;
 	};
 	struct Triangle { Mat<> p[3]; Material* material = NULL; };					//三角形
-	/*---------------- 基础参数 ----------------*/
+	//基础参数 
 	Mat<> Eye{ 3 }, gCenter{ 3 };
 	Mat<RGB>	ScreenPix;
 	Mat<Mat<>>	Screen;
@@ -49,17 +51,14 @@ public:
 	double ScreenXSize, ScreenYSize, eps = 1e-4;
 	std::vector<Triangle> TriangleSet;											//三角形集
 	std::vector<Mat<>>    PointLight;											//点光源集(QuickReflect专用)
-	/*---------------- 底层 ----------------*/
+	//函数
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数
 	void init (int width, int height);											//初始化
 	void setPix(int x, int y, Mat<>& color);									//画像素
-	/*---------------- DRAW ----------------*/
 	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		//渲染
 	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);					//追踪光线
-	double seekIntersection				(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
-	double seekIntersection_RaySphere	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
-	double seekIntersection_RayTriangle	(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
+	double seekIntersection (Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);	//求交点
 	//add
 	void drawTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);				//画三角形
 	void drawSphere		(Mat<>& center, double r,			Material* material = NULL);				//画球
