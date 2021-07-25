@@ -101,7 +101,7 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
 		A = Ray.dot(Ray),
 		B = 2 * Ray.dot(RayStCenter),
 		Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
-	if (Delta < 0) return -DBL_MAX;									//有无交点
+	if (Delta < 0) return DBL_MAX;									//有无交点
 	Delta = sqrt(Delta);
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
@@ -114,13 +114,33 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	a = p.cross_(Ray, edge[1]).dot(edge[0]);
 	if (a > 0) tmp.sub(RaySt, p1);
 	else       tmp.sub(p1, RaySt), a = -a;
-	if (a < 1e-4)		return -DBL_MAX;								//射线与三角面平行
+	if (a < 1e-4)		return DBL_MAX;								//射线与三角面平行
 	// u & q & v
 	u = p.dot(tmp) / a;
-	if (u < 0 || u > 1)	return -DBL_MAX;
+	if (u < 0 || u > 1)	return DBL_MAX;
 	v = q.cross_(tmp, edge[0]).dot(Ray) / a;
-	return (v < 0 || u + v > 1) ? -DBL_MAX : q.dot(edge[1]) / a;
+	return (v < 0 || u + v > 1) ? DBL_MAX : q.dot(edge[1]) / a;
 }
+double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+	return DBL_MAX;
+}
+double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
+	double t0 = -DBL_MAX, t1 = DBL_MAX;
+	for (int dim = 0; dim < 3; dim++) {
+		if (Ray[dim] == 0) {
+			return DBL_MAX;
+		}
+		double
+			t0t = (pmin[dim] - RaySt[dim]) / Ray[dim],
+			t1t = (pmax[dim] - RaySt[dim]) / Ray[dim];
+		if (t0t > t1t) std::swap(t0t, t1t);
+		t0 = std::max(t0, t0t);
+		t1 = std::min(t1, t1t);
+		if (t0 > t1 || t1 < 0) return DBL_MAX;
+	}
+	return t0 >= 0 ? t0 : t1;
+}
+
 /*#############################################################################
 
 *						光线追踪  Ray Tracing
@@ -187,26 +207,31 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 ******************************************************************************/
 Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	//[1][2][3]
-	double    minDis = DBL_MAX, dis;
-	Triangle* minDisTri = NULL;
-	for (int i = 0; i < TriangleSet.size(); i++) {
-		dis    = seekIntersection(TriangleSet[i], RaySt, Ray);
-		minDis = (dis > eps && dis < minDis) ? minDisTri = &TriangleSet[i], dis : minDis;
+	double minDis = DBL_MAX, dis;
+	Object* minDisOb = NULL;
+	for (int i = 0; i < ObjectSet.size(); i++) {
+		dis    = seekIntersection(ObjectSet[i], RaySt, Ray);
+		minDis = (dis > eps && dis < minDis) ? minDisOb = &ObjectSet[i], dis : minDis;
 	}
 	if (minDis == DBL_MAX)			return color;					//Miss intersect
-	Material* material = minDisTri->material;
+	Material* material = minDisOb->material;
 	if (material->rediate != 0)		return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color;					//Max Ray Level
 	//[4] RaySt & FaceVec
 	static Mat<> faceVec, RayTmp, tmp;
 	{
 		RaySt += (tmp.mul(minDis, Ray));
-		if (minDisTri->p[2][0] == DBL_MAX)
-			 faceVec.sub(RaySt, minDisTri->p[0]).normalize();
-		else faceVec.cross_(
-				   tmp.sub(minDisTri->p[1], minDisTri->p[0]), 
-				RayTmp.sub(minDisTri->p[2], minDisTri->p[0])
-			 ).normalize();
+		switch (minDisOb->type) {
+		case Sphere:	faceVec.sub(RaySt, minDisOb->p[0]).normalize(); break;
+		case Triangle:	faceVec.cross_(
+							   tmp.sub(minDisOb->p[1], minDisOb->p[0]),
+							RayTmp.sub(minDisOb->p[2], minDisOb->p[0])
+						).normalize(); break;
+		case Cuboid:	if (fabs(RaySt[0] - minDisOb->p[0][0]) < eps || fabs(RaySt[0] - minDisOb->p[1][0]) < eps) faceVec = { 1, 0, 0 };
+				   else if (fabs(RaySt[1] - minDisOb->p[0][1]) < eps || fabs(RaySt[1] - minDisOb->p[1][1]) < eps) faceVec = { 0, 1, 0 };
+				   else if (fabs(RaySt[2] - minDisOb->p[0][2]) < eps || fabs(RaySt[2] - minDisOb->p[1][2]) < eps) faceVec = { 0, 0, 1 };
+						break;
+		}
 	}
 	//[5]
 	static int refractColorIndex; static double refractRateBuf; static bool isChromaticDisperson;
@@ -238,23 +263,36 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	if (level == 0 && isChromaticDisperson) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
 	return color.elementMul(material->color);
 }
-double RayTracing::seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray) {
-	return triangle.p[2][0] == DBL_MAX ?
-		RaySphere  (RaySt, Ray, triangle.p[0], triangle.p[1][0]) :
-		RayTriangle(RaySt, Ray, triangle.p[0], triangle.p[1], triangle.p[2]);
+double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
+	switch (ob.type) {
+	case Triangle:	return RayTriangle	(RaySt, Ray, ob.p[0], ob.p[1], ob.p[2]);
+	case Sphere:	return RaySphere	(RaySt, Ray, ob.p[0], ob.v[0]);
+	case Cuboid:	return RayCuboid	(RaySt, Ray, ob.p[0], ob.p[1]);
+	}
 }
 /*--------------------------------[ 画三角形 ]--------------------------------*/
-void RayTracing::drawTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
-	Triangle triangle;
-	triangle.p[0] = p1;
-	triangle.p[1] = p2;
-	triangle.p[2] = p3;
-	triangle.material = material;
-	TriangleSet.push_back(triangle); 
+void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
+	Object ob; ob.type = Triangle;
+	ob.p = (Mat<>*)calloc(3, sizeof(Mat<>));
+	ob.p[0] = p1;
+	ob.p[1] = p2;
+	ob.p[2] = p3;
+	ob.material = material;
+	ObjectSet.push_back(ob);
 }
 /*--------------------------------[ 画球 ]--------------------------------*/
-void RayTracing::drawSphere(Mat<>& center, double r, Material* material) {
-	Mat<> p1(3), p2(3);
-	p1[0] = p1[1] = p1[2] = r; p2[0] = DBL_MAX;
-	drawTriangle(center, p1, p2, material); 
+void RayTracing::addSphere(Mat<>& center, double r, Material* material) {
+	Object ob; ob.type = Sphere;
+	ob.p = (Mat<> *)calloc(1, sizeof(Mat<>) ); ob.p[0] = center;
+	ob.v = (double*)calloc(1, sizeof(double)); ob.v[0] = r;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void RayTracing::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
+	Object ob; ob.type = Cuboid;
+	ob.p = (Mat<>*)calloc(2, sizeof(Mat<>)); 
+	ob.p[0] = pmin;
+	ob.p[1] = pmax;
+	ob.material = material;
+	ObjectSet.push_back(ob);
 }
