@@ -22,9 +22,9 @@ limitations under the License.
 #define PI 3.141592653589
 #define RAND_DBL (rand() / double(RAND_MAX))
 /*---------------- 几何光学 ----------------*/
-Mat<>& reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
-Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
-Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);						//漫反射
+Mat<>& reflect			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
+Mat<>& refract			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
+Mat<>& diffuseReflect	(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
 /*---------------- 求交点 ----------------*/
 double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与三角面
 double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//求交-射线与多边面

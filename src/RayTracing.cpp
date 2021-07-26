@@ -79,6 +79,7 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 				  Δ = b² - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)² - 4(Al² + Bl² + Cl²)(ΔX² + ΔY² + ΔZ² - R²)
 				  若Δ≥0 有交点.
 				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
+-------------------------------------------------------------------------------
 		[射线三角形交点]
 		Moller-Trumbore方法(1997)
 		射线: P = O + t D
@@ -94,6 +95,8 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 				t = (T×E1·E2) / (D×E2·E1)
 				u = (D×E2· T) / (D×E2·E1)
 				v = (T×E1· D) / (D×E2·E1)
+-------------------------------------------------------------------------------
+		[射线长方体交点]
 ******************************************************************************/
 double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
 	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);

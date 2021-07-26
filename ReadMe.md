@@ -152,22 +152,31 @@ static Mat<>& scale		(Mat<>& ratio, Mat<>& center,						Mat<>& transMat = Transf
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/树.jpg) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/山海人.png)
 
-### <RayTracing.h> 光线追踪:
-* 几何光学:
+### <RayTracing.h> 光线追踪:  
+
 ```
+// 几何光学:
 static Mat<>& reflect		(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
 static Mat<>& refract		(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
 static Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
-```
-* 核心:
-```
+----------------------------------------------------------------------------------------
+// 求交点:
+double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与三角面
+double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//求交-射线与多边面
+double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R);			//求交-射线与球
+double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与长方体
+double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//求交-射线与长方体 (轴对齐)
+----------------------------------------------------------------------------------------
+// 核心:
 void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		//渲染
-struct Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
-static double seekIntersection(Triangle& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
+Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
+double seekIntersection(Object& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
 ```
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-2.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/色散火彩.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-12885.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Shpere.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room.png) 
+
 
 ### <Fractal.h> 分形:
 ```
