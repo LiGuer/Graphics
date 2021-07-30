@@ -27,6 +27,7 @@ Mat<>& refract			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double
 Mat<>& diffuseReflect	(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
 /*---------------- 求交点 ----------------*/
 double RayPlane		(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D);	//求交-射线与平面
+double RayCircle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal);	//求交-射线与圆
 double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与三角面
 double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//求交-射线与多边面
 double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R);			//求交-射线与球
@@ -46,7 +47,7 @@ public:
 			reflect = 1, reflectLossRate = 1,
 			refract = 0, refractLossRate = 1;
 	};
-	enum { PLANE = 0, Triangle, Polygon, Sphere, Cuboid };
+	enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, SPHERE, CUBOID };
 	struct Object { int type; Mat<>* p; double* v; Material* material = NULL; };//物体
 	struct OctTree {															//八叉树
 		std::vector<Object> ObjectSet;
@@ -73,6 +74,7 @@ public:
 	double seekIntersection (Object& ob, Mat<>& RaySt, Mat<>& Ray);				//求交点
 	//add
 	void addPlane		(Mat<>& k,  Mat<>& p0,				Material* material = NULL);	//+平面
+	void addCircle		(Mat<>& center, double R, Mat<>& n,	Material* material = NULL);	//+圆
 	void addTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体

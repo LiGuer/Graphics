@@ -72,6 +72,15 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 /******************************************************************************
 						求交点
 *	[算法]:
+-------------------------------------------------------------------------------
+		[射线平面交点]
+		平面方程: Ax + By + Cz + D = 0
+		直线方程: (x - x0) / a = (y - y0) / b = (z - z0) / c = K
+			联立平面,直线方程, 解K, K即直线到射线平面交点的距离
+			x = K a + x0 , ...
+			A(K a + x0) + B(K b + y0) + C(K c + z0) + D = 0
+			=> K =  - (A x0 + B y0 + C z0) / (A a + B b + C c)
+-------------------------------------------------------------------------------
 		[射线球面交点]
 		球方程: (X - Xs)² + (Y - Ys)² + (Z - Zs)² = R²
 		线球交点: K²(Al² + Bl² + Cl²) + 2K(Al ΔX + Bl ΔY + Cl ΔZ) + (ΔX² + ΔY² + ΔZ² - R²) = 0
@@ -80,8 +89,7 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 				  若Δ≥0 有交点.
 				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
 -------------------------------------------------------------------------------
-		[射线三角形交点]
-		Moller-Trumbore方法(1997)
+		[射线三角形交点] Moller-Trumbore方法(1997)
 		射线: P = O + t D
 		射线三角形交点:
 				O + t D = (1 - u - v)V0 + u V1 + v V2
@@ -101,7 +109,15 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 double RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
 	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
 	if (t == 0) return DBL_MAX;
-	return -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
+	double d = -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
+	return d > 0 ? d : DBL_MAX;
+}
+double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
+	double
+		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
+		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+	static Mat<> tmp; tmp.add(RaySt, tmp.mul(d, Ray)); 
+	return (tmp -= Center).norm() <= R ? d : DBL_MAX;
 }
 double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> edge[2], tmp, p, q;
@@ -231,12 +247,13 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		RaySt += (tmp.mul(minDis, Ray));
 		switch (minDisOb->type) {
 		case PLANE:		faceVec = minDisOb->p[0]; break;
-		case Triangle:	faceVec.cross_(
+		case CIRCLE:	faceVec = minDisOb->p[1]; break;
+		case TRIANGLE:	faceVec.cross_(
 							   tmp.sub(minDisOb->p[1], minDisOb->p[0]),
 							RayTmp.sub(minDisOb->p[2], minDisOb->p[0])
 						).normalize(); break;
-		case Sphere:	faceVec.sub(RaySt, minDisOb->p[0]).normalize(); break;
-		case Cuboid:	if (fabs(RaySt[0] - minDisOb->p[0][0]) < eps || fabs(RaySt[0] - minDisOb->p[1][0]) < eps) faceVec = { 1, 0, 0 };
+		case SPHERE:	faceVec.sub(RaySt, minDisOb->p[0]).normalize(); break;
+		case CUBOID:	if (fabs(RaySt[0] - minDisOb->p[0][0]) < eps || fabs(RaySt[0] - minDisOb->p[1][0]) < eps) faceVec = { 1, 0, 0 };
 				   else if (fabs(RaySt[1] - minDisOb->p[0][1]) < eps || fabs(RaySt[1] - minDisOb->p[1][1]) < eps) faceVec = { 0, 1, 0 };
 				   else if (fabs(RaySt[2] - minDisOb->p[0][2]) < eps || fabs(RaySt[2] - minDisOb->p[1][2]) < eps) faceVec = { 0, 0, 1 };
 						break;
@@ -275,9 +292,10 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
 	switch (ob.type) {
 	case PLANE:		return RayPlane		(RaySt, Ray, ob.p[0][0], ob.p[0][1], ob.p[0][2], ob.v[0]);
-	case Triangle:	return RayTriangle	(RaySt, Ray, ob.p[0], ob.p[1], ob.p[2]);
-	case Sphere:	return RaySphere	(RaySt, Ray, ob.p[0], ob.v[0]);
-	case Cuboid:	return RayCuboid	(RaySt, Ray, ob.p[0], ob.p[1]);
+	case CIRCLE:	return RayCircle	(RaySt, Ray, ob.p[0], ob.v[0], ob.p[1]);
+	case TRIANGLE:	return RayTriangle	(RaySt, Ray, ob.p[0], ob.p[1], ob.p[2]);
+	case SPHERE:	return RaySphere	(RaySt, Ray, ob.p[0], ob.v[0]);
+	case CUBOID:	return RayCuboid	(RaySt, Ray, ob.p[0], ob.p[1]);
 	}
 }
 /*--------------------------------[ add Object ]--------------------------------*/
@@ -290,8 +308,18 @@ void RayTracing::addPlane(Mat<>& k, Mat<>& p0, Material* material) {
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+void RayTracing::addCircle(Mat<>& center, double R, Mat<>& n, Material* material) {
+	Object ob; ob.type = CIRCLE;
+	ob.p = (Mat<>*)calloc(2, sizeof(Mat<>));
+	ob.p[0] = center; 
+	ob.p[1] = n; ob.p[1].normalize();
+	ob.v = (double*)calloc(1, sizeof(double));
+	ob.v[0] = R;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
 void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
-	Object ob; ob.type = Triangle;
+	Object ob; ob.type = TRIANGLE;
 	ob.p = (Mat<>*)calloc(3, sizeof(Mat<>));
 	ob.p[0] = p1;
 	ob.p[1] = p2;
@@ -300,14 +328,14 @@ void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material
 	ObjectSet.push_back(ob);
 }
 void RayTracing::addSphere(Mat<>& center, double r, Material* material) {
-	Object ob; ob.type = Sphere;
+	Object ob; ob.type = SPHERE;
 	ob.p = (Mat<> *)calloc(1, sizeof(Mat<>) ); ob.p[0] = center;
 	ob.v = (double*)calloc(1, sizeof(double)); ob.v[0] = r;
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
 void RayTracing::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
-	Object ob; ob.type = Cuboid;
+	Object ob; ob.type = CUBOID;
 	ob.p = (Mat<>*)calloc(2, sizeof(Mat<>)); 
 	ob.p[0] = pmin;
 	ob.p[1] = pmax;
