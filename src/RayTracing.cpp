@@ -135,13 +135,14 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	v = q.cross_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? DBL_MAX : q.dot(edge[1]) / a;
 }
-double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, bool(*f)(double, double)) {
+double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
 	double
 		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
-	static Mat<> tmp; tmp.add(RaySt, tmp.mul(d, Ray));
-	(tmp -= Center);
-	return f(tmp.norm(), tmp[1]) ? d : DBL_MAX;
+	static Mat<> tmp; 
+	tmp.sub(tmp.add(RaySt, tmp.mul(d, Ray)), Center);
+	static double length, angle; length = tmp.norm(), angle = acos(tmp.dot(one) / length);
+	return f(length * cos(angle), length * sin(angle)) ? d : DBL_MAX;
 }
 double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
 	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
@@ -303,7 +304,7 @@ double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
 	case PLANE:		return RayPlane		(RaySt, Ray,(*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
 	case CIRCLE:	return RayCircle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
 	case TRIANGLE:	return RayTriangle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2]);
-	case PLANESHAPE:return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], (bool(*)(double, double))ob.v[2]);
+	case PLANESHAPE:return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2], (bool(*)(double, double))ob.v[3]);
 	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1]);
 	case CUBOID:	return RayCuboid	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1]);
 	}
@@ -337,10 +338,18 @@ void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material
 }
 void RayTracing::addPlaneShape(Mat<>& p0, Mat<>& n, bool(*f)(double, double), Material* material) {
 	Object ob; ob.type = PLANESHAPE;
-	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v = (void**)calloc(4, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p0;
 	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = n;  (*(Mat<>*)ob.v[1]).normalize();
-	ob.v[2] = (void*)f;
+	ob.v[2] = new Mat<>;	
+	ob.v[3] = (void*)f;
+	{
+		if (n[0] == 0 && n[1] == 0)*(Mat<>*)ob.v[2] = { 1,0,0 };
+		else {
+			Mat<> t(3);
+			(*(Mat<>*)ob.v[2]).cross_(t = { 0,0,1 }, *(Mat<>*)ob.v[0]).normalize();
+		}
+	}
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
