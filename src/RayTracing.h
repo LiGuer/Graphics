@@ -30,6 +30,7 @@ double RayPlane		(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, dou
 double RayCircle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal);	//求交-射线与圆
 double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与三角面
 double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//求交-射线与多边面
+double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, bool(*f)(double, double));//求交-射线与平面图形
 double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R);			//求交-射线与球
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与长方体
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//求交-射线与长方体 (轴对齐)
@@ -47,8 +48,8 @@ public:
 			reflect = 1, reflectLossRate = 1,
 			refract = 0, refractLossRate = 1;
 	};
-	enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, SPHERE, CUBOID };
-	struct Object { int type; void** v; Material* material = NULL; };//物体
+	enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
+	struct Object { int type; void** v; Material* material = NULL; };		//物体
 	//基础参数 
 	Mat<> gCenter{ 3 }, Eye{ 3 };
 	Mat<RGB>	ScreenPix;
@@ -66,9 +67,10 @@ public:
 	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);					//追踪光线
 	double seekIntersection (Object& ob, Mat<>& RaySt, Mat<>& Ray);				//求交点
 	//add
-	void addPlane		(Mat<>& k,  Mat<>& p0,				Material* material = NULL);	//+平面
+	void addPlane		(Mat<>& n,  Mat<>& p0,				Material* material = NULL);	//+平面
 	void addCircle		(Mat<>& center, double R, Mat<>& n,	Material* material = NULL);	//+圆
 	void addTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
+	void addPlaneShape	(Mat<>& p0, Mat<>& n, bool(*f)(double,double), Material* material = NULL);	//+平面图形
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
 	void addStl(const char* file, Mat<>& center, double size, Material** material);
