@@ -253,9 +253,9 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 							RayTmp.sub(*(Mat<>*)minDisOb->v[2], *(Mat<>*)minDisOb->v[0])
 						).normalize(); break;
 		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)minDisOb->v[0]).normalize(); break;
-		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[0])[0]) < eps || fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[0])[0]) < eps) faceVec = { 1, 0, 0 };
-				   else if (fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[0])[1]) < eps || fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[0])[1]) < eps) faceVec = { 0, 1, 0 };
-				   else if (fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[0])[2]) < eps || fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[0])[2]) < eps) faceVec = { 0, 0, 1 };
+		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[0])[0]) < eps || fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[1])[0]) < eps) faceVec = { 1, 0, 0 };
+				   else if (fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[0])[1]) < eps || fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[1])[1]) < eps) faceVec = { 0, 1, 0 };
+				   else if (fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[0])[2]) < eps || fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[1])[2]) < eps) faceVec = { 0, 0, 1 };
 						break;
 		}
 	}
