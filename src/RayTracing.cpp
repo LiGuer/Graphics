@@ -294,7 +294,7 @@ double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
 	case PLANE:		return RayPlane		(RaySt, Ray,(*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
 	case CIRCLE:	return RayCircle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
 	case TRIANGLE:	return RayTriangle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2]);
-	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double* )ob.v[0]);
+	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1]);
 	case CUBOID:	return RayCuboid	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1]);
 	}
 }
