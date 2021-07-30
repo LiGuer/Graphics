@@ -48,14 +48,7 @@ public:
 			refract = 0, refractLossRate = 1;
 	};
 	enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, SPHERE, CUBOID };
-	struct Object { int type; Mat<>* p; double* v; Material* material = NULL; };//物体
-	struct OctTree {															//八叉树
-		std::vector<Object> ObjectSet;
-		OctTree* kid[8], *parent = NULL;
-		void buildTree() {
-
-		}
-	};
+	struct Object { int type; void** v; Material* material = NULL; };//物体
 	//基础参数 
 	Mat<> gCenter{ 3 }, Eye{ 3 };
 	Mat<RGB>	ScreenPix;
@@ -78,17 +71,6 @@ public:
 	void addTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
-	void addStl(const char* file, Mat<>& center, double size, Material** material) {
-		Mat<> p0(3), p1(3), p2(3), p3(3), p4(3), p5(3), p6(3); Mat<short> a;
-		GraphicsFileCode::stlRead(file, p0, p1, p2, p3, a);
-		for (int i = 0; i < p0.cols; i++) {
-			addTriangle(
-				((p4 = { p1(0,i), p1(1,i), p1(2,i) }) *= size) += center,
-				((p5 = { p2(0,i), p2(1,i), p2(2,i) }) *= size) += center,
-				((p6 = { p3(0,i), p3(1,i), p3(2,i) }) *= size) += center,
-				material[a[i]]
-			);
-		}
-	}
+	void addStl(const char* file, Mat<>& center, double size, Material** material);
 };
 #endif
