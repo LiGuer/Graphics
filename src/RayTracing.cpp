@@ -98,15 +98,10 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 -------------------------------------------------------------------------------
 		[射线长方体交点]
 ******************************************************************************/
-double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
-	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
-	double 
-		A = Ray.dot(Ray),
-		B = 2 * Ray.dot(RayStCenter),
-		Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
-	if (Delta < 0) return DBL_MAX;									//有无交点
-	Delta = sqrt(Delta);
-	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
+double RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
+	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
+	if (t == 0) return DBL_MAX;
+	return -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
 }
 double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> edge[2], tmp, p, q;
@@ -123,6 +118,16 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	if (u < 0 || u > 1)	return DBL_MAX;
 	v = q.cross_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? DBL_MAX : q.dot(edge[1]) / a;
+}
+double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
+	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
+	double 
+		A = Ray.dot(Ray),
+		B = 2 * Ray.dot(RayStCenter),
+		Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
+	if (Delta < 0) return DBL_MAX;									//有无交点
+	Delta = sqrt(Delta);
+	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
 double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	return DBL_MAX;
@@ -225,11 +230,12 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	{
 		RaySt += (tmp.mul(minDis, Ray));
 		switch (minDisOb->type) {
-		case Sphere:	faceVec.sub(RaySt, minDisOb->p[0]).normalize(); break;
+		case PLANE:		faceVec = minDisOb->p[0]; break;
 		case Triangle:	faceVec.cross_(
 							   tmp.sub(minDisOb->p[1], minDisOb->p[0]),
 							RayTmp.sub(minDisOb->p[2], minDisOb->p[0])
 						).normalize(); break;
+		case Sphere:	faceVec.sub(RaySt, minDisOb->p[0]).normalize(); break;
 		case Cuboid:	if (fabs(RaySt[0] - minDisOb->p[0][0]) < eps || fabs(RaySt[0] - minDisOb->p[1][0]) < eps) faceVec = { 1, 0, 0 };
 				   else if (fabs(RaySt[1] - minDisOb->p[0][1]) < eps || fabs(RaySt[1] - minDisOb->p[1][1]) < eps) faceVec = { 0, 1, 0 };
 				   else if (fabs(RaySt[2] - minDisOb->p[0][2]) < eps || fabs(RaySt[2] - minDisOb->p[1][2]) < eps) faceVec = { 0, 0, 1 };
@@ -268,12 +274,22 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 }
 double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
 	switch (ob.type) {
+	case PLANE:		return RayPlane		(RaySt, Ray, ob.p[0][0], ob.p[0][1], ob.p[0][2], ob.v[0]);
 	case Triangle:	return RayTriangle	(RaySt, Ray, ob.p[0], ob.p[1], ob.p[2]);
 	case Sphere:	return RaySphere	(RaySt, Ray, ob.p[0], ob.v[0]);
 	case Cuboid:	return RayCuboid	(RaySt, Ray, ob.p[0], ob.p[1]);
 	}
 }
-/*--------------------------------[ 画三角形 ]--------------------------------*/
+/*--------------------------------[ add Object ]--------------------------------*/
+void RayTracing::addPlane(Mat<>& k, Mat<>& p0, Material* material) {
+	Object ob; ob.type = PLANE;
+	ob.p = (Mat<>*)calloc(1, sizeof(Mat<>));
+	ob.p[0] = k; ob.p[0].normalize();
+	ob.v = (double*)calloc(1, sizeof(double));
+	ob.v[0] = -(ob.p[0][0] * p0[0] + ob.p[0][1] * p0[1] + ob.p[0][2] * p0[2]);
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
 void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
 	Object ob; ob.type = Triangle;
 	ob.p = (Mat<>*)calloc(3, sizeof(Mat<>));
@@ -283,7 +299,6 @@ void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
-/*--------------------------------[ 画球 ]--------------------------------*/
 void RayTracing::addSphere(Mat<>& center, double r, Material* material) {
 	Object ob; ob.type = Sphere;
 	ob.p = (Mat<> *)calloc(1, sizeof(Mat<>) ); ob.p[0] = center;
