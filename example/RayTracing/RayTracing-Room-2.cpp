@@ -1,5 +1,11 @@
 #include "..\LiGu_Codes\LiGu_Graphics\src\RayTracing.h"
 #pragma GCC optimize(3,"Ofast","inline")
+Mat<bool> img;
+bool f(double x, double y) {
+	if (x < 0 || y < 0) return 0;
+	if (x * 1.7 >= img.rows || y * 1.7 >= img.cols) return 0;
+	return img(x * 1.7, y * 1.7);
+}
 
 int main() {
 	srand(time(NULL));
@@ -19,6 +25,14 @@ int main() {
 		ray.addCuboid(p1 = { 400,-400,-350 }, p2 = { 600,-170,-320 }, material);
 		material = new RayTracing::Material; material->color = { 1, 1, 1 };	material->reflect = 1;
 		ray.addSphere(p1 = { 1000,0,250 }, 200, material);
+		material = new RayTracing::Material; material->color = { 1, 1, 0 };	material->reflect = 1;
+		{
+			Mat<RGB> img0;
+			GraphicsFileCode::ppmRead("D:/f_img.ppm", img0);
+			img.zero(img0.rows, img0.cols);
+			for (int i = 0; i < img.size(); i++) img[i] = img0[i].R < 100 ? 1 : 0;
+			ray.addPlaneShape(p1 = { 0, -495, -500 }, p2 = { 0, 1, 0 }, f, material);
+		}
 		//Box
 		material = new RayTracing::Material; material->color = { 1, 0.68, 0.75 };	material->diffuseReflect = 1;
 		ray.addPlane(p1 = { 0, 1, 0 }, p2 = { 0, +500, 0 }, material);
@@ -31,7 +45,7 @@ int main() {
 		ray.addPlane(p1 = { 0, 0, 1 }, p2 = { 0, 0, -500 }, material);
 		material = new RayTracing::Material; material->color = 8; material->rediate = 1;
 		ray.addCircle(
-			p1 = { 500,0, 499 }, 200,
+			p1 = { 500,0, 499 }, 250,
 			p2 = { 0,0,1 },
 		material);
 		ray.PointLight.push_back(p1 = { 500, 0, 400 });

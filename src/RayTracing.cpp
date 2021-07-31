@@ -116,6 +116,7 @@ double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& norm
 	double
 		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+	if (d == DBL_MAX) return DBL_MAX;
 	static Mat<> tmp; tmp.add(RaySt, tmp.mul(d, Ray)); 
 	return (tmp -= Center).norm() <= R ? d : DBL_MAX;
 }
@@ -139,9 +140,11 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 	double
 		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+	if (d == DBL_MAX) return DBL_MAX;
 	static Mat<> tmp; 
 	tmp.sub(tmp.add(RaySt, tmp.mul(d, Ray)), Center);
 	static double length, angle; length = tmp.norm(), angle = acos(tmp.dot(one) / length);
+	if (length == 0) return DBL_MAX;
 	return f(length * cos(angle), length * sin(angle)) ? d : DBL_MAX;
 }
 double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
