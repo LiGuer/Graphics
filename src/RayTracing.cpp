@@ -141,11 +141,10 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
 	if (d == DBL_MAX) return DBL_MAX;
-	static Mat<> tmp; 
-	tmp.sub(tmp.add(RaySt, tmp.mul(d, Ray)), Center);
-	static double length, angle; length = tmp.norm(), angle = acos(tmp.dot(one) / length);
-	if (length == 0) return DBL_MAX;
-	return f(length * cos(angle), length * sin(angle)) ? d : DBL_MAX;
+	static Mat<> delta, tmp; 
+	delta.sub(delta.add(RaySt, delta.mul(d, Ray)), Center);
+	tmp.cross_(delta, one);
+	return f(delta.dot(one), (tmp.dot(normal) > 0 ? 1 : -1) * tmp.norm()) ? d : DBL_MAX;
 }
 double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
 	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
@@ -350,7 +349,7 @@ void RayTracing::addPlaneShape(Mat<>& p0, Mat<>& n, bool(*f)(double, double), Ma
 		if (n[0] == 0 && n[1] == 0)*(Mat<>*)ob.v[2] = { 1,0,0 };
 		else {
 			Mat<> t(3);
-			(*(Mat<>*)ob.v[2]).cross_(t = { 0,0,1 }, *(Mat<>*)ob.v[0]).normalize();
+			(*(Mat<>*)ob.v[2]).cross_(*(Mat<>*)ob.v[1], t = { 0,0,1 }).normalize();
 		}
 	}
 	ob.material = material;
