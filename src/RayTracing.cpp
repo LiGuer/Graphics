@@ -155,9 +155,16 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(do
 	if (Delta < 0) return DBL_MAX;									//有无交点
 	Delta = sqrt(Delta);
 	if (f != NULL) {
-		static Mat<> delta, tmp, z(3); z[2] = 1;
-		delta.sub(delta.add(RaySt, delta.mul((-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A), Ray)), center).normalize();
-		return f(acos(delta.dot(z)), asin(tmp.cross_(delta, z).norm()));
+		static double d; static Mat<> delta;
+		if ((d = (-B - Delta) / (2 * A)) > 1e-4) {
+			delta.sub(delta.add(RaySt, delta.mul(d, Ray)), center).normalize();
+			if (f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3))) return d;
+		}
+		if ((d = (-B + Delta) / (2 * A)) > 1e-4) {
+			delta.sub(delta.add(RaySt, delta.mul(d, Ray)), center).normalize();
+			return f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)) ? d : DBL_MAX;
+		} 
+		return DBL_MAX;
 	}
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
