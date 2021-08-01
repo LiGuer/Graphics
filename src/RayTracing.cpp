@@ -146,7 +146,7 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 	tmp.cross_(delta, one);
 	return f(delta.dot(one), (tmp.dot(normal) > 0 ? 1 : -1) * tmp.norm()) ? d : DBL_MAX;
 }
-double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
+double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double)) {
 	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
 	double 
 		A = Ray.dot(Ray),
@@ -154,6 +154,11 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R) {
 		Delta = B * B - 4 * A * (RayStCenter.dot(RayStCenter) - R * R);
 	if (Delta < 0) return DBL_MAX;									//有无交点
 	Delta = sqrt(Delta);
+	if (f != NULL) {
+		static Mat<> delta, tmp, z(3); z[2] = 1;
+		delta.sub(delta.add(RaySt, delta.mul((-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A), Ray)), center).normalize();
+		return f(acos(delta.dot(z)), asin(tmp.cross_(delta, z).norm()));
+	}
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
 double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
@@ -307,7 +312,7 @@ double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
 	case CIRCLE:	return RayCircle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
 	case TRIANGLE:	return RayTriangle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2]);
 	case PLANESHAPE:return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2], (bool(*)(double, double))ob.v[3]);
-	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1]);
+	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], (bool(*)(double, double))ob.v[2]);
 	case CUBOID:	return RayCuboid	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1]);
 	}
 }
@@ -355,11 +360,12 @@ void RayTracing::addPlaneShape(Mat<>& p0, Mat<>& n, bool(*f)(double, double), Ma
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
-void RayTracing::addSphere(Mat<>& center, double r, Material* material) {
+void RayTracing::addSphere(Mat<>& center, double r, Material* material, bool(*f)(double, double)) {
 	Object ob; ob.type = SPHERE;
-	ob.v = (void**)calloc(2, sizeof(void*));
+	ob.v = (void**)calloc(3, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
 	ob.v[1] = new double;	*(double*)ob.v[1] = r;
+	ob.v[2] = (void*)f;
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }

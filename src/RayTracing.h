@@ -31,7 +31,7 @@ double RayCircle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& nor
 double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与三角面
 double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//求交-射线与多边面
 double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double));//求交-射线与平面图形
-double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R);			//求交-射线与球
+double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double) = NULL);			//求交-射线与球
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与长方体
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//求交-射线与长方体 (轴对齐)
 /*---------------- 光线追踪 ----------------*/
@@ -71,7 +71,7 @@ public:
 	void addCircle		(Mat<>& center, double R, Mat<>& n,	Material* material = NULL);	//+圆
 	void addTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
 	void addPlaneShape	(Mat<>& p0, Mat<>& n, bool(*f)(double,double), Material* material = NULL);	//+平面图形
-	void addSphere		(Mat<>& center, double r,			Material* material = NULL);	//+球
+	void addSphere		(Mat<>& center, double r,			Material* material = NULL, bool(*f)(double, double) = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
 	void addStl(const char* file, Mat<>& center, double size, Material** material);
 };
