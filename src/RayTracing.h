@@ -57,7 +57,7 @@ public:
 	int maxRayLevel = 5;
 	double ScreenXSize, ScreenYSize, eps = 1e-4;
 	std::vector<Object> ObjectSet;											//三角形集
-	std::vector<Mat<>>    PointLight;											//点光源集(QuickReflect专用)
+	std::vector<Mat<>>  PointLight;											//点光源集(QuickReflect专用)
 	//函数
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }					//构造函数

@@ -174,6 +174,7 @@ double seekIntersection(Object& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交�
 ```
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-2.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-3.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-4.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/色散火彩.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-12885.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Shpere.png) 

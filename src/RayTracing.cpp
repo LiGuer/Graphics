@@ -162,7 +162,7 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(do
 		}
 		if ((d = (-B + Delta) / (2 * A)) > 1e-4) {
 			delta.sub(delta.add(RaySt, delta.mul(d, Ray)), center).normalize();
-			return f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)) ? d : DBL_MAX;
+			if (f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3))) return d;
 		} 
 		return DBL_MAX;
 	}
