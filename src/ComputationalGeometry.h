@@ -35,6 +35,6 @@ namespace Geometry {
 	/*----------------[ 3D 三维 ]----------------*/
 	//球
 	double RaySphereIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double R);	//射线与球面交点
-	Mat<>* getSphereFibonacciPoint(int& n);											//球面均匀点分布
+	Mat<>* getSphereFibonacciPoint(int n);											//球面均匀点分布
 }
 #endif

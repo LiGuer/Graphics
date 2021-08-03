@@ -349,7 +349,7 @@ double Geometry::RaySphereIntersection(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, 
 *	[Referance]:
 		[1] Thanks and copyright for https://github.com/SebLague/Boids
 *************************************************************************************************/
-Mat<>* Geometry::getSphereFibonacciPoint(int& n) {
+Mat<>* Geometry::getSphereFibonacciPoint(int n) {
 	Mat<>* point = (Mat<>*)malloc(n * sizeof(Mat<>));
 	memset(point, 0, n * sizeof(Mat<>));
 	double goldenRatio = (1 + sqrt(5)) / 2, angleIncrement = PI * 2 * goldenRatio;	// 黄金分割点

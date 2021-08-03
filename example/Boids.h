@@ -29,13 +29,13 @@ void Delay(int time){clock_t now = clock(); while (clock() - now < time); }//tim
 ******************************************************************************/
 class Boids {
 public:
-	struct Boids_cell { Mat<double> r{ 3,1 }, v{ 3,1 }, a{ 3,1 }; };
+	struct Boids_cell { Mat<> r{ 3,1 }, v{ 3,1 }, a{ 3,1 }; };
 	Graphics3D g{ 1000, 1000 };
 	double size = 300;
 	double visualField = 20, visualAngle = -0.5;		// 能见范围 // 能见角度cosθ
 	double deltaT = 1, speed = 3;
 	double weight[4] = { 1,1,1,4 };					// 各规则的权值
-	Mat<double>* obstacleAvoidance_direction;
+	Mat<>* obstacleAvoidance_direction;
 	/*********************************[ 函数 ]*********************************/
 	/*--------------------------------[ play 运行 ]--------------------------------*/
 	void play(Boids_cell cell[], int n) {
@@ -43,17 +43,17 @@ public:
 			rule(cell, n, i);
 			obstacleAvoidance(cell[i]);
 		}
-		Mat<double> temp(3, 1);
+		Mat<> temp(3);
 		for (int i = 0; i < n; i++) {
-			cell[i].v.add(cell[i].v, temp.mult(deltaT, cell[i].a));
+			cell[i].v.add(cell[i].v, temp.mul(deltaT, cell[i].a));
 			cell[i].v.normalization();
-			cell[i].r.add(cell[i].r, temp.mult(deltaT * speed, cell[i].v));
+			cell[i].r.add(cell[i].r, temp.mul(deltaT * speed, cell[i].v));
 		}
 	}
 	/*--------------------------------[ rule 规则 ]--------------------------------*/
 	void rule(Boids_cell cell[], int n, int index) {
-		Mat<double> distance(3, 1);
-		Mat<double> avoidDirection(3, 1), groupVelocity(3, 1), groupCenter(3, 1), temp;
+		Mat<> distance(3);
+		Mat<> avoidDirection(3), groupVelocity(3), groupCenter(3), temp;
 		int groupNum = 0;
 		for (int i = 0; i < n; i++) {
 			if (i == index)continue;
@@ -65,7 +65,7 @@ public:
 			if (angle < visualAngle)continue;
 			groupNum++;
 			//[Rule 1]: collisionAvoid  [Rule 2]: velocityMatching  [Rule 3]: flockCentering
-			avoidDirection.add(avoidDirection, temp.mult(1 / distance.norm(), distance));
+			avoidDirection.add(avoidDirection, temp.mul(1 / distance.norm(), distance));
 			groupVelocity.add(groupVelocity, cell[i].v);
 			groupCenter.add(groupCenter, distance);
 		}
@@ -73,38 +73,36 @@ public:
 		// Update Acceleration
 		cell[index].a.clean();
 		if (groupNum == 0) return;
-		cell[index].a.add(cell[index].a, avoidDirection.mult(weight[0], avoidDirection.normalization()));
-		cell[index].a.add(cell[index].a, groupVelocity.mult(weight[1], groupVelocity.normalization()));
-		cell[index].a.add(cell[index].a, groupCenter.mult(weight[2], groupCenter.normalization()));
+		cell[index].a.add(cell[index].a, avoidDirection.mul(weight[0], avoidDirection.normalization()));
+		cell[index].a.add(cell[index].a, groupVelocity.mul(weight[1], groupVelocity.normalization()));
+		cell[index].a.add(cell[index].a, groupCenter.mul(weight[2], groupCenter.normalization()));
 	}
 	/*--------------------------------[ obstacleAvoidance 障碍规避 ]--------------------------------*/
-	void obstacleAvoidance_init() {// 均匀球面点
-		int numViewDirections;  Mat<double>zero(3,1);
-		obstacleAvoidance_direction = getSphereFibonacciPoint(numViewDirections);
-	}
 	void obstacleAvoidance(Boids_cell& cell) {
+		static Mat<>* obstacleAvoidance_direction;
+		static bool o = true;
+		if (o) o = false, obstacleAvoidance_direction = Geometry::getSphereFibonacciPoint(200);
 		// 确定坐标变换矩阵
-		Mat<double>rorateAxis(3, 1), rotateMat, Temp(3, 1);
-		rorateAxis.crossProduct(cell.v, obstacleAvoidance_direction[0]);
-		double theta = -acos(Temp.dot(cell.v, obstacleAvoidance_direction[0])); // cosθ = a * b / (|a| * |b|)
-		g.rotate(rorateAxis.normalization(), theta, Temp, rotateMat);
-
-		Temp = rotateMat; rotateMat.E(3);
-		for (int i = 0; i < 3; i++)for (int j = 0; j < 3; j++)rotateMat(i, j) = Temp(i, j);
+		Mat<> rorateAxis(3), rotateMat, tmp(3);
+		GraphicsND::rotate(
+			rorateAxis.cross(cell.v, obstacleAvoidance_direction[0]).normalization(),
+			-acos(tmp.dot(cell.v, obstacleAvoidance_direction[0])), 
+			tmp, rotateMat.E(4)
+		); rotateMat.block(1, 3, 1, 3, rotateMat);
 		// 碰撞检测
-		Mat<double>derection(3, 1);
+		Mat<> derection;
 		for (int k = 0; k < 200; k++) {
-			derection.mult(rotateMat, obstacleAvoidance_direction[k]);
+			derection.mul(rotateMat, obstacleAvoidance_direction[k]);
 			bool flag = 1; int distance = visualField;
 			while (--distance > 0) {
-				Temp.add(Temp.mult(distance, derection), cell.r);
-				if (obstacleFunction(Temp)) { flag = 0; break; }
+				tmp.add(tmp.mul(distance, derection), cell.r);
+				if (obstacleFunction(tmp)) { flag = 0; break; }
 			}
 			if (flag)break;
 		}
-		cell.a.add(cell.a, derection.mult(weight[3], derection));
+		cell.a += (derection *= weight[3]);
 	}
-	bool obstacleFunction(Mat<double>& point) {
+	bool obstacleFunction(Mat<>& point) {
 		for (int i = 0; i < 3; i++) {
 			if (fabs(point[i]) >= size)return true;
 		}
@@ -113,11 +111,11 @@ public:
 	/*--------------------------------[ Boidss 主函数 ]--------------------------------*/
 	void Boids_main() {
 		// set Graphics3D
-		Mat<double> Axis(3, 1); Axis[0] = 0.7; Axis[1] = 0.4; Axis[2] = 0.59;
-		Mat<double> center(3, 1); center[0] = 500; center[1] = 500; center[2] = 500;
+		Mat<> Axis(3); Axis[0] = 0.7; Axis[1] = 0.4; Axis[2] = 0.59;
+		Mat<> center(3); center[0] = 500; center[1] = 500; center[2] = 500;
 		double theta = 1;
 		// 
-		Mat<double> zero(3, 1), CuboidL(3, 1), CuboidR(3, 1);
+		Mat<> zero(3), CuboidL(3), CuboidR(3);
 		CuboidR[0] = size; CuboidR[1] = size; CuboidR[2] = size; CuboidL[0] = -size; CuboidL[1] = -size; CuboidL[2] = -size;
 		// set Boids_cell
 		int N = 200;
@@ -127,8 +125,7 @@ public:
 			cell[i].v.rands(3, 1, 0, 1);
 			cell[i].v.normalization();
 		}
-		Mat<double> temp;
-		obstacleAvoidance_init();
+		Mat<> temp;
 		while (1) {
 			theta += 0.01; if (theta >= 2 * 3.1415926) theta = 0;
 			g.TransformMat.E(4);
@@ -137,7 +134,7 @@ public:
 
 			play(cell, N);
 			for (int i = 0; i < N; i++)
-				g.drawLine(cell[i].r, temp.add(temp.mult(10, cell[i].v), cell[i].r));
+				g.drawLine(cell[i].r, temp.add(temp.mul(10, cell[i].v), cell[i].r));
 
 			Delay(20);
 			g.g->PicWrite("D:/LIGU.ppm");
@@ -146,15 +143,4 @@ public:
 		}
 	}
 };
-
-
-
-/*
-int main()
-{
-	Delay(1000);
-	Boids boids;
-	boids.Boids_main();
-}
-*/
 #endif

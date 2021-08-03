@@ -559,42 +559,76 @@ void MarchingCubes(F& f, Mat<>& St, Mat<>& Ed, Mat<>& dx, std::vector<Mat<>>& tr
 		[ r ]: r = v·dt = v0·dt·^v
 *	[Referance]:
 		[1] Thanks for https://github.com/SebLague/Boids
+-------------------------------------------------------------------------------
+*	[Example]
+	// obstacleAvoidance 障碍规避
+	bool obstacleFunction(Mat<>& point) {
+		if (fabs(point[0]) >= 500 || fabs(point[1]) >= 500 || fabs(point[2]) >= 500) return true;
+		return false;
+	}
+	void obstacleAvoidance(BoidsBird& cell) {
+		static Mat<>* directionSet;
+		static bool o = true;
+		if(o) o = false, directionSet = Geometry::getSphereFibonacciPoint(200);
+		// 确定坐标变换矩阵
+		static Mat<> rorateAxis, rotateMat, tmp(3), zero(3);
+		GraphicsND::rotate(
+			rorateAxis.cross_(cell.v, directionSet[0]).normalize(),
+			-acos(tmp.dot    (cell.v, directionSet[0])),
+			zero, rotateMat.E(4)
+		); rotateMat.block(1, 3, 1, 3, rotateMat);
+		// 碰撞检测
+		static Mat<> derection;
+		for (int k = 0; k < 200; k++) {
+			derection.mul(rotateMat, directionSet[k]);
+			if (!obstacleFunction(tmp.add(tmp.mul(20, derection), cell.r))) break;
+		} cell.a += (derection *= 4);
+	}
+	int main() {
+		std::vector<Fractal::BoidsBird> birds;
+		Fractal::BoidsBird b;
+		for (int i = 0; i < 2000; i++) {
+			b.r.rands(-400, 400);
+			b.v.rands(0, 1);
+			birds.push_back(b);
+		}
+		double w[4] = { 1,1,1,4 };
+		while (true) Fractal::Boids(birds, obstacleAvoidance, 20, -0.5, w);
+	}
 ******************************************************************************/
 struct BoidsBird { Mat<> r{ 3 }, v{ 3 }, a{ 3 }; };
 //[ rule 规则 ]
 void BoidsRule(std::vector<BoidsBird>& birds, int index, 
 	double visualField, double visualAngle, double* weight, void(*obstacleAvoidance)(BoidsBird& birds)
 ) {
-	Mat<> distance(3), avoidDirection(3), groupVelocity(3), groupCenter(3), tmp;
-	int groupNum = 0;
+	static Mat<> distance(3); Mat<> avoidDirection(3), groupVelocity(3), groupCenter(3);
+	bool notGroup = true; double dis;
 	for (int i = 0; i < birds.size(); i++) {
+		dis = distance.sub(birds[i].r, birds[index].r).norm();
 		if ( i == index
-		|| distance.add(birds[i].r,birds[index].r.negative(distance)).norm()                   > visualField
-		|| distance.dot(distance,  birds[index].v) / (distance.norm() * birds[index].v.norm()) < visualAngle
+		|| dis > visualField || distance.dot(birds[index].v) / dis < visualAngle
 		) continue;
-		groupNum++;
+		notGroup = false;
 		//[Rule 1]: collisionAvoid  [Rule 2]: velocityMatching  [Rule 3]: flockCentering
-		avoidDirection+=(tmp.mul(1 / distance.norm(), distance));
-		groupVelocity += birds[i].v;
 		groupCenter   += distance;
+		avoidDirection+=(distance.normalize());
+		groupVelocity += birds[i].v;
 	}
-	avoidDirection *= -1;
 	// Update Acceleration
-	birds[index].a.zero(); if (groupNum == 0) return;
-	birds[index].a += (avoidDirection.mul(weight[0], avoidDirection.normalize()));
-	birds[index].a += (groupVelocity .mul(weight[1], groupVelocity .normalize()));
-	birds[index].a += (groupCenter   .mul(weight[2], groupCenter   .normalize()));
-	obstacleAvoidance(birds[index]);
+	birds[index].a.zero(); obstacleAvoidance(birds[index]); if (notGroup) return;
+	birds[index].a += (avoidDirection.mul(-weight[0], avoidDirection.normalize()));
+	birds[index].a += (groupVelocity .mul( weight[1], groupVelocity .normalize()));
+	birds[index].a += (groupCenter   .mul( weight[2], groupCenter   .normalize()));
 }
 //[ play 运行 ]
 void Boids(std::vector<BoidsBird>& birds, void(*obstacleAvoidance)(BoidsBird& birds),
 	double visualField, double visualAngle, double* weight, double dt = 1, double speed = 3 // 能见范围、能见角度cos、各规则权值
 ) {
 	for (int i = 0; i < birds.size(); i++) BoidsRule(birds, i, visualField, visualAngle, weight, obstacleAvoidance);
-	Mat<> tmp(3);
 	for (int i = 0; i < birds.size(); i++) {
-		birds[i].v += (tmp.mul(dt,         birds[i].a));
-		birds[i].r += (tmp.mul(dt * speed, birds[i].v.normalize()));
+		birds[i].v += (birds[i].a *= dt);
+		birds[i].r +=((birds[i].v.normalize())*= dt * speed);
+		birds[i].v.normalize();
 	}
 }
 }
