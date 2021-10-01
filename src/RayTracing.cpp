@@ -14,9 +14,7 @@ limitations under the License.
 ==============================================================================*/
 #include "RayTracing.h"
 /*#############################################################################
-
 *						几何光学  Geometrical Optics
-
 -------------------------------------------------------------------------------
 *	[基本定律]:
 		[1] 光沿直线传播.
@@ -138,7 +136,7 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 }
 double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
 	double
-		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
+		D = -normal.dot(Center),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
 	if (d == DBL_MAX) return DBL_MAX;
 	static Mat<> delta, tmp; 
@@ -265,7 +263,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	if (material->rediate != 0)		return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color;					//Max Ray Level
 	//[4] RaySt & FaceVec
-	static Mat<> faceVec, RayTmp, tmp;
+	static Mat<> faceVec(3), RayTmp, tmp;
 	{
 		RaySt += (tmp.mul(minDis, Ray));
 		switch (minDisOb->type) {

@@ -19,9 +19,8 @@ limitations under the License.
 #include "../../LiGu_AlgorithmLib/Tensor.h"
 #include "GraphicsND.h"
 #define PI 3.141692653589
-
-namespace Fractal {
 /*################################################################################################
+[分形 Fractal]
 isMandelbrotSet		(C, Z0, iterateTimes)
 Mandelbrot			(C, min, max, resSize, iterateTimes, Set)
 Julia				(C, min, max, resSize, iterateTimes, Set)
@@ -33,6 +32,7 @@ FractalTree3D		(linesSt, linesEd, level, alpha, fork)
 Boids				(birds)
 BoidsRule			(birds, index)
 ################################################################################################*/
+namespace Fractal {
 /*************************************************************************************************
 *								Mandelbrot集
 *	[定义]: Zn+1 = Zn² + C

@@ -149,7 +149,7 @@ static Mat<>& scale		(Mat<>& ratio, Mat<>& center,						Mat<>& transMat = Transf
 ```  
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/高维空间/四维超立方图_四维超球.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/高维空间/四维超球-纬度.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/树.jpg) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/树.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/山海人.png)
 
 ### <RayTracing.h> 光线追踪:  
@@ -176,7 +176,6 @@ Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪�
 double seekIntersection(Object& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
 ```
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-2.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-3.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-4.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/色散火彩.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-12885.png) 
