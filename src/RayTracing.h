@@ -67,10 +67,10 @@ public:
 	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);					//追踪光线
 	double seekIntersection (Object& ob, Mat<>& RaySt, Mat<>& Ray);				//求交点
 	//add
-	void addPlane		(Mat<>& n,  Mat<>& p0,				Material* material = NULL);	//+平面
+	void addPlane		(Mat<>& n, Mat<>& p0,				Material* material = NULL);	//+平面
 	void addCircle		(Mat<>& center, double R, Mat<>& n,	Material* material = NULL);	//+圆
-	void addTriangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
-	void addPlaneShape	(Mat<>& p0, Mat<>& n, bool(*f)(double,double), Material* material = NULL);	//+平面图形
+	void addTriangle	(Mat<>& p1,Mat<>& p2, Mat<>& p3,	Material* material = NULL);	//+三角形
+	void addPlaneShape	(Mat<>& n, Mat<>& p0, bool(*f)(double,double), Material* material = NULL);	//+平面图形
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL, bool(*f)(double, double) = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
 	void addStl(const char* file, Mat<>& center, double size, Material** material);

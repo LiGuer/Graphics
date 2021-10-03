@@ -185,7 +185,6 @@ double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 	}
 	return t0 >= 0 ? t0 : t1;
 }
-
 /*#############################################################################
 
 *						光线追踪  Ray Tracing
@@ -348,7 +347,7 @@ void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
-void RayTracing::addPlaneShape(Mat<>& p0, Mat<>& n, bool(*f)(double, double), Material* material) {
+void RayTracing::addPlaneShape(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material) {
 	Object ob; ob.type = PLANESHAPE;
 	ob.v = (void**)calloc(4, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p0;
