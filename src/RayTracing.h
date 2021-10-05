@@ -54,9 +54,9 @@ public:
 	ObjectNode* ObNodeList;
 	std::vector<Object> ObjectSet;											//三角形集
 	int planeNum = 0;
-	void sort(std::vector<Object>& obSet);
-	void sort() { sort(ObjectSet); };
-	void sort(ObjectNode* obSet, int l, int r, ObjectNode*& node);
+	void build(std::vector<Object>& obSet);
+	void build() { build(ObjectSet); };
+	void build(ObjectNode* obSet, int l, int r, ObjectNode*& node);
 	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob);
 	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, Object*& ob);
 	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob);

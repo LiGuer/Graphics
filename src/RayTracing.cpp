@@ -191,7 +191,7 @@ double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 
 ##############################################################################*/
 /*--------------------------------[ 建树 ]--------------------------------*/
-void ObjectTree::sort(std::vector<Object>& obSet) {
+void ObjectTree::build(std::vector<Object>& obSet) {
 	ObNodeList = (ObjectNode*)malloc(obSet.size() * sizeof(ObjectNode));
 	Mat<> p(3);
 	for (int i = 0; i < obSet.size(); i++) {
@@ -227,10 +227,10 @@ void ObjectTree::sort(std::vector<Object>& obSet) {
 	std::sort(ObNodeList, ObNodeList + obSet.size(), [](ObjectNode& a, ObjectNode& b) {
 		if (a.ob->type == PLANE || a.ob->type == PLANESHAPE) return true; return false;
 	});
-	while (ObNodeList[planeNum].ob->type == PLANE || ObNodeList[planeNum].ob->type == PLANESHAPE) planeNum++;
-	sort(ObNodeList, planeNum, obSet.size() - 1, root);
+	while (ObNodeList[planeNum].ob->type == PLANE || ObNodeList[planeNum].ob->type == PLANESHAPE) planeNum++; 
+	build(ObNodeList, planeNum, obSet.size() - 1, root); 
 }
-void ObjectTree::sort(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
+void ObjectTree::build(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
 	if (l == r) { node = &obSet[l]; return; }
 	node = new ObjectNode;
 	Object* bound = new Object;
@@ -256,8 +256,8 @@ void ObjectTree::sort(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
 			return (*(Mat<>*)a.bound->v[0])[dim] < (*(Mat<>*)b.bound->v[0])[dim];
 			return (*(Mat<>*)a.bound->v[1])[dim] < (*(Mat<>*)b.bound->v[1])[dim];
 		});
-	sort(obSet, l, (l + r) / 2,     node->kid[0]);
-	sort(obSet, (l + r) / 2 + 1, r, node->kid[1]);
+	build(obSet, l, (l + r) / 2,     node->kid[0]);
+	build(obSet, (l + r) / 2 + 1, r, node->kid[1]);
 }
 /*--------------------------------[ 求交 ]--------------------------------*/
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
@@ -272,8 +272,8 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, 
 	if (node->ob != NULL) { ob = node->ob; return seekIntersection(RaySt, Ray, *node->ob); }
 	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) return DBL_MAX;
 	Object* ob_1, * ob_2;
-	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1);
-	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2);
+	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1); dis_1 = dis_1 > 10e-4 ? dis_1 : DBL_MAX;
+	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2); dis_2 = dis_2 > 10e-4 ? dis_2 : DBL_MAX;
 	ob = dis_1 < dis_2 ? ob_1 : ob_2;
 	return std::min(dis_1, dis_2);
 }
@@ -388,7 +388,7 @@ void RayTracing::setPix(int x, int y, Mat<>& color) {
 -------------------------------------------------------------------------*/
 void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[0]
-	obTree.sort();
+	obTree.build();
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);															//屏幕轴由眼指向屏幕中心
@@ -409,7 +409,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 					RaySt.add(gCenter,   PixVec), 
 					Ray.  add(ScreenVec, PixVec).normalize(), 
 					color.zero(), 0
-				);
+				); 
 				setPix(x, y, (Screen(x, y) *= 1 - rate) += (color *= rate));
 			} 
 		} if (sample % 1 == 0) printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
@@ -466,11 +466,13 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		} color.fill(1) *= lightCos;
 	}
 	else if (material->diffuseReflect) {						//Reflect Diffuse
-		traceRay(RaySt, diffuseReflect(RayTmp, faceVec, Ray), color, level + 1);
+		diffuseReflect(RayTmp, faceVec, Ray);
+		traceRay(RaySt, Ray, color, level + 1);
 		color *= material->reflectLossRate;
 	}
 	else if (RAND_DBL < material->reflect) {					//Reflect
-		traceRay(RaySt, reflect       (RayTmp, faceVec, Ray), color, level + 1);
+		reflect(RayTmp, faceVec, Ray);
+		traceRay(RaySt, Ray, color, level + 1);
 		color *= material->reflectLossRate;
 	}
 	else{														//Refract
