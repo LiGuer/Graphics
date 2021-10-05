@@ -187,6 +187,181 @@ double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 }
 /*#############################################################################
 
+*						对象/对象树
+
+##############################################################################*/
+/*--------------------------------[ 建树 ]--------------------------------*/
+void ObjectTree::sort(std::vector<Object>& obSet) {
+	ObNodeList = (ObjectNode*)malloc(obSet.size() * sizeof(ObjectNode));
+	Mat<> p(3);
+	for (int i = 0; i < obSet.size(); i++) {
+		Object* bound = new Object;
+		bound->type = CUBOID;
+		bound->v = (void**)calloc(2, sizeof(void*));
+		bound->v[0] = new Mat<>(3);
+		bound->v[1] = new Mat<>(3);
+
+		Object* ob = &obSet[i];
+		switch (ob->type) {
+		case CIRCLE:
+			p = *(double*)ob->v[2];
+			(*(Mat<>*)bound->v[0]).sub(*(Mat<>*)ob->v[0], p);
+			(*(Mat<>*)bound->v[1]).add(*(Mat<>*)ob->v[0], p);
+			break;
+		case TRIANGLE:
+			for (int j = 0; j < 3; j++) {
+				(*(Mat<>*)bound->v[0])[j] = std::min((*(Mat<>*)ob->v[0])[j], std::min((*(Mat<>*)ob->v[1])[j], (*(Mat<>*)ob->v[2])[j]));
+				(*(Mat<>*)bound->v[1])[j] = std::max((*(Mat<>*)ob->v[0])[j], std::max((*(Mat<>*)ob->v[1])[j], (*(Mat<>*)ob->v[2])[j]));
+			}
+			break;
+		case SPHERE:
+			p = *(double*)ob->v[1];
+			(*(Mat<>*)bound->v[0]).sub(*(Mat<>*)ob->v[0], p);
+			(*(Mat<>*)bound->v[1]).add(*(Mat<>*)ob->v[0], p);
+			break;
+		case CUBOID: delete bound; bound = ob; break;
+		}
+		ObNodeList[i].ob = &obSet[i];
+		ObNodeList[i].bound = bound;
+	}
+	std::sort(ObNodeList, ObNodeList + obSet.size(), [](ObjectNode& a, ObjectNode& b) {
+		if (a.ob->type == PLANE || a.ob->type == PLANESHAPE) return true; return false;
+	});
+	while (ObNodeList[planeNum].ob->type == PLANE || ObNodeList[planeNum].ob->type == PLANESHAPE) planeNum++;
+	sort(ObNodeList, planeNum, obSet.size() - 1, root);
+}
+void ObjectTree::sort(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
+	if (l == r) { node = &obSet[l]; return; }
+	node = new ObjectNode;
+	Object* bound = new Object;
+	bound->type = CUBOID;
+	bound->v = (void**)calloc(2, sizeof(void*));
+	bound->v[0] = new Mat<>; *(Mat<>*)bound->v[0] = *(Mat<>*)obSet[l].bound->v[0];
+	bound->v[1] = new Mat<>; *(Mat<>*)bound->v[1] = *(Mat<>*)obSet[l].bound->v[1];
+
+	double delta[3];
+	for (int i = l + 1; i <= r; i++) {
+		for (int j = 0; j < 3; j++) {
+			(*(Mat<>*)bound->v[0])[j] = std::min((*(Mat<>*)bound->v[0])[j], (*(Mat<>*)obSet[i].bound->v[0])[j]);
+			(*(Mat<>*)bound->v[1])[j] = std::max((*(Mat<>*)bound->v[1])[j], (*(Mat<>*)obSet[i].bound->v[1])[j]);
+			delta[j] = std::max(delta[j], (*(Mat<>*)obSet[i].bound->v[1])[j] - (*(Mat<>*)obSet[i].bound->v[0])[j]);
+		}
+	}
+	node->bound = bound;
+	int dim;
+	dim = delta[0] / ((*(Mat<>*)bound->v[1])[0] - (*(Mat<>*)bound->v[0])[0]) < delta[1] / ((*(Mat<>*)bound->v[1])[1] - (*(Mat<>*)bound->v[0])[1]) ? 0 : 1;
+	dim = delta[1] / ((*(Mat<>*)bound->v[1])[1] - (*(Mat<>*)bound->v[0])[1]) < delta[2] / ((*(Mat<>*)bound->v[1])[2] - (*(Mat<>*)bound->v[0])[2]) ? 1 : 2;
+	std::sort(obSet + l, obSet + r + 1, [&dim](ObjectNode& a, ObjectNode& b) {
+		if((*(Mat<>*)a.bound->v[0])[dim] != (*(Mat<>*)b.bound->v[0])[dim]) 
+			return (*(Mat<>*)a.bound->v[0])[dim] < (*(Mat<>*)b.bound->v[0])[dim];
+			return (*(Mat<>*)a.bound->v[1])[dim] < (*(Mat<>*)b.bound->v[1])[dim];
+		});
+	sort(obSet, l, (l + r) / 2,     node->kid[0]);
+	sort(obSet, (l + r) / 2 + 1, r, node->kid[1]);
+}
+/*--------------------------------[ 求交 ]--------------------------------*/
+double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
+	double disMin = seekIntersection(RaySt, Ray, root, ob), dis_t;
+	for (int i = 0; i < planeNum; i++) {
+		dis_t = seekIntersection(RaySt, Ray, *ObNodeList[i].ob);
+		if (disMin > dis_t) { ob = ObNodeList[i].ob; disMin = dis_t; }
+	}
+	return disMin;
+}
+double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, Object*& ob) {
+	if (node->ob != NULL) { ob = node->ob; return seekIntersection(RaySt, Ray, *node->ob); }
+	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) return DBL_MAX;
+	Object* ob_1, * ob_2;
+	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1);
+	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2);
+	ob = dis_1 < dis_2 ? ob_1 : ob_2;
+	return std::min(dis_1, dis_2);
+}
+double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob) {
+	switch (ob.type) {
+	case PLANE:		return RayPlane		(RaySt, Ray,(*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
+	case CIRCLE:	return RayCircle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
+	case TRIANGLE:	return RayTriangle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2]);
+	case PLANESHAPE:return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2], (bool(*)(double, double))ob.v[3]);
+	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], (bool(*)(double, double))ob.v[2]);
+	case CUBOID:	return RayCuboid	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1]);
+	}
+}
+/*--------------------------------[ add Object ]--------------------------------*/
+void ObjectTree::addPlane(Mat<>& n, Mat<>& p0, Material* material) {
+	Object ob; ob.type = PLANE;
+	ob.v = (void**)calloc(2, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = n;(*(Mat<>*)ob.v[0]).normalize();
+	ob.v[1] = new double;	*(double*)ob.v[1] = -((*(Mat<>*)ob.v[0])[0] * p0[0] + (*(Mat<>*)ob.v[0])[1] * p0[1] + (*(Mat<>*)ob.v[0])[2] * p0[2]);
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addCircle(Mat<>& center, double R, Mat<>& n, Material* material) {
+	Object ob; ob.type = CIRCLE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new Mat<>;	*(Mat<>*) ob.v[1] = n; (*(Mat<>*)ob.v[1]).normalize();
+	ob.v[2] = new double;	*(double*)ob.v[2] = R;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
+	Object ob; ob.type = TRIANGLE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p1;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = p2;
+	ob.v[2] = new Mat<>;	*(Mat<>*)ob.v[2] = p3;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addPlaneShape(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material) {
+	Object ob; ob.type = PLANESHAPE;
+	ob.v = (void**)calloc(4, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p0;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = n;  (*(Mat<>*)ob.v[1]).normalize();
+	ob.v[2] = new Mat<>;	
+	ob.v[3] = (void*)f;
+	{
+		if (n[0] == 0 && n[1] == 0)*(Mat<>*)ob.v[2] = { 1,0,0 };
+		else {
+			Mat<> t(3);
+			(*(Mat<>*)ob.v[2]).cross_(*(Mat<>*)ob.v[1], t = { 0,0,1 }).normalize();
+		}
+	}
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addSphere(Mat<>& center, double r, Material* material, bool(*f)(double, double)) {
+	Object ob; ob.type = SPHERE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new double;	*(double*)ob.v[1] = r;
+	ob.v[2] = (void*)f;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
+	Object ob; ob.type = CUBOID;
+	ob.v = (void**)calloc(2, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = pmin;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = pmax;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+void ObjectTree::addStl(const char* file, Mat<>& center, double size, Material** material) {
+	Mat<> p0(3), p1(3), p2(3), p3(3), p4(3), p5(3), p6(3); Mat<short> a;
+	GraphicsFileCode::stlRead(file, p0, p1, p2, p3, a);
+	for (int i = 0; i < p0.cols; i++) {
+		addTriangle(
+			((p4 = { p1(0,i), p1(1,i), p1(2,i) }) *= size) += center,
+			((p5 = { p2(0,i), p2(1,i), p2(2,i) }) *= size) += center,
+			((p6 = { p3(0,i), p3(1,i), p3(2,i) }) *= size) += center,
+			material[a[i]]
+		);
+	}
+}
+/*#############################################################################
+
 *						光线追踪  Ray Tracing
 
 ##############################################################################*/
@@ -212,6 +387,8 @@ void RayTracing::setPix(int x, int y, Mat<>& color) {
 			[5] 基于结果绘制该像素色彩
 -------------------------------------------------------------------------*/
 void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
+	//[0]
+	obTree.sort();
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);															//屏幕轴由眼指向屏幕中心
@@ -227,7 +404,7 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 				PixVec.add(														//[3]
 					PixXVec.mul(x + RAND_DBL - Screen.rows / 2 - 0.5, ScreenXVec),
 					PixYVec.mul(y + RAND_DBL - Screen.cols / 2 - 0.5, ScreenYVec)
-				);
+				); 
 				traceRay(														//[4][5]
 					RaySt.add(gCenter,   PixVec), 
 					Ray.  add(ScreenVec, PixVec).normalize(), 
@@ -251,32 +428,28 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 ******************************************************************************/
 Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	//[1][2][3]
-	double minDis = DBL_MAX, dis;
-	Object* minDisOb = NULL;
-	for (int i = 0; i < ObjectSet.size(); i++) {
-		dis    = seekIntersection(ObjectSet[i], RaySt, Ray);
-		minDis = (dis > eps && dis < minDis) ? minDisOb = &ObjectSet[i], dis : minDis;
-	}
-	if (minDis == DBL_MAX)			return color;					//Miss intersect
-	Material* material = minDisOb->material;
+	Object* ob;
+	double dis = obTree.seekIntersection(RaySt, Ray, ob); 
+	if (dis == DBL_MAX)				return color;					//Miss intersect
+	Material* material = ob->material;
 	if (material->rediate != 0)		return color = material->color;	//Light Source
 	if (level > maxRayLevel)		return color;					//Max Ray Level
 	//[4] RaySt & FaceVec
 	static Mat<> faceVec(3), RayTmp, tmp;
 	{
-		RaySt += (tmp.mul(minDis, Ray));
-		switch (minDisOb->type) {
-		case PLANE:		faceVec = *(Mat<>*)minDisOb->v[0]; break;
-		case CIRCLE:	faceVec = *(Mat<>*)minDisOb->v[1]; break;
+		RaySt += (tmp.mul(dis, Ray));
+		switch (ob->type) {
+		case PLANE:		faceVec = *(Mat<>*)ob->v[0]; break;
+		case CIRCLE:	faceVec = *(Mat<>*)ob->v[1]; break;
 		case TRIANGLE:	faceVec.cross_(
-							   tmp.sub(*(Mat<>*)minDisOb->v[1], *(Mat<>*)minDisOb->v[0]),
-							RayTmp.sub(*(Mat<>*)minDisOb->v[2], *(Mat<>*)minDisOb->v[0])
+							   tmp.sub(*(Mat<>*)ob->v[1], *(Mat<>*)ob->v[0]),
+							RayTmp.sub(*(Mat<>*)ob->v[2], *(Mat<>*)ob->v[0])
 						).normalize(); break;
-		case PLANESHAPE:faceVec = *(Mat<>*)minDisOb->v[1]; break;
-		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)minDisOb->v[0]).normalize(); break;
-		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[0])[0]) < eps || fabs(RaySt[0] - (*(Mat<>*)minDisOb->v[1])[0]) < eps) faceVec = { 1, 0, 0 };
-				   else if (fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[0])[1]) < eps || fabs(RaySt[1] - (*(Mat<>*)minDisOb->v[1])[1]) < eps) faceVec = { 0, 1, 0 };
-				   else if (fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[0])[2]) < eps || fabs(RaySt[2] - (*(Mat<>*)minDisOb->v[1])[2]) < eps) faceVec = { 0, 0, 1 };
+		case PLANESHAPE:faceVec = *(Mat<>*)ob->v[1]; break;
+		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)ob->v[0]).normalize(); break;
+		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)ob->v[0])[0]) < eps || fabs(RaySt[0] - (*(Mat<>*)ob->v[1])[0]) < eps) faceVec = { 1, 0, 0 };
+				   else if (fabs(RaySt[1] - (*(Mat<>*)ob->v[0])[1]) < eps || fabs(RaySt[1] - (*(Mat<>*)ob->v[1])[1]) < eps) faceVec = { 0, 1, 0 };
+				   else if (fabs(RaySt[2] - (*(Mat<>*)ob->v[0])[2]) < eps || fabs(RaySt[2] - (*(Mat<>*)ob->v[1])[2]) < eps) faceVec = { 0, 0, 1 };
 						break;
 		}
 	}
@@ -309,87 +482,4 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	}
 	if (level == 0 && isChromaticDisperson) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
 	return color.elementMul(material->color);
-}
-double RayTracing::seekIntersection(Object& ob, Mat<>& RaySt, Mat<>& Ray) {
-	switch (ob.type) {
-	case PLANE:		return RayPlane		(RaySt, Ray,(*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
-	case CIRCLE:	return RayCircle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
-	case TRIANGLE:	return RayTriangle	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2]);
-	case PLANESHAPE:return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1], *(Mat<>*)ob.v[2], (bool(*)(double, double))ob.v[3]);
-	case SPHERE:	return RaySphere	(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], (bool(*)(double, double))ob.v[2]);
-	case CUBOID:	return RayCuboid	(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>* )ob.v[1]);
-	}
-}
-/*--------------------------------[ add Object ]--------------------------------*/
-void RayTracing::addPlane(Mat<>& n, Mat<>& p0, Material* material) {
-	Object ob; ob.type = PLANE;
-	ob.v = (void**)calloc(2, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = n;(*(Mat<>*)ob.v[0]).normalize();
-	ob.v[1] = new double;	*(double*)ob.v[1] = -((*(Mat<>*)ob.v[0])[0] * p0[0] + (*(Mat<>*)ob.v[0])[1] * p0[1] + (*(Mat<>*)ob.v[0])[2] * p0[2]);
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addCircle(Mat<>& center, double R, Mat<>& n, Material* material) {
-	Object ob; ob.type = CIRCLE;
-	ob.v = (void**)calloc(3, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
-	ob.v[1] = new Mat<>;	*(Mat<>*) ob.v[1] = n; (*(Mat<>*)ob.v[1]).normalize();
-	ob.v[2] = new double;	*(double*)ob.v[2] = R;
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
-	Object ob; ob.type = TRIANGLE;
-	ob.v = (void**)calloc(3, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p1;
-	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = p2;
-	ob.v[2] = new Mat<>;	*(Mat<>*)ob.v[2] = p3;
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addPlaneShape(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material) {
-	Object ob; ob.type = PLANESHAPE;
-	ob.v = (void**)calloc(4, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p0;
-	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = n;  (*(Mat<>*)ob.v[1]).normalize();
-	ob.v[2] = new Mat<>;	
-	ob.v[3] = (void*)f;
-	{
-		if (n[0] == 0 && n[1] == 0)*(Mat<>*)ob.v[2] = { 1,0,0 };
-		else {
-			Mat<> t(3);
-			(*(Mat<>*)ob.v[2]).cross_(*(Mat<>*)ob.v[1], t = { 0,0,1 }).normalize();
-		}
-	}
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addSphere(Mat<>& center, double r, Material* material, bool(*f)(double, double)) {
-	Object ob; ob.type = SPHERE;
-	ob.v = (void**)calloc(3, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
-	ob.v[1] = new double;	*(double*)ob.v[1] = r;
-	ob.v[2] = (void*)f;
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
-	Object ob; ob.type = CUBOID;
-	ob.v = (void**)calloc(2, sizeof(void*));
-	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = pmin;
-	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = pmax;
-	ob.material = material;
-	ObjectSet.push_back(ob);
-}
-void RayTracing::addStl(const char* file, Mat<>& center, double size, Material** material) {
-	Mat<> p0(3), p1(3), p2(3), p3(3), p4(3), p5(3), p6(3); Mat<short> a;
-	GraphicsFileCode::stlRead(file, p0, p1, p2, p3, a);
-	for (int i = 0; i < p0.cols; i++) {
-		addTriangle(
-			((p4 = { p1(0,i), p1(1,i), p1(2,i) }) *= size) += center,
-			((p5 = { p2(0,i), p2(1,i), p2(2,i) }) *= size) += center,
-			((p6 = { p3(0,i), p3(1,i), p3(2,i) }) *= size) += center,
-			material[a[i]]
-		);
-	}
 }

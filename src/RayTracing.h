@@ -34,38 +34,32 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double) = NULL);			//求交-射线与球
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与长方体
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//求交-射线与长方体 (轴对齐)
-/*---------------- 光线追踪 ----------------*/
-class RayTracing {
+/*---------------- 对象/对象树 ----------------*/
+struct Material {															//材质
+	Mat<> color{ 3 }, refractRate{ 3 };
+	bool
+		rediate = 0,
+		quickReflect = 0,
+		diffuseReflect = 0;
+	double
+		reflect = 1, reflectLossRate = 1,
+		refract = 0, refractLossRate = 1;
+};
+enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
+struct Object { int type; void** v; Material* material = NULL; };		//物体
+struct ObjectNode { Object* ob = NULL, * bound = NULL; ObjectNode* kid[2] = { NULL, NULL }; };
+class  ObjectTree {
 public:
-	// 数据结构
-	struct Material {															//材质
-		Mat<> color{ 3 }, refractRate{ 3 };
-		bool
-			rediate = 0,
-			quickReflect = 0,
-			diffuseReflect = 0;
-		double
-			reflect = 1, reflectLossRate = 1,
-			refract = 0, refractLossRate = 1;
-	};
-	enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
-	struct Object { int type; void** v; Material* material = NULL; };		//物体
-	//基础参数 
-	Mat<> gCenter{ 3 }, Eye{ 3 };
-	Mat<RGB>	ScreenPix;
-	Mat<Mat<>>	Screen;
-	int maxRayLevel = 5;
-	double ScreenXSize, ScreenYSize, eps = 1e-4;
+	ObjectNode* root = NULL;
+	ObjectNode* ObNodeList;
 	std::vector<Object> ObjectSet;											//三角形集
-	std::vector<Mat<>>  PointLight;											//点光源集(QuickReflect专用)
-	//函数
-	RayTracing() { ; }
-	RayTracing(int width, int height) { init(width, height); }					//构造函数
-	void init (int width, int height);											//初始化
-	void setPix(int x, int y, Mat<>& color);									//画像素
-	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		//渲染
-	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);					//追踪光线
-	double seekIntersection (Object& ob, Mat<>& RaySt, Mat<>& Ray);				//求交点
+	int planeNum = 0;
+	void sort(std::vector<Object>& obSet);
+	void sort() { sort(ObjectSet); };
+	void sort(ObjectNode* obSet, int l, int r, ObjectNode*& node);
+	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob);
+	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, Object*& ob);
+	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob);
 	//add
 	void addPlane		(Mat<>& n, Mat<>& p0,				Material* material = NULL);	//+平面
 	void addCircle		(Mat<>& center, double R, Mat<>& n,	Material* material = NULL);	//+圆
@@ -74,5 +68,24 @@ public:
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL, bool(*f)(double, double) = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
 	void addStl(const char* file, Mat<>& center, double size, Material** material);
+};
+/*---------------- 光线追踪 ----------------*/
+class RayTracing {
+public:
+	//基础参数 
+	Mat<> gCenter{ 3 }, Eye{ 3 };
+	Mat<RGB>	ScreenPix;
+	Mat<Mat<>>	Screen;
+	int maxRayLevel = 5;
+	double ScreenXSize, ScreenYSize, eps = 1e-4;
+	ObjectTree obTree;
+	std::vector<Mat<>>  PointLight;													//点光源集(QuickReflect专用)
+	//函数
+	RayTracing() { ; }
+	RayTracing(int width, int height) { init(width, height); }						//构造函数
+	void init (int width, int height);												//初始化
+	void setPix(int x, int y, Mat<>& color);										//画像素
+	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);	//渲染
+	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);				//追踪光线
 };
 #endif
