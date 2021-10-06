@@ -102,7 +102,7 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 				u = (D×E2· T) / (D×E2·E1)
 				v = (T×E1· D) / (D×E2·E1)
 -------------------------------------------------------------------------------
-		[射线长方体交点]
+		[射线矩体交点]
 ******************************************************************************/
 double RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
 	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
@@ -172,7 +172,7 @@ double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 	double t0 = -DBL_MAX, t1 = DBL_MAX;
 	for (int dim = 0; dim < 3; dim++) {
-		if (Ray[dim] == 0) {
+		if (fabs(Ray[dim]) < EPS && (RaySt[dim] < pmin[dim] || RaySt[dim] > pmax[dim])) {
 			return DBL_MAX;
 		}
 		double
@@ -264,7 +264,7 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
 	double disMin = seekIntersection(RaySt, Ray, root, ob), dis_t;
 	for (int i = 0; i < planeNum; i++) {
 		dis_t = seekIntersection(RaySt, Ray, *ObNodeList[i].ob);
-		if (disMin > dis_t) { ob = ObNodeList[i].ob; disMin = dis_t; }
+		if (dis_t > EPS && disMin > dis_t) { ob = ObNodeList[i].ob; disMin = dis_t; }
 	}
 	return disMin;
 }
@@ -272,8 +272,8 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, 
 	if (node->ob != NULL) { ob = node->ob; return seekIntersection(RaySt, Ray, *node->ob); }
 	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) return DBL_MAX;
 	Object* ob_1, * ob_2;
-	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1); dis_1 = dis_1 > 10e-4 ? dis_1 : DBL_MAX;
-	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2); dis_2 = dis_2 > 10e-4 ? dis_2 : DBL_MAX;
+	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1); dis_1 = dis_1 > EPS ? dis_1 : DBL_MAX;
+	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2); dis_2 = dis_2 > EPS ? dis_2 : DBL_MAX;
 	ob = dis_1 < dis_2 ? ob_1 : ob_2;
 	return std::min(dis_1, dis_2);
 }
@@ -447,9 +447,9 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 						).normalize(); break;
 		case PLANESHAPE:faceVec = *(Mat<>*)ob->v[1]; break;
 		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)ob->v[0]).normalize(); break;
-		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)ob->v[0])[0]) < eps || fabs(RaySt[0] - (*(Mat<>*)ob->v[1])[0]) < eps) faceVec = { 1, 0, 0 };
-				   else if (fabs(RaySt[1] - (*(Mat<>*)ob->v[0])[1]) < eps || fabs(RaySt[1] - (*(Mat<>*)ob->v[1])[1]) < eps) faceVec = { 0, 1, 0 };
-				   else if (fabs(RaySt[2] - (*(Mat<>*)ob->v[0])[2]) < eps || fabs(RaySt[2] - (*(Mat<>*)ob->v[1])[2]) < eps) faceVec = { 0, 0, 1 };
+		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)ob->v[0])[0]) < EPS || fabs(RaySt[0] - (*(Mat<>*)ob->v[1])[0]) < EPS) faceVec = { 1, 0, 0 };
+				   else if (fabs(RaySt[1] - (*(Mat<>*)ob->v[0])[1]) < EPS || fabs(RaySt[1] - (*(Mat<>*)ob->v[1])[1]) < EPS) faceVec = { 0, 1, 0 };
+				   else if (fabs(RaySt[2] - (*(Mat<>*)ob->v[0])[2]) < EPS || fabs(RaySt[2] - (*(Mat<>*)ob->v[1])[2]) < EPS) faceVec = { 0, 0, 1 };
 						break;
 		}
 	}
@@ -479,7 +479,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		if(material->refractRate [0] != material->refractRate[1] || material->refractRate[0] != material->refractRate[2]) isChromaticDisperson = 1;
 		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 1 : material->refractRate[refractColorIndex];
 		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
-		traceRay(RaySt += (tmp.mul(eps, Ray)), Ray, color, level + 1);
+		traceRay(RaySt += (tmp.mul(EPS, Ray)), Ray, color, level + 1);
 		color *= material->refractLossRate; 
 	}
 	if (level == 0 && isChromaticDisperson) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }

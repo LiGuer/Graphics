@@ -20,6 +20,7 @@ limitations under the License.
 #include "RGB.h"
 #include "GraphicsFileCode.h"
 #define PI 3.141592653589
+#define EPS 10e-4
 #define RAND_DBL (rand() / double(RAND_MAX))
 /*---------------- 几何光学 ----------------*/
 Mat<>& reflect			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
@@ -77,7 +78,7 @@ public:
 	Mat<RGB>	ScreenPix;
 	Mat<Mat<>>	Screen;
 	int maxRayLevel = 5;
-	double ScreenXSize, ScreenYSize, eps = 1e-4;
+	double ScreenXSize, ScreenYSize;
 	ObjectTree obTree;
 	std::vector<Mat<>>  PointLight;													//点光源集(QuickReflect专用)
 	//函数
