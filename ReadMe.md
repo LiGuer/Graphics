@@ -175,8 +175,7 @@ void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);		
 Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);			//追踪光线
 double seekIntersection(Object& triangle, Mat<>& RaySt, Mat<>& Ray);		//求交点
 ```
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-2.png) 
-![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-4.png) 
+![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/色散火彩.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Room-12885.png) 
 ![image](https://github.com/LiGuer/LiGu_Graphics/blob/master/example/RayTracing/RayTracing-Shpere.png) 
