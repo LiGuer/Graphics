@@ -106,6 +106,7 @@ public:
 	ARGB colorlist(double index, int model = 1);																	//色谱
 	/*---------------- 几何变换 Transformation ----------------*/
 	static Mat<>& translate	(Mat<>& delta,										Mat<>& transMat = TransformMat);	//平移
+	static Mat<>& rotate(Mat<>& theta, Mat<>& center, Mat<>& transMat = TransformMat);
 	static Mat<>& rotate	(double theta, Mat<>& center,						Mat<>& transMat = TransformMat);	//旋转 2D
 	static Mat<>& rotate	(Mat<>& rotateAxis, double theta, Mat<>& center,	Mat<>& transMat = TransformMat);	//旋转 3D
 	static Mat<>& rotate	(Mat<>& rotateAxis1, Mat<>& rotateAxis2, double theta1, double theta2,Mat<>& center,Mat<>& transMat = TransformMat);	//旋转 4D

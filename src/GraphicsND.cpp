@@ -1135,6 +1135,29 @@ Mat<>& GraphicsND::rotate(double theta, Mat<>& center, Mat<>& transMat) {
 	}, transMat);
 	return translate(center, transMat);
 }
+Mat<>& GraphicsND::rotate(Mat<>& theta, Mat<>& center, Mat<>& transMat) {
+	Mat<> tmp, rotateMat(transMat.rows - 1, transMat.cols - 1);
+	translate(center.negative(tmp), transMat);
+	// rotate
+	tmp.zero(transMat.rows - 1, transMat.cols - 1);
+	rotateMat.E();
+	for (int i = 0; i < transMat.rows - 1; i++) {
+		for (int j = 0; j < transMat.cols - 1; j++) {
+			if (i == j) continue;
+			tmp.PrimaryRotation(i, j, theta(i, j));
+			rotateMat.mul(tmp, rotateMat);
+		}
+	}
+	tmp = rotateMat; rotateMat.E(transMat.rows);
+	for (int i = 1; i < transMat.rows; i++) {
+		for (int j = 1; j < transMat.cols; j++) {
+			rotateMat(i, j) = tmp(i - 1, j - 1);
+		}
+	}
+
+	transMat.mul(rotateMat, transMat);
+	return translate(center, transMat);
+}
 //3D S03·四元数
 Mat<>& GraphicsND::rotate(Mat<>& rotateAxis, double theta, Mat<>& center, Mat<>& transMat) {
 	if (transMat.rows - 1 != 3) exit(-1);

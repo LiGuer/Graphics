@@ -2,15 +2,24 @@
 #include <ctime>
 void Delay(int time) { clock_t now = clock(); while (clock() - now < time); }//time*1000为秒数 
 int main() {
-	GraphicsND G(1000, 1000, 4); G.g.PaintSize = 1;// G.LINE = 1; G.FACE = 0;
-	Mat<> p1(4), p2(4), zero(4);
-	double a = 0.01, b = 0.001;
-	while (1) {
-		a += 0.01; b += 0.001;
-		G.rotate(p1, p2, a, b, zero); G.g.PaintColor = 0xFFFFFF;
-		G.drawSuperCuboid(p1 = { 100 ,100 ,100,100 }, p2 = { -100 ,-100 ,-100,-100 });
-		G.drawSuperSphere(zero, 300);
-		//G.draw4DSphere(zero, 300);
-		G.g.writeImg("D:/LiGu.ppm"); G.clear(0); G.TransformMat.E(); Delay(10);
+	int Dim = 6;
+	GraphicsND G(500, 500, Dim); G.g.PaintSize = 1;// G.LINE = 1; G.FACE = 0;
+	Mat<> theta(Dim, Dim), p1(Dim), p2(Dim), zero(Dim);
+	while (1) 
+	{
+		theta(0, 1) += 0.1;
+		theta(0, 2) += 0.05;
+		theta(0, 3) += 0.05;
+		theta(0, 4) += 0.05;
+		theta(0, 5) += 0.05;
+		theta(1, 2) += 0.05;
+		theta(1, 3) += 0.03;
+		theta(2, 3) += 0.01;
+		theta(2, 4) += 0.01;
+		theta(2, 5) += 0.01;
+		G.rotate(theta, zero); 
+		G.g.PaintColor = 0xFFFFFF;
+		G.drawSuperCuboid(p1 = 100, p2 = -100);
+		G.g.writeImg("D:/LiGu.ppm"); G.clear(0); G.TransformMat.E(); Delay(100);
 	}
 }
