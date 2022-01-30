@@ -1,0 +1,60 @@
+#include "../LiGu_Codes/LiGu_Graphics/src/GraphicsND.h"
+#include "../LiGu_Codes/LiGu_AlgorithmLib/Complex.h"
+
+using namespace ComplexLib;
+
+void f(Complex& a) {
+	a = Pow(Sin(a),2) + Sinh(a);
+}
+
+int main() {
+	GraphicsND G(1000, 1000);
+	Complex a, b, c;
+	double dx = 0.1, dx2 = 100;
+	int N = 10;
+
+	for (int i = -N; i <= N; i++) {
+		for (int j = -N; j <= N; j++) {
+			a.set(i * dx, j * dx);
+			b.set(i * dx, (j + 1) * dx);
+			c.set((i + 1) * dx, j * dx);
+
+			f(a);
+			f(b);
+			f(c);
+
+			G.drawLine(a.real * dx2, b.real * dx2, a.imag * dx2, b.imag * dx2);
+			G.drawLine(a.real * dx2, c.real * dx2, a.imag * dx2, c.imag * dx2);
+		}
+	}
+	//
+	G.g.PaintColor = 0xFF0000;
+	G.g.PaintSize = 1;
+
+	for (int i = 0; i < N; i++) {
+		a.set(i * dx, 0); f(a);
+		b.set((i + 1) * dx, 0); f(b);
+
+		G.drawLine(a.real * dx2, b.real * dx2, a.imag * dx2, b.imag * dx2);
+
+		a.set(0, i * dx);     f(a);
+		b.set(0, (i + 1) * dx); f(b);
+
+		G.drawLine(a.real * dx2, b.real * dx2, a.imag * dx2, b.imag * dx2);
+	}
+	//
+	int x = 5;
+	for (int i = 0; i < x; i++) {
+		a.set(i * dx, x * dx); f(a);
+		b.set((i + 1) * dx, x * dx); f(b);
+
+		G.drawLine(a.real * dx2, b.real * dx2, a.imag * dx2, b.imag * dx2);
+
+		a.set(x * dx, i * dx);     f(a);
+		b.set(x * dx, (i + 1) * dx); f(b);
+
+		G.drawLine(a.real * dx2, b.real * dx2, a.imag * dx2, b.imag * dx2);
+	}
+
+	G.g.writeImg("D:/Ligu.ppm");
+}

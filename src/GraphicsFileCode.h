@@ -12,7 +12,7 @@ limitations under the License.
 ==============================================================================*/
 #ifndef GRAPHICS_FILECODE_H
 #define GRAPHICS_FILECODE_H
-#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/Matrix/Mat.h"
 #include "RGB.h"
 namespace GraphicsFileCode {
 /******************************************************************************

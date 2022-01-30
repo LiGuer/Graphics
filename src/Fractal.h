@@ -15,7 +15,7 @@ limitations under the License.
 #include <math.h>
 #include <complex>
 #include <vector>
-#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_AlgorithmLib/Matrix/Mat.h"
 #include "../../LiGu_AlgorithmLib/Tensor.h"
 #include "GraphicsND.h"
 #define PI 3.141692653589
@@ -179,13 +179,13 @@ Mat<>& PerlinNoise(Mat<>& output, int frequency) {
 void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int level, double alpha, int fork = 3) {
 	if (level <= 0) return;
 	// 确定旋转矩阵
-	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3), tmp; zAxis.set(0, 0, 1);
+	Mat<> st = linesSt.back(), ed = linesEd.back(), direction, rotateAxis, rotateMat, zAxis(3); zAxis = { 0, 0, 1 };
 	direction.sub(ed, st);
 	if (direction[0] != 0 || direction[1] != 0) {
-		GraphicsND::rotate(
+		Matrix::rotate(
 			rotateAxis.cross(direction, zAxis),
-			-acos(tmp.dot(direction, zAxis) / direction.norm()),
-			tmp.zero(3), rotateMat.E(4)
+			-acos(direction.dot(direction, zAxis) / direction.norm()),
+			rotateMat.E(4)
 		); rotateMat.block(1, 3, 1, 3, rotateMat);
 	}
 	else rotateMat.E(3);
@@ -193,11 +193,11 @@ void FractalTree3D(std::vector<Mat<>>& linesSt, std::vector<Mat<>>& linesEd, int
 	double Lenth = direction.norm(); 
 	Mat<> endPoint(3);
 	for (int i = 0; i < fork; i++) {
-		endPoint.set(
-			sin(alpha) * cos((double)i * 2 * PI / fork), 
-			sin(alpha) * sin((double)i * 2 * PI / fork), 
+		endPoint = {
+			sin(alpha) * cos((double)i * 2 * PI / fork),
+			sin(alpha) * sin((double)i * 2 * PI / fork),
 			cos(alpha)
-		);
+		};
 		endPoint.add(ed, endPoint.mul(0.7 * Lenth, endPoint.mul(rotateMat, endPoint)));
 		linesSt.push_back(ed);
 		linesEd.push_back(endPoint);
