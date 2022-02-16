@@ -110,6 +110,7 @@ public:
 	Mat<>& rotate	(Mat<>& rotateAxis, double theta,	Mat<>& center, Mat<>& transMat = TransformMat);	//旋转 3D
 	Mat<>& scale	(Mat<>& ratio,						Mat<>& center, Mat<>& transMat = TransformMat);	//缩放
 	Mat<>& reflect	(Mat<>& e,							Mat<>& center, Mat<>& transMat = TransformMat);	//镜像
+	Mat<>& perspect (Mat<>& e, Mat<>& center, Mat<>& transMat); // 透视投影
 	/*---------------- 交互 ----------------*/
 	void interactive();
 };

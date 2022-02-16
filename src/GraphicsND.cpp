@@ -1139,6 +1139,10 @@ Mat<>& GraphicsND::reflect(Mat<>& e, Mat<>& center, Mat<>& transMat) {
 	tmp.E(transMat.rows).setBlock(scaleMat, 1, 1);
 	return translate(center, transMat.mul(tmp, transMat));
 }
+// 透视投影
+Mat<>& GraphicsND::perspect(Mat<>& e, Mat<>& center, Mat<>& transMat) {
+
+}
 
 /*--------------------------------[ 交互 ]--------------------------------*/
 void GraphicsND::interactive() {

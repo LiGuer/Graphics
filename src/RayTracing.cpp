@@ -13,37 +13,22 @@ limitations under the License.
 [1] Thanks for Kevin Beason at http://www.kevinbeason.com/smallpt/
 ==============================================================================*/
 #include "RayTracing.h"
+
 /*#############################################################################
-*						几何光学  Geometrical Optics
--------------------------------------------------------------------------------
-*	[基本定律]:
-		[1] 光沿直线传播.
-		[2] 两束光传播中互不干扰,会聚于同一点时光强简单相加.
-		[3] 介质分界面光传播:
-			[3.1] 反射. 入射角 == 反射角
-			[3.2] 折射. n1·sinθ1 = n2·sinθ2
-			[3.3] 漫反射
-		[4] 光路可逆
+*						几何光学  
 ##############################################################################*/
-/******************************************************************************
-*						反射
-*	[反射定律]: 入射角 == 反射角
-			设面矢F, 入射光L
-			Lf = L - F·2 cos<L,F>
-******************************************************************************/
+
+/* 反射
+ * 入射角 == 反射角 $\.L_o = \.L_i - 2 (\.N · \.L_i) \.N$
+ */
 Mat<>& reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 	return RayO.add(RayO.mul(-2 * faceVec.dot(RayI), faceVec), RayI).normalize();
 }
-/******************************************************************************
-*						折射
-*	[折射定律]: n1·sinθ1 = n2·sinθ2
-			设面矢F, 入射光L
-			=> sin θo =  n·sin θi  ,  n = n入 / n折, θi = <L,F>
-			Lo = Li + F·sin(θo - θi) / sinθo
-			   = Li + F·( cosθi·sinθo - cosθo·sinθi) / sinθo
-			   = Li + F·( cosθi - cosθo / n )
-			   = Li + F·( cosθi - sqrt(1 - n²·sin²θi) / n )
-******************************************************************************/
+
+/* 折射
+ * $n_i·\sin \theta_i = n_o·\sin \theta_o$
+   $\.L_o = \.L_i + \.N· (\cos\theta_i - \frac{\sqrt{1 - n^2·\sin^2\theta_i}}{n})$
+ */
 Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
 	double k = rateI / rateO,
 		CosI = faceVec.dot(RayI),
@@ -51,11 +36,10 @@ Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double ra
 	return CosO < 0 ? reflect(RayI, faceVec, RayO) :				//全反射
 		RayO.add(RayI, RayO.mul(-CosI - (CosI > 0 ? -1 : 1)* sqrt(CosO) / k, faceVec)).normalize();
 }
-/******************************************************************************
-*						漫反射
-*	[算法]: MonteCarlo: 随机持续采样
-*	[漫反射]: 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
-******************************************************************************/
+
+/* 漫反射
+ * MonteCarlo: 随机持续采样, 在面矢半球内，面积均匀的随机取一射线，作为反射光线.
+ */
 Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 	double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
 	static Mat<> t(3), u, v;
@@ -67,57 +51,67 @@ Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 	return RayO.add(RayO.mul(sqrt(1 - r2), faceVec), u += v).normalize();
 }
 
-/******************************************************************************
+/* 雾 (均匀同质)
+ * $L_o(x) = L_i(x) · t(x) + A · (1 - t(x))$
+   $t(x) = e^{-\beta d(x)}$
+ */
+double Haze(double I, double A, double dis, double beta) {
+	double t = exp(-beta * dis);
+	return I * t + A * (1 - t);
+}
+Mat<>& Haze(Mat<>& I, Mat<>& O, Mat<>& A, double dis, double beta) {
+	static Mat<> Tmp(3);
+	double t = exp(-beta * dis);
+	O.mul(t, I);
+	Tmp.mul(1 - t, A);
+	O += Tmp;
+	return O;
+}
+
+/*#############################################################################
 						求交点
-*	[算法]:
--------------------------------------------------------------------------------
-		[射线平面交点]
-		平面方程: Ax + By + Cz + D = 0
-		直线方程: (x - x0) / a = (y - y0) / b = (z - z0) / c = K
-			联立平面,直线方程, 解K, K即直线到射线平面交点的距离
-			x = K a + x0 , ...
-			A(K a + x0) + B(K b + y0) + C(K c + z0) + D = 0
-			=> K =  - (A x0 + B y0 + C z0) / (A a + B b + C c)
--------------------------------------------------------------------------------
-		[射线球面交点]
-		球方程: (X - Xs)² + (Y - Ys)² + (Z - Zs)² = R²
-		线球交点: K²(Al² + Bl² + Cl²) + 2K(Al ΔX + Bl ΔY + Cl ΔZ) + (ΔX² + ΔY² + ΔZ² - R²) = 0
-				  ΔX = Xl - Xs
-				  Δ = b² - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)² - 4(Al² + Bl² + Cl²)(ΔX² + ΔY² + ΔZ² - R²)
-				  若Δ≥0 有交点.
-				  K = ( -b ± sqrt(Δ) ) / 2a	即光线走过线距离
--------------------------------------------------------------------------------
-		[射线三角形交点] Moller-Trumbore方法(1997)
-		射线: P = O + t D
-		射线三角形交点:
-				O + t D = (1 - u - v)V0 + u V1 + v V2
-				[ -D  V1-V0  V2-V0] [ t  u  v ]' = O - V0
-				T = O - V0    E1 = V1 - V0    E2 = V2 - V0
-				[ -D  E1  E2 ] [ t  u  v ]' = T
-				t = | T  E1  E2| / |-D  E1  E2|
-				u = |-D   T  E2| / |-D  E1  E2|
-				v = |-D  E1  E2| / |-D  E1  E2|
-		(混合积公式): |a  b  c| = a×b·c = -a×c·b
-				t = (T×E1·E2) / (D×E2·E1)
-				u = (D×E2· T) / (D×E2·E1)
-				v = (T×E1· D) / (D×E2·E1)
--------------------------------------------------------------------------------
-		[射线矩体交点]
-******************************************************************************/
+##############################################################################*/
+
+/* 射线、平面交点
+ * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
+ */
 double RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
 	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
 	if (t == 0) return DBL_MAX;
 	double d = -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
 	return d > 0 ? d : DBL_MAX;
 }
-double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
+double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
 	double
-		D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
+		D = -normal.dot(Center),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+	if (d == DBL_MAX) return DBL_MAX;
+	static Mat<> delta, tmp; 
+	delta.sub(delta.add(RaySt, delta.mul(d, Ray)), Center);
+	tmp.cross_(delta, one);
+	return f(delta.dot(one), (tmp.dot(normal) > 0 ? 1 : -1) * tmp.norm()) ? d : DBL_MAX;
+}
+
+/* 射线、圆交点
+ */
+double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
+	double D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
+		   d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
 	if (d == DBL_MAX) return DBL_MAX;
 	static Mat<> tmp; tmp.add(RaySt, tmp.mul(d, Ray)); 
 	return (tmp -= Center).norm() <= R ? d : DBL_MAX;
 }
+
+/* 射线、三角形交点
+ * 
+	O + t D = (1 - u - v)V0 + u V1 + v V2
+	[ -D  V1-V0  V2-V0] [ t  u  v ]' = O - V0
+	T = O - V0    E1 = V1 - V0    E2 = V2 - V0
+	[ -D  E1  E2 ] [ t  u  v ]' = T
+	t = | T  E1  E2| / |-D  E1  E2|
+	u = |-D   T  E2| / |-D  E1  E2|
+	v = |-D  E1  E2| / |-D  E1  E2|
+ */
 double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> edge[2], tmp, p, q;
 	edge[0].sub(p2, p1);
@@ -134,16 +128,12 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	v = q.cross_(tmp, edge[0]).dot(Ray) / a;
 	return (v < 0 || u + v > 1) ? DBL_MAX : q.dot(edge[1]) / a;
 }
-double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
-	double
-		D = -normal.dot(Center),
-		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
-	if (d == DBL_MAX) return DBL_MAX;
-	static Mat<> delta, tmp; 
-	delta.sub(delta.add(RaySt, delta.mul(d, Ray)), Center);
-	tmp.cross_(delta, one);
-	return f(delta.dot(one), (tmp.dot(normal) > 0 ? 1 : -1) * tmp.norm()) ? d : DBL_MAX;
-}
+
+/* 射线、球面交点
+ * K = ( -b ± sqrt(Δ) ) / 2 a
+   Δ = b^2 - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)^2 - 4(Al^2 + Bl^2 + Cl^2)(ΔX^2 + ΔY^2 + ΔZ^2 - R^2)
+   若Δ≥0 有交点.
+ */
 double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double)) {
 	static Mat<> RayStCenter; RayStCenter.sub(RaySt, center);
 	double 
@@ -166,6 +156,10 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(do
 	}
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
+
+/* 射线、矩体交点
+ * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
+ */
 double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	return DBL_MAX;
 }
@@ -185,10 +179,9 @@ double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 	}
 	return t0 >= 0 ? t0 : t1;
 }
+
 /*#############################################################################
-
-*						对象/对象树
-
+						对象/对象树
 ##############################################################################*/
 /*--------------------------------[ 建树 ]--------------------------------*/
 void ObjectTree::build(std::vector<Object>& obSet) {
@@ -230,6 +223,7 @@ void ObjectTree::build(std::vector<Object>& obSet) {
 	while (ObNodeList[planeNum].ob->type == PLANE || ObNodeList[planeNum].ob->type == PLANESHAPE) planeNum++; 
 	build(ObNodeList, planeNum, obSet.size() - 1, root); 
 }
+
 void ObjectTree::build(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
 	if (l == r) { node = &obSet[l]; return; }
 	node = new ObjectNode;
@@ -259,6 +253,7 @@ void ObjectTree::build(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
 	build(obSet, l, (l + r) / 2,     node->kid[0]);
 	build(obSet, (l + r) / 2 + 1, r, node->kid[1]);
 }
+
 /*--------------------------------[ 求交 ]--------------------------------*/
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
 	double disMin = seekIntersection(RaySt, Ray, root, ob), dis_t;
@@ -268,6 +263,7 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
 	}
 	return disMin;
 }
+
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, Object*& ob) {
 	if (node->ob != NULL) { ob = node->ob; return seekIntersection(RaySt, Ray, *node->ob); }
 	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) return DBL_MAX;
@@ -277,6 +273,7 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, 
 	ob = dis_1 < dis_2 ? ob_1 : ob_2;
 	return std::min(dis_1, dis_2);
 }
+
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob) {
 	switch (ob.type) {
 	case PLANE:		return RayPlane		(RaySt, Ray,(*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
@@ -296,6 +293,20 @@ void ObjectTree::addPlane(Mat<>& n, Mat<>& p0, Material* material) {
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addPlane(std::initializer_list<double> nt, std::initializer_list<double> p0t, Material* material) {
+	Mat<> n(3), p0(3); 
+	n = nt;
+	p0 = p0t;
+
+	Object ob; ob.type = PLANE;
+	ob.v = (void**)calloc(2, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = n; (*(Mat<>*)ob.v[0]).normalize();
+	ob.v[1] = new double;	*(double*)ob.v[1] = -((*(Mat<>*)ob.v[0])[0] * p0[0] + (*(Mat<>*)ob.v[0])[1] * p0[1] + (*(Mat<>*)ob.v[0])[2] * p0[2]);
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addCircle(Mat<>& center, double R, Mat<>& n, Material* material) {
 	Object ob; ob.type = CIRCLE;
 	ob.v = (void**)calloc(3, sizeof(void*));
@@ -305,6 +316,21 @@ void ObjectTree::addCircle(Mat<>& center, double R, Mat<>& n, Material* material
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addCircle(std::initializer_list<double> centert, double R, std::initializer_list<double> nt, Material* material) {
+	Mat<> n(3), center(3);
+	n = nt;
+	center = centert;
+
+	Object ob; ob.type = CIRCLE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new Mat<>;	*(Mat<>*) ob.v[1] = n; (*(Mat<>*)ob.v[1]).normalize();
+	ob.v[2] = new double;	*(double*)ob.v[2] = R;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material) {
 	Object ob; ob.type = TRIANGLE;
 	ob.v = (void**)calloc(3, sizeof(void*));
@@ -314,6 +340,22 @@ void ObjectTree::addTriangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Material* material
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addTriangle(std::initializer_list<double> p1t, std::initializer_list<double> p2t, std::initializer_list<double> p3t, Material* material) {
+	Mat<> p1(3), p2(3), p3;
+	p1 = p1t;
+	p2 = p2t;
+	p3 = p3t;
+
+	Object ob; ob.type = TRIANGLE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p1;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = p2;
+	ob.v[2] = new Mat<>;	*(Mat<>*)ob.v[2] = p3;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addPlaneShape(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material) {
 	Object ob; ob.type = PLANESHAPE;
 	ob.v = (void**)calloc(4, sizeof(void*));
@@ -331,6 +373,29 @@ void ObjectTree::addPlaneShape(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Ma
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addPlaneShape(std::initializer_list<double> nt, std::initializer_list<double> p0t, bool(*f)(double, double), Material* material) {
+	Mat<> n(3), p0(3); 
+	n = nt;
+	p0 = p0t;
+
+	Object ob; ob.type = PLANESHAPE;
+	ob.v = (void**)calloc(4, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = p0;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = n;  (*(Mat<>*)ob.v[1]).normalize();
+	ob.v[2] = new Mat<>;
+	ob.v[3] = (void*)f;
+	{
+		if (n[0] == 0 && n[1] == 0)*(Mat<>*)ob.v[2] = { 1,0,0 };
+		else {
+			Mat<> t(3);
+			(*(Mat<>*)ob.v[2]).cross_(*(Mat<>*)ob.v[1], t = { 0,0,1 }).normalize();
+		}
+	}
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addSphere(Mat<>& center, double r, Material* material, bool(*f)(double, double)) {
 	Object ob; ob.type = SPHERE;
 	ob.v = (void**)calloc(3, sizeof(void*));
@@ -340,6 +405,20 @@ void ObjectTree::addSphere(Mat<>& center, double r, Material* material, bool(*f)
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addSphere(std::initializer_list<double> centert, double r, Material* material, bool(*f)(double, double)) {
+	Mat<> center(3);
+	center = centert;
+
+	Object ob; ob.type = SPHERE;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new double;	*(double*)ob.v[1] = r;
+	ob.v[2] = (void*)f;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
 	Object ob; ob.type = CUBOID;
 	ob.v = (void**)calloc(2, sizeof(void*));
@@ -348,6 +427,20 @@ void ObjectTree::addCuboid(Mat<>& pmin, Mat<>& pmax, Material* material){
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
+
+void ObjectTree::addCuboid(std::initializer_list<double> pmint, std::initializer_list<double> pmaxt, Material* material) {
+	Mat<> pmin(3), pmax(3);
+	pmin = pmint;
+	pmax = pmaxt;
+
+	Object ob; ob.type = CUBOID;
+	ob.v = (void**)calloc(2, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*)ob.v[0] = pmin;
+	ob.v[1] = new Mat<>;	*(Mat<>*)ob.v[1] = pmax;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
 void ObjectTree::addStl(const char* file, Mat<>& center, double size, Material** material) {
 	Mat<> p0(3), p1(3), p2(3), p3(3), p4(3), p5(3), p6(3); Mat<short> a;
 	GraphicsFileCode::stlRead(file, p0, p1, p2, p3, a);
@@ -360,6 +453,23 @@ void ObjectTree::addStl(const char* file, Mat<>& center, double size, Material**
 		);
 	}
 }
+
+void ObjectTree::addStl(const char* file, std::initializer_list<double> centert, double size, Material** material) {
+	Mat<> center(3);
+	center = centert;
+
+	Mat<> p0(3), p1(3), p2(3), p3(3), p4(3), p5(3), p6(3); Mat<short> a;
+	GraphicsFileCode::stlRead(file, p0, p1, p2, p3, a);
+	for (int i = 0; i < p0.cols; i++) {
+		addTriangle(
+			((p4 = { p1(0,i), p1(1,i), p1(2,i) }) *= size) += center,
+			((p5 = { p2(0,i), p2(1,i), p2(2,i) }) *= size) += center,
+			((p6 = { p3(0,i), p3(1,i), p3(2,i) }) *= size) += center,
+			material[a[i]]
+		);
+	}
+}
+
 /*#############################################################################
 
 *						光线追踪  Ray Tracing
@@ -388,37 +498,48 @@ void RayTracing::setPix(int x, int y, Mat<>& color) {
 -------------------------------------------------------------------------*/
 void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 	//[0]
-	obTree.build();
+	objTree.build();
 	//[1]
 	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
 	ScreenVec. sub(gCenter, Eye);															//屏幕轴由眼指向屏幕中心
-	ScreenYVec.set(ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0).normalize();	//屏幕Y向轴始终与Z轴垂直,无z分量
-	ScreenXVec.cross(ScreenVec, ScreenYVec).normalize();									//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	ScreenYVec = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0 };			//屏幕Y向轴始终与Z轴垂直,无z分量
+	ScreenXVec.cross(ScreenVec, ScreenYVec.normalize()).normalize();						//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+
 	//[2]
 	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3); clock_t start;
 	for (int sample = sampleSt; sample < sampleEd; sample++) {
-		if (sample % 1 == 0) { GraphicsFileCode::ppmWrite(fileName, ScreenPix); start = clock(); }
-		double rate = 1.0 / (sample + 1);
+		double rate = 1.0 / (sample + 1), randX = RAND_DBL, randY = RAND_DBL;
+
+		Screen *= 1 - rate;
+
 		for (int x = 0; x < Screen.rows; x++) {
 			for (int y = 0; y < Screen.cols; y++) {
 				PixVec.add(														//[3]
-					PixXVec.mul(x + RAND_DBL - Screen.rows / 2 - 0.5, ScreenXVec),
-					PixYVec.mul(y + RAND_DBL - Screen.cols / 2 - 0.5, ScreenYVec)
+					PixXVec.mul(x + randX - Screen.rows / 2 - 0.5, ScreenXVec),
+					PixYVec.mul(y + randY - Screen.cols / 2 - 0.5, ScreenYVec)
 				); 
 				traceRay(														//[4][5]
 					RaySt.add(gCenter,   PixVec), 
 					Ray.  add(ScreenVec, PixVec).normalize(), 
 					color.zero(), 0
 				); 
-				setPix(x, y, (Screen(x, y) *= 1 - rate) += (color *= rate));
+				Screen(x, y) += (color *= rate);
 			} 
 		} if (sample % 1 == 0) printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
+
+
+		if (sample % 1 == 0) {
+			for (int x = 0; x < Screen.rows; x++) 
+				for (int y = 0; y < Screen.cols; y++) 
+					setPix(x, y, Screen(x, y));
+
+			GraphicsFileCode::ppmWrite(fileName, ScreenPix); start = clock();
+		}
 	}
 }
 /******************************************************************************
 *						追踪光线
-*	[算法]:
-*	[过程]:
+*	[步骤]:
 		[1] 遍历三角形集合中的每一个三角形
 			[2]	判断光线和该三角形是否相交、光线走过距离、交点坐标、光线夹角
 			[3] 保留光线走过距离最近的三角形的相关数据
@@ -427,61 +548,110 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 &	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 ******************************************************************************/
 Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
-	//[1][2][3]
-	Object* ob;
-	double dis = obTree.seekIntersection(RaySt, Ray, ob); 
-	if (dis == DBL_MAX)				return color;					//Miss intersect
-	Material* material = ob->material;
-	if (material->rediate != 0)		return color = material->color;	//Light Source
-	if (level > maxRayLevel)		return color;					//Max Ray Level
-	//[4] RaySt & FaceVec
-	static Mat<> faceVec(3), RayTmp, tmp;
-	{
+	//搜索光线-对象的最近交点距离
+	Object* obj; 
+	double dis = objTree.seekIntersection(RaySt, Ray, obj); 
+
+	//无交点
+	if (dis == DBL_MAX)
+		color.zero();
+
+	//光源
+	else if (obj->material->rediate) 
+		color = obj->material->color;
+
+	//最大追踪层数
+	else if (level > maxRayLevel) 
+		return color;
+
+	else {
+		Material* material = obj->material;
+
+		//计算面矢、交点
+		static Mat<> faceVec(3), tmp, tmp2;
+
 		RaySt += (tmp.mul(dis, Ray));
-		switch (ob->type) {
-		case PLANE:		faceVec = *(Mat<>*)ob->v[0]; break;
-		case CIRCLE:	faceVec = *(Mat<>*)ob->v[1]; break;
-		case TRIANGLE:	faceVec.cross_(
-							   tmp.sub(*(Mat<>*)ob->v[1], *(Mat<>*)ob->v[0]),
-							RayTmp.sub(*(Mat<>*)ob->v[2], *(Mat<>*)ob->v[0])
-						).normalize(); break;
-		case PLANESHAPE:faceVec = *(Mat<>*)ob->v[1]; break;
-		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)ob->v[0]).normalize(); break;
-		case CUBOID:	if (fabs(RaySt[0] - (*(Mat<>*)ob->v[0])[0]) < EPS || fabs(RaySt[0] - (*(Mat<>*)ob->v[1])[0]) < EPS) faceVec = { 1, 0, 0 };
-				   else if (fabs(RaySt[1] - (*(Mat<>*)ob->v[0])[1]) < EPS || fabs(RaySt[1] - (*(Mat<>*)ob->v[1])[1]) < EPS) faceVec = { 0, 1, 0 };
-				   else if (fabs(RaySt[2] - (*(Mat<>*)ob->v[0])[2]) < EPS || fabs(RaySt[2] - (*(Mat<>*)ob->v[1])[2]) < EPS) faceVec = { 0, 0, 1 };
-						break;
+
+		switch (obj->type) {
+		case PLANE:		faceVec = *(Mat<>*)obj->v[0]; break;
+		case CIRCLE:	faceVec = *(Mat<>*)obj->v[1]; break;
+		case TRIANGLE:	
+			faceVec.cross_(
+				tmp .sub(*(Mat<>*)obj->v[1], *(Mat<>*)obj->v[0]),
+				tmp2.sub(*(Mat<>*)obj->v[2], *(Mat<>*)obj->v[0])
+			).normalize(); break;
+		case PLANESHAPE:faceVec = *(Mat<>*)obj->v[1]; break;
+		case SPHERE:	faceVec.sub(RaySt, *(Mat<>*)obj->v[0]).normalize(); break;
+		case CUBOID:	 
+			if      (fabs(RaySt[0] - (*(Mat<>*)obj->v[0])[0]) < EPS || fabs(RaySt[0] - (*(Mat<>*)obj->v[1])[0]) < EPS) faceVec = { 1, 0, 0 };
+			else if (fabs(RaySt[1] - (*(Mat<>*)obj->v[0])[1]) < EPS || fabs(RaySt[1] - (*(Mat<>*)obj->v[1])[1]) < EPS) faceVec = { 0, 1, 0 };
+			else if (fabs(RaySt[2] - (*(Mat<>*)obj->v[0])[2]) < EPS || fabs(RaySt[2] - (*(Mat<>*)obj->v[1])[2]) < EPS) faceVec = { 0, 0, 1 };
+			break;
 		}
+
+		//色散补丁
+		static int refractColorIndex; 
+		static double refractRateBuf; 
+		static bool isChromaticDisperson;
+		if (level == 0) 
+			refractColorIndex = RAND_DBL * 3, refractRateBuf = 1, isChromaticDisperson = 0;
+		
+		static Mat<> Ray0; 
+		Ray0 = Ray;
+
+		//快速反射
+		if (material->quickReflect) {								//Reflect Quick: 计算点光源直接照射该点产生的颜色
+			double lightCos = 0, t;
+			faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
+			for (int i = 0; i < PointLight.size(); i++) {
+				t = faceVec.dot(tmp.sub(PointLight[i], RaySt).normalize());
+				lightCos = t > lightCos ? t : lightCos;
+			} 
+			color = 1;
+			color *= lightCos;
+		}
+
+		//漫反射
+		else if (material->diffuseReflect) {
+			diffuseReflect(Ray0, faceVec, Ray);
+			traceRay(RaySt, Ray, color, level + 1);
+			color *= material->reflectLossRate;
+		}
+
+		//反射
+		else if (RAND_DBL < material->reflect) {
+			reflect(Ray0, faceVec, Ray);
+			traceRay(RaySt, Ray, color, level + 1);
+			color *= material->reflectLossRate;
+		}
+
+		//折射
+		else {
+			//折射率补丁
+			if (material->refractRate[0] != material->refractRate[1] 
+			 || material->refractRate[0] != material->refractRate[2]) 
+				isChromaticDisperson = 1;
+			double t = refractRateBuf; 
+			refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 
+				1 : material->refractRate[refractColorIndex];
+
+			refract(Ray0, faceVec, Ray, t, refractRateBuf);
+			traceRay(RaySt += (tmp.mul(EPS, Ray)), Ray, color, level + 1);
+			color *= material->refractLossRate;
+		}
+		//色散补丁
+		if (level == 0 && isChromaticDisperson) { 
+			double t = color[refractColorIndex]; 
+			color.zero();
+			color[refractColorIndex] = 3 * t;
+		}
+
+		color.elementMul(obj->material->color);
 	}
-	//[5]
-	static int refractColorIndex; static double refractRateBuf; static bool isChromaticDisperson;
-	if (level == 0) refractColorIndex = RAND_DBL * 3, refractRateBuf = 1, isChromaticDisperson = 0;
-	RayTmp = Ray;
-	if (material->quickReflect) {								//Reflect Quick: 计算点光源直接照射该点产生的颜色
-		double lightCos = 0, t;
-		faceVec *= faceVec.dot(Ray) > 0 ? -1 : 1;
-		for (int i = 0; i < PointLight.size(); i++) {
-			t = faceVec.dot(tmp.sub(PointLight[i], RaySt).normalize());
-			lightCos = t > lightCos ? t : lightCos;
-		} color.fill(1) *= lightCos;
-	}
-	else if (material->diffuseReflect) {						//Reflect Diffuse
-		diffuseReflect(RayTmp, faceVec, Ray);
-		traceRay(RaySt, Ray, color, level + 1);
-		color *= material->reflectLossRate;
-	}
-	else if (RAND_DBL < material->reflect) {					//Reflect
-		reflect(RayTmp, faceVec, Ray);
-		traceRay(RaySt, Ray, color, level + 1);
-		color *= material->reflectLossRate;
-	}
-	else{														//Refract
-		if(material->refractRate [0] != material->refractRate[1] || material->refractRate[0] != material->refractRate[2]) isChromaticDisperson = 1;
-		double t = refractRateBuf; refractRateBuf = refractRateBuf == material->refractRate[refractColorIndex] ? 1 : material->refractRate[refractColorIndex];
-		refract(RayTmp, faceVec, Ray, t, refractRateBuf);
-		traceRay(RaySt += (tmp.mul(EPS, Ray)), Ray, color, level + 1);
-		color *= material->refractLossRate; 
-	}
-	if (level == 0 && isChromaticDisperson) { double t = color[refractColorIndex]; color.zero()[refractColorIndex] = 3 * t; }
-	return color.elementMul(material->color);
+
+	//雾
+	if(haze) 
+		Haze(color, color, haze_A, dis, haze_beta);
+
+	return color;
 }

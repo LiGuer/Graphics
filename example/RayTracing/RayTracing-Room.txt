@@ -1,0 +1,33 @@
+Material	color = 1	reflect = 0.1	refractRate = 1.5
+Cuboid	{ 350, 320,-500 }, { 650, 350,-200 }
+Cuboid	{ 350,-100,-500 }, { 650, -70,-200 }
+Cuboid	{ 350,-150,-200 }, { 650, 400,-170 }
+Plane	{ 1, 0, 0 }, { 1000, 0, 0 }
+Plane	{ 1, 0, 0 }, { 950, 0, 0 }
+
+Material	color = { 1, 1, 0 }	diffuseReflect = 1
+Cuboid	{ 400,-400,-500 }, { 600,-370,-100 }
+Cuboid	{ 400,-200,-500 }, { 600,-170,-350 }
+Cuboid	{ 400,-400,-350 }, { 600,-170,-320 }
+
+Material	color = { 1, 1, 1 }	reflect = 1
+Sphere	{ 500, 500 + 75, 200 }, 150
+
+Material	color = { 1, 0.678, 0.784 }	reflect = 1
+Sphere	{ 500,250,-170 + 120 }, 120	,[](double x, double y) { double o = y - ((int)(y / (PI / 2))) * (PI / 2), r = 3 / 2.5 * sin(o) * cos(o) / (pow(sin(o), 3) + pow(cos(o), 3)); if ((PI - x) < asin(r)) return true; return false; }
+Sphere	{ 500,250,-170 + 120 / 3.0 }, 120 / 3.0	,[](double x, double y) { y += PI / 4; double o = y - ((int)(y / (PI / 2))) * (PI / 2), r = 3 / 2.5 * sin(o) * cos(o) / (pow(sin(o), 3) + pow(cos(o), 3)); if ((PI - x) < 2 * asin(r)) return true; return false; }
+
+Material	color = 1	rediate = 1
+Sphere	{ 500,250,-20 }, 30
+
+//Box
+Material	color = { 0.65, 0.62, 1 }	diffuseReflect = 1
+PlaneShape	{ 0, 1, 0 }, { 0, +600, 0 }, [](double x, double y) { return x <= 1000 ? true : false; }
+
+Material	color = { 1, 0.68, 0.75 }	diffuseReflect = 1
+PlaneShape	{ 0, 1, 0 }, { 0, -600, 0 }, [](double x, double y) { return x <= 1000 ? true : false; }
+
+Material	color = 1	diffuseReflect = 1
+Plane	{ 0, 0, 1 }, { 0, 0, -500 }
+
+Material	color = 7	rediate = 1

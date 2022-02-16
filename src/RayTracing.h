@@ -26,6 +26,10 @@ limitations under the License.
 Mat<>& reflect			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//反射
 Mat<>& refract			(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO);	//折射
 Mat<>& diffuseReflect	(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO);								//漫反射
+
+double Haze(double I, double A, double dis, double beta);										// 雾
+Mat<>& Haze(Mat<>& I, Mat<>& O, Mat<>& A, double dis, double beta);
+
 /*---------------- 求交点 ----------------*/
 double RayPlane		(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D);	//求交-射线与平面
 double RayCircle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal);	//求交-射线与圆
@@ -35,6 +39,7 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double) = NULL);			//求交-射线与球
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//求交-射线与长方体
 double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//求交-射线与长方体 (轴对齐)
+
 /*---------------- 对象/对象树 ----------------*/
 struct Material {															//材质
 	Mat<> color{ 3 }, refractRate{ 3 };
@@ -46,6 +51,7 @@ struct Material {															//材质
 		reflect = 1, reflectLossRate = 1,
 		refract = 0, refractLossRate = 1;
 };
+
 enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
 struct Object { int type; void** v; Material* material = NULL; };		//物体
 struct ObjectNode { Object* ob = NULL, * bound = NULL; ObjectNode* kid[2] = { NULL, NULL }; };
@@ -68,7 +74,17 @@ public:
 	void addPlaneShape	(Mat<>& n, Mat<>& p0, bool(*f)(double,double), Material* material = NULL);	//+平面图形
 	void addSphere		(Mat<>& center, double r,			Material* material = NULL, bool(*f)(double, double) = NULL);	//+球
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax,			Material* material = NULL);	//+长方体
-	void addStl(const char* file, Mat<>& center, double size, Material** material);
+	void addStl	(const char* file, Mat<>& center, double size, Material** material);
+
+
+	void addPlane(std::initializer_list<double> n, std::initializer_list<double> p0, Material* material);
+	void addCircle(std::initializer_list<double> center, double R, std::initializer_list<double> n, Material* material);
+	void addTriangle(std::initializer_list<double> p1, std::initializer_list<double> p2, std::initializer_list<double> p3, Material* material);
+	void addPlaneShape(std::initializer_list<double> n, std::initializer_list<double> p0, bool(*f)(double, double), Material* material);
+	void addSphere(std::initializer_list<double> center, double r, Material* material, bool(*f)(double, double) = NULL);
+	void addCuboid(std::initializer_list<double> pmin, std::initializer_list<double> pmax, Material* material);
+	void addStl(const char* file, std::initializer_list<double> center, double size, Material** material);
+
 };
 /*---------------- 光线追踪 ----------------*/
 class RayTracing {
@@ -79,8 +95,12 @@ public:
 	Mat<Mat<>>	Screen;
 	int maxRayLevel = 5;
 	double ScreenXSize, ScreenYSize;
-	ObjectTree obTree;
+	ObjectTree objTree;
 	std::vector<Mat<>>  PointLight;													//点光源集(QuickReflect专用)
+
+	bool haze = false; 
+	Mat<> haze_A{ 3 };
+	double haze_beta = 1;
 	//函数
 	RayTracing() { ; }
 	RayTracing(int width, int height) { init(width, height); }						//构造函数
@@ -89,4 +109,5 @@ public:
 	void paint(const char* fileName, int sampleSt = 0, int sampleEd = 0x7FFFFFFF);	//渲染
 	Mat<>& traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);				//追踪光线
 };
+
 #endif
