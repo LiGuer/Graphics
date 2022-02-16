@@ -93,7 +93,7 @@ public:
 	Mat<> gCenter{ 3 }, Eye{ 3 };
 	Mat<RGB>	ScreenPix;
 	Mat<Mat<>>	Screen;
-	int maxRayLevel = 5;
+	int maxRayLevel = 6;
 	double ScreenXSize, ScreenYSize;
 	ObjectTree objTree;
 	std::vector<Mat<>>  PointLight;													//点光源集(QuickReflect专用)
