@@ -18,18 +18,17 @@ limitations under the License.
 /*********************************************************************************
 *									RGB
 *	[Reference]:
-		[1] ÑÕÉ«»ìºÏ Copyright & Thanks for Nathan Moinvaziri at https://stackoverflow.com/questions/5919663/how-does-photoshop-blend-two-images-together
+		[1] é¢œè‰²æ··åˆ Copyright & Thanks for Nathan Moinvaziri at https://stackoverflow.com/questions/5919663/how-does-photoshop-blend-two-images-together
 *********************************************************************************/
 class RGB {
 public:
 #define INT8U unsigned char
 #define ARGB  unsigned int
-#define FP64  double
-	/*---------------- »ù´¡²ÎÊý ----------------*/
+	/*---------------- åŸºç¡€å‚æ•° ----------------*/
 	INT8U R = 0, G = 0, B = 0;
-	/*---------------- »ù´¡º¯Êý ----------------*/
+	/*---------------- åŸºç¡€å‡½æ•° ----------------*/
 	RGB() { ; }
-	RGB(ARGB a) { *this = a; }														//¹¹Ôìº¯Êý
+	RGB(ARGB a) { *this = a; }														//æž„é€ å‡½æ•°
 	RGB& operator=(const RGB& a) { R = a.R; G = a.G; B = a.B; return *this; }
 	RGB& operator=(ARGB& a) { R = a >> 16; G = a >> 8; B = a; return *this; }
 	RGB& operator*=(double a) { R *= a; G *= a; B *= a; return *this; }
@@ -41,7 +40,7 @@ public:
 		case 2: return B;
 		}
 	}
-	/*---------------- ÑÕÉ«»ìºÏ ----------------*/
+	/*---------------- é¢œè‰²æ··åˆ ----------------*/
 #define ChannelBlend_Normal(A,B)     ((INT8U)(A))
 #define ChannelBlend_Lighten(A,B)    ((INT8U)((B > A) ? B:A))
 #define ChannelBlend_Darken(A,B)     ((INT8U)((B > A) ? A:B))

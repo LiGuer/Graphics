@@ -1,23 +1,13 @@
-/*
-Copyright 2020,2021 LiGuer. All Rights Reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-	http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-#ifndef FRACTAL
-#define FRACTAL
+#ifndef FRACTAL_H
+#define FRACTAL_H
+
 #include <math.h>
 #include <complex>
 #include <vector>
 #include "../../LiGu_AlgorithmLib/Matrix/Mat.h"
 #include "../../LiGu_AlgorithmLib/Tensor.h"
 #include "GraphicsND.h"
+
 #define PI 3.141692653589
 /*################################################################################################
 [分形 Fractal]
@@ -32,6 +22,7 @@ FractalTree3D		(linesSt, linesEd, level, alpha, fork)
 Boids				(birds)
 BoidsRule			(birds, index)
 ################################################################################################*/
+
 namespace Fractal {
 /*************************************************************************************************
 *								Mandelbrot集
@@ -48,6 +39,7 @@ int isMandelbrotSet(std::complex<double> C, std::complex<double> Z0, int iterate
 		z = z * z + C;										// Zn+1 = Zn² + C   
 	} return 0;							//属于,输出0; 不属于,输出判断出的当次迭代数
 }
+
 void Mandelbrot(std::complex<double> min, std::complex<double> max, int resSize, int iterateTimes, Mat<int> Set) {
 	Set.zero(resSize, resSize);
 	double deltaReal = (max.real() - min.real()) / resSize,
@@ -64,6 +56,7 @@ void Mandelbrot(std::complex<double> min, std::complex<double> max, int resSize,
 		}
 	}
 }
+
 /*************************************************************************************************
 *								Julia集
 *	[定义]: Zn+1 = Zn² + C
