@@ -1,5 +1,8 @@
 #include "Object.h"
 
+using namespace Matrix;
+using namespace Intersect;
+using namespace ObjectLib;
 /*#############################################################################
 * 
 *					对象/对象树
@@ -88,11 +91,20 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
 }
 
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, Object*& ob) {
-	if (node->ob != NULL) { ob = node->ob; return seekIntersection(RaySt, Ray, *node->ob); }
-	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) return DBL_MAX;
+	if (node->ob != NULL) { 
+		ob = node->ob; 
+		return seekIntersection(RaySt, Ray, *node->ob); 
+	}
+	if (seekIntersection(RaySt, Ray, *node->bound) == DBL_MAX) 
+		return DBL_MAX;
+
 	Object* ob_1, * ob_2;
-	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1); dis_1 = dis_1 > EPS ? dis_1 : DBL_MAX;
-	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2); dis_2 = dis_2 > EPS ? dis_2 : DBL_MAX;
+	double dis_1 = seekIntersection(RaySt, Ray, node->kid[0], ob_1); 
+	dis_1 = dis_1 > EPS ? dis_1 : DBL_MAX;
+
+	double dis_2 = seekIntersection(RaySt, Ray, node->kid[1], ob_2); 
+	dis_2 = dis_2 > EPS ? dis_2 : DBL_MAX;
+
 	ob = dis_1 < dis_2 ? ob_1 : ob_2;
 	return std::min(dis_1, dis_2);
 }

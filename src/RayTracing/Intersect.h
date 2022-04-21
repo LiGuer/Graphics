@@ -1,7 +1,12 @@
 #ifndef INTERSECT_H
 #define INTERSECT_H
 
+#include <float.h>
+#include <algorithm>
 #include "../../../LiGu_Math/src/Math/Matrix/Matrix.h"
+
+#define PI 3.141592653589
+#define EPS 10e-4
 
 namespace Intersect {
 	

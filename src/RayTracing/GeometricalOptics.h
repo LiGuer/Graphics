@@ -10,14 +10,14 @@ using namespace Matrix;
 namespace GeometricalOptics {
 
 	/*---- 反射 ----*/
-	Mat<>& reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
+	inline Mat<>& reflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 		mul(RayO, -2 * dot(faceVec, RayI), faceVec);
 		add(RayO, RayO, RayI);
 		return normalize(RayO);
 	}
 
 	/*---- 折射 ----*/
-	Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
+	inline Mat<>& refract(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO, double rateI, double rateO) {
 		double k = rateI / rateO,
 			CosI = dot(faceVec, RayI),
 			CosO = 1 - pow(k, 2) * (1 - pow(CosI, 2));
@@ -31,7 +31,7 @@ namespace GeometricalOptics {
 	}
 
 	/*---- 漫反射 ----*/
-	Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
+	inline Mat<>& diffuseReflect(Mat<>& RayI, Mat<>& faceVec, Mat<>& RayO) {
 		double r1 = 2 * PI * RAND_DBL, r2 = RAND_DBL;
 		static Mat<> t(3), u, v;
 		mul(faceVec, dot(faceVec, RayI) > 0 ? -1 : 1, faceVec);
@@ -46,12 +46,12 @@ namespace GeometricalOptics {
 	}
 
 	/*---- 雾 (均匀同质) ----*/
-	double Haze(double I, double A, double dis, double beta) {
+	inline double Haze(double I, double A, double dis, double beta) {
 		double t = exp(-beta * dis);
 		return I * t + A * (1 - t);
 	}
 
-	Mat<>& Haze(Mat<>& I, Mat<>& O, Mat<>& A, double dis, double beta) {
+	inline Mat<>& Haze(Mat<>& I, Mat<>& O, Mat<>& A, double dis, double beta) {
 		static Mat<> tmp(3);
 		double t = exp(-beta * dis);
 		mul(O, t, I);

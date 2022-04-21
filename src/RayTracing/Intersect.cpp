@@ -1,5 +1,6 @@
 #include "Intersect.h"
 
+using namespace Matrix;
 /*#############################################################################
 * 
 *						求交点
@@ -9,18 +10,21 @@
 /* 射线、平面交点
  * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
  */
-double RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
+double Intersect::RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
 	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
-	if (t == 0) return DBL_MAX;
+	if (t == 0) 
+		return DBL_MAX;
 	double d = -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
 	return d > 0 ? d : DBL_MAX;
 }
 
-double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
+double Intersect::RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
 	double
 		D = -dot(normal, Center),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
-	if (d == DBL_MAX) return DBL_MAX;
+	if (d == DBL_MAX) 
+		return DBL_MAX;
+
 	static Mat<> delta, tmp;
 	sub(delta, add(delta, RaySt, mul(delta, d, Ray)), Center);
 	cross_(tmp, delta, one);
@@ -29,10 +33,11 @@ double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat
 
 /* 射线、圆交点
  */
-double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
+double Intersect::RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
 	double D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
 		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
-	if (d == DBL_MAX) return DBL_MAX;
+	if (d == DBL_MAX) 
+		return DBL_MAX;
 
 	static Mat<> tmp;
 	add(tmp, RaySt, mul(tmp, d, Ray));
@@ -41,16 +46,8 @@ double RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& norm
 }
 
 /* 射线、三角形交点
- *
-	O + t D = (1 - u - v)V0 + u V1 + v V2
-	[ -D  V1-V0  V2-V0] [ t  u  v ]' = O - V0
-	T = O - V0    E1 = V1 - V0    E2 = V2 - V0
-	[ -D  E1  E2 ] [ t  u  v ]' = T
-	t = | T  E1  E2| / |-D  E1  E2|
-	u = |-D   T  E2| / |-D  E1  E2|
-	v = |-D  E1  E2| / |-D  E1  E2|
  */
-double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+double Intersect::RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> edge[2], tmp, p, q;
 	sub(edge[0], p2, p1);
 	sub(edge[1], p3, p1);
@@ -82,7 +79,7 @@ double RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
    Δ = b^2 - 4ac = 4(Al ΔX + Bl ΔY + Cl ΔZ)^2 - 4(Al^2 + Bl^2 + Cl^2)(ΔX^2 + ΔY^2 + ΔZ^2 - R^2)
    若Δ≥0 有交点.
  */
-double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double)) {
+double Intersect::RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double)) {
 	static Mat<> RayStCenter;
 	sub(RayStCenter, RaySt, center);
 
@@ -118,11 +115,11 @@ double RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(do
 /* 射线、矩体交点
  * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
  */
-double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+double Intersect::RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	return DBL_MAX;
 }
 
-double RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
+double Intersect::RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
 	double t0 = -DBL_MAX, t1 = DBL_MAX;
 	for (int dim = 0; dim < 3; dim++) {
 		if (fabs(Ray[dim]) < EPS && (RaySt[dim] < pmin[dim] || RaySt[dim] > pmax[dim])) {

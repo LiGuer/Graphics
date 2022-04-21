@@ -1,24 +1,15 @@
 ﻿#include "RayTracing.h"
 
+using namespace ObjectLib;
+
 /*#############################################################################
 
 *						光线追踪  Ray Tracing
 
 ##############################################################################*/
-/*--------------------------------[ 初始化 ]--------------------------------*/
-void RayTracing::init(int width, int height) {
-	ScreenPix.zero(height, width);
-	Screen.   zero(height, width);
-	for (int i = 0; i < Screen.size(); i++) Screen[i].zero(3);
-}
 
-/*--------------------------------[ 画像素 ]--------------------------------*/
-void RayTracing::setPix(int x, int y, Mat<>& color) {
-	if (x < 0 || x >= ScreenPix.rows || y < 0 || y >= ScreenPix.cols) return;
-	ScreenPix(ScreenPix.rows - x - 1, y).R = std::min((int)(color[0] * 0xFF), 0xFF);
-	ScreenPix(ScreenPix.rows - x - 1, y).G = std::min((int)(color[1] * 0xFF), 0xFF);
-	ScreenPix(ScreenPix.rows - x - 1, y).B = std::min((int)(color[2] * 0xFF), 0xFF);
-}
+std::vector<Mat<>>  RayTracing::PointLight;
+int RayTracing::maxRayLevel = 6;
 
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
@@ -28,49 +19,46 @@ void RayTracing::setPix(int x, int y, Mat<>& color) {
 			[4] 光线追踪算法
 			[5] 基于结果绘制该像素色彩
 -------------------------------------------------------------------------*/
-void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
-	//[0]
-
-	objTree.build();
+void RayTracing::traceRay(
+	Mat<>& center, Mat<>& direct, double width, double height,
+	ObjectTree& objTree,
+	Mat<>& R, Mat<>& G, Mat<>& B,
+	int sampleSt, int sampleEd
+) {
 	//[1]
-	static Mat<> ScreenVec, ScreenXVec, ScreenYVec(3);
-	sub(ScreenVec, gCenter, Eye);															//屏幕轴由眼指向屏幕中心
-	ScreenYVec = { ScreenVec[0] == 0 ? 0 : -ScreenVec[1] / ScreenVec[0], 1, 0 };			//屏幕Y向轴始终与Z轴垂直,无z分量
-	normalize(ScreenYVec);
-	cross(ScreenXVec, ScreenVec, ScreenYVec);						//屏幕X向轴与屏幕轴、屏幕Y向轴正交
-	normalize(ScreenXVec);
+	static Mat<> ScreenXVec, ScreenYVec(3);
+	normalize(ScreenYVec = { -direct[1], direct[0], 0 });			//屏幕Y向轴始终与Z轴垂直,无z分量, 且与direct正交(内积为零)
+	normalize(cross_(ScreenXVec, direct, ScreenYVec));						//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 
 	//[2]
-	static Mat<> PixYVec, PixXVec, PixVec, Ray, RaySt, color(3); clock_t start = clock();
-	for (int sample = sampleSt; sample < sampleEd; sample++) {
-		double rate = 1.0 / (sample + 1), randX = RAND_DBL, randY = RAND_DBL;
+	static Mat<> SampleYVec, SampleXVec, SampleVec, Ray, RaySt, color(3);
+	clock_t start = clock();
 
-		for (int x = 0; x < Screen.rows; x++) {
-			for (int y = 0; y < Screen.cols; y++) {
-				add(														//[3]
-					PixVec,
-					mul(PixXVec, x + randX - Screen.rows / 2 - 0.5, ScreenXVec),
-					mul(PixYVec, y + randY - Screen.cols / 2 - 0.5, ScreenYVec)
+	for (int sample = sampleSt; sample < sampleEd; sample++) {
+		double rate = 1.0 / (sample + 1),
+			randX = RAND_DBL, 
+			randY = RAND_DBL;
+
+		for (int x = 0; x < R.rows; x++) {
+			for (int y = 0; y < R.cols; y++) {
+				add(SampleVec,														//[3]
+					mul(SampleXVec, x + randX - R.rows / 2.0 - 0.5, ScreenXVec),
+					mul(SampleYVec, y + randY - R.cols / 2.0 - 0.5, ScreenYVec)
 				); 
-				traceRay(														//[4][5]
-					add(RaySt, gCenter,   PixVec),
-					normalize(add(Ray, ScreenVec, PixVec)),
-					color.zero(), 0
-				); 
+				add(RaySt, center, SampleVec);
+				add(Ray,   direct, SampleVec);
+
+				traceRay(objTree, RaySt, normalize(Ray), color.zero(), 0); 			//[4][5]
 				
-				mul(Screen(x, y), 1 - rate, Screen(x, y));
-				add(Screen(x, y), Screen(x, y), mul(color, rate, color));
+				mul(color, rate, color);
+				R(x, y) = R(x, y) * (1 - rate) + color(0);
+				G(x, y) = G(x, y) * (1 - rate) + color(1);
+				B(x, y) = B(x, y) * (1 - rate) + color(2);
 			} 
 		}
 
 		if (sample % 100 == 0) {
 			printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
-
-			for (int x = 0; x < Screen.rows; x++) 
-				for (int y = 0; y < Screen.cols; y++) 
-					setPix(x, y, Screen(x, y));
-
-			GraphicsIO::ppmWrite(fileName, ScreenPix); 
 			start = clock();
 		}
 	}
@@ -86,8 +74,8 @@ void RayTracing::paint(const char* fileName, int sampleSt, int sampleEd) {
 			计算三角形反射方向，将反射光线为基准重新计算
 &	[注]:distance > 1而不是> 0，是因为反射光线在接触面的精度内，来回碰自己....
 ******************************************************************************/
-Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
-	//搜索光线-对象的最近交点距离
+Mat<>& RayTracing::traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) 
+{
 	Object* obj; 
 	double dis = objTree.seekIntersection(RaySt, Ray, obj); 
 
@@ -107,27 +95,10 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		Material* material = obj->material;
 
 		//计算面矢、交点
-		static Mat<> faceVec(3), tmp, tmp2;
+		static Mat<> faceVec(3), tmp;
 
 		add(RaySt, RaySt, mul(tmp, dis, Ray));
-
-		switch (obj->type) {
-		case PLANE:		faceVec = *(Mat<>*)obj->v[0]; break;
-		case CIRCLE:	faceVec = *(Mat<>*)obj->v[1]; break;
-		case TRIANGLE:	
-			normalize(cross_(
-				faceVec,
-				sub(tmp, *(Mat<>*)obj->v[1], *(Mat<>*)obj->v[0]),
-				sub(tmp2, *(Mat<>*)obj->v[2], *(Mat<>*)obj->v[0])
-			)); break;
-		case PLANESHAPE:faceVec = *(Mat<>*)obj->v[1]; break;
-		case SPHERE:	normalize(sub(faceVec, RaySt, *(Mat<>*)obj->v[0])); break;
-		case CUBOID:	 
-			if      (fabs(RaySt[0] - (*(Mat<>*)obj->v[0])[0]) < EPS || fabs(RaySt[0] - (*(Mat<>*)obj->v[1])[0]) < EPS) faceVec = { 1, 0, 0 };
-			else if (fabs(RaySt[1] - (*(Mat<>*)obj->v[0])[1]) < EPS || fabs(RaySt[1] - (*(Mat<>*)obj->v[1])[1]) < EPS) faceVec = { 0, 1, 0 };
-			else if (fabs(RaySt[2] - (*(Mat<>*)obj->v[0])[2]) < EPS || fabs(RaySt[2] - (*(Mat<>*)obj->v[1])[2]) < EPS) faceVec = { 0, 0, 1 };
-			break;
-		}
+		FaceVector(*obj, RaySt, faceVec);
 
 		//色散补丁
 		static int refractColorIndex; 
@@ -143,8 +114,10 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		if (material->quickReflect) {								//Reflect Quick: 计算点光源直接照射该点产生的颜色
 			double lightCos = 0, t;
 			mul(faceVec, dot(faceVec, Ray) > 0 ? -1 : 1, faceVec);
+
 			for (int i = 0; i < PointLight.size(); i++) {
-				t = dot(faceVec, normalize(sub(tmp, PointLight[i], RaySt)));
+				normalize(sub(tmp, PointLight[i], RaySt));
+				t = dot(faceVec, tmp);
 				lightCos = t > lightCos ? t : lightCos;
 			} 
 			mul(color, lightCos, color = 1);
@@ -153,14 +126,14 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 		//漫反射
 		else if (material->diffuseReflect) {
 			diffuseReflect(Ray0, faceVec, Ray);
-			traceRay(RaySt, Ray, color, level + 1);
+			traceRay(objTree, RaySt, Ray, color, level + 1);
 			mul(color, material->reflectLossRate, color);
 		}
 
 		//反射
 		else if (RAND_DBL < material->reflect) {
 			reflect(Ray0, faceVec, Ray);
-			traceRay(RaySt, Ray, color, level + 1);
+			traceRay(objTree, RaySt, Ray, color, level + 1);
 			mul(color, material->reflectLossRate, color);
 		}
 
@@ -175,7 +148,7 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 				1 : material->refractRate[refractColorIndex];
 
 			refract(Ray0, faceVec, Ray, t, refractRateBuf);
-			traceRay(add(RaySt, RaySt, mul(tmp, EPS, Ray)), Ray, color, level + 1);
+			traceRay(objTree, add(RaySt, RaySt, mul(tmp, EPS, Ray)), Ray, color, level + 1);
 			mul(color, material->refractLossRate, color);
 		}
 		//色散补丁
@@ -189,8 +162,8 @@ Mat<>& RayTracing::traceRay(Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level) {
 	}
 
 	//雾
-	if(haze) 
-		Haze(color, color, haze_A, dis, haze_beta);
+	//if(haze) 
+		//Haze(color, color, haze_A, dis, haze_beta);
 
 	return color;
 }

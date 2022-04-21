@@ -1,8 +1,17 @@
 #ifndef RAY_TRACING_OBJECT_H
 #define RAY_TRACING_OBJECT_H
 
+#include <vector>
+#include <algorithm>
 #include "Material.h"
 #include "Intersect.h"
+#include "../GraphicsIO.h"
+
+#define EPS 10e-4
+
+using namespace Matrix;
+
+namespace ObjectLib {
 
 /*---------------- 对象/对象树 ----------------*/
 enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
@@ -12,6 +21,34 @@ struct Object { 		//物体
 	void** v; 
 	Material* material = NULL; 
 };
+
+inline Mat<>& FaceVector(Object& obj, Mat<>& intersect, Mat<>& ans) {
+	static Mat<> tmp1(3), tmp2(3);
+
+	switch (obj.type) {
+	case PLANE:		ans = *(Mat<>*)obj.v[0]; break;
+	case CIRCLE:	ans = *(Mat<>*)obj.v[1]; break;
+	case TRIANGLE:
+		normalize(cross_(ans,
+			sub(tmp1, *(Mat<>*)obj.v[1], *(Mat<>*)obj.v[0]),
+			sub(tmp2, *(Mat<>*)obj.v[2], *(Mat<>*)obj.v[0])
+		)); break;
+	case PLANESHAPE:ans = *(Mat<>*)obj.v[1]; break;
+	case SPHERE:	normalize(sub(ans, intersect, *(Mat<>*)obj.v[0])); break;
+	case CUBOID:
+		if (fabs(intersect[0] - (*(Mat<>*)obj.v[0])[0]) < EPS 
+			|| fabs(intersect[0] - (*(Mat<>*)obj.v[1])[0]) < EPS) 
+			ans = { 1, 0, 0 };
+		else if (fabs(intersect[1] - (*(Mat<>*)obj.v[0])[1]) < EPS 
+				|| fabs(intersect[1] - (*(Mat<>*)obj.v[1])[1]) < EPS) 
+			ans = { 0, 1, 0 };
+		else if (fabs(intersect[2] - (*(Mat<>*)obj.v[0])[2]) < EPS 
+				|| fabs(intersect[2] - (*(Mat<>*)obj.v[1])[2]) < EPS) 
+			ans = { 0, 0, 1 };
+		break;
+	}
+	return ans;
+}
 
 struct ObjectNode {
 	Object* ob = NULL, * bound = NULL; 
@@ -51,5 +88,7 @@ public:
 	void addStl			(const char* file, std::initializer_list<double> center, double size, Material** material);
 
 };
+
+}
 
 #endif
