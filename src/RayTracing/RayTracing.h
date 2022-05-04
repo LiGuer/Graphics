@@ -4,6 +4,7 @@
 #include <time.h>
 #include <vector>
 #include <algorithm>
+#include <thread>
 #include "../RGB.h"
 #include "../GraphicsIO.h"
 #include "GeometricalOptics.h"
@@ -24,10 +25,11 @@ using namespace ObjectLib;
 
 namespace RayTracing {
 	extern std::vector<Mat<>>  PointLight;													//点光源集(QuickReflect专用)
-	/*
-	bool haze = false;
-	Mat<> haze_A{ 3 };
-	double haze_beta = 1;*/
+	
+	extern bool haze;
+	extern Mat<> haze_A;
+	extern double haze_beta;
+	
 	extern int maxRayLevel;
 
 	void traceRay(
@@ -35,6 +37,18 @@ namespace RayTracing {
 		ObjectTree& objTree,
 		Mat<>& R, Mat<>& G, Mat<>& B,
 		int sampleSt = 0, int sampleEd = 0x7FFFFFFF
+	);
+
+	void traceRay_(
+		Mat<>& center, Mat<>& direct, double width, double height,
+		ObjectTree& objTree,
+		Mat<>& R, Mat<>& G, Mat<>& B,
+		int sampleSt = 0, int sampleEd = 0x7FFFFFFF
+	);
+
+	void traceRay_func(
+		Mat<>* ScreenXVec, Mat<>* ScreenYVec, Mat<>* center, Mat<>* direct, 
+		ObjectTree* objTree, double rate, Mat<>* R, Mat<>* G, Mat<>* B, int st, int ed
 	);
 
 	Mat<>& traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);				//追踪光线

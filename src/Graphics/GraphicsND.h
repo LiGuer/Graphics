@@ -10,10 +10,10 @@ namespace Graphics {
 
 	/*-------------------------------- DRAW --------------------------------*/
 	// Any Dim
-	void drawPoint		(Mat<ARGB>& image, Mat<>& p0);				//»­µã
-	void drawPoint		(Mat<ARGB>& image, double x = 0, double y = 0, double z = 0);	//»­µã
-	void drawSuperCuboid(Mat<ARGB>& image, Mat<>& pMin, Mat<>& pMax);				//»­Á¢·½Ìå
-	void drawGrid		(Mat<ARGB>& image, Mat<>& delta, Mat<>& max, Mat<>& min);	//»­Íø¸ñ
+	void drawPoint		(Mat<ARGB>& image, Mat<>& p0);				//ç”»ç‚¹
+	void drawPoint		(Mat<ARGB>& image, double x = 0, double y = 0, double z = 0);	//ç”»ç‚¹
+	void drawSuperCuboid(Mat<ARGB>& image, Mat<>& pMin, Mat<>& pMax);				//ç”»ç«‹æ–¹ä½“
+	void drawGrid		(Mat<ARGB>& image, Mat<>& delta, Mat<>& max, Mat<>& min);	//ç”»ç½‘æ ¼
 }
 
 #endif

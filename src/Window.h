@@ -4,7 +4,7 @@
 #include "Graphics/GraphicsND.h"
 
 /*
- * 视窗 : 三维图、三视图
+ * 瑙嗙獥 : 涓夌淮鍥俱�佷笁瑙嗗浘
  */
 class WindowPix {
 public:

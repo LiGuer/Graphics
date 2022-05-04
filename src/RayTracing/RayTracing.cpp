@@ -11,6 +11,11 @@ using namespace ObjectLib;
 std::vector<Mat<>>  RayTracing::PointLight;
 int RayTracing::maxRayLevel = 6;
 
+
+bool RayTracing::haze = 1;
+Mat<> RayTracing::haze_A{ 3 };
+double RayTracing::haze_beta = 1e-3;
+
 /*--------------------------------[ 渲染 ]--------------------------------
 *	[过程]:
 		[1] 计算屏幕矢量、屏幕X,Y向轴
@@ -19,6 +24,64 @@ int RayTracing::maxRayLevel = 6;
 			[4] 光线追踪算法
 			[5] 基于结果绘制该像素色彩
 -------------------------------------------------------------------------*/
+
+static void RayTracing::traceRay_func(Mat<>* ScreenXVec, Mat<>* ScreenYVec, Mat<>* center, Mat<>* direct, ObjectTree* objTree, double rate, Mat<>* R, Mat<>* G, Mat<>* B, int st, int ed) {
+	Mat<> SampleVec, SampleXVec, SampleYVec, Ray, RaySt, color(3);
+
+	for (int i = st; i < ed; i++) {
+		add(SampleVec,														//[3]
+			mul(SampleXVec, R->i2x(i) - (*R).rows / 2.0 - 0.5, *ScreenXVec),
+			mul(SampleYVec, R->i2y(i) - (*R).cols / 2.0 - 0.5, *ScreenYVec)
+		);
+		add(RaySt, *center, SampleVec);
+		add(Ray,   *direct, SampleVec);
+
+		RayTracing::traceRay(*objTree, RaySt, normalize(Ray), color.zero(), 0); 			//[4][5]
+
+		mul(color, rate, color);
+		(*R)(i) = (*R)(i) * (1 - rate) + color(0);
+		(*G)(i) = (*G)(i) * (1 - rate) + color(1);
+		(*B)(i) = (*B)(i) * (1 - rate) + color(2);
+	}
+}
+
+void RayTracing::traceRay_(
+	Mat<>& center, Mat<>& direct, double width, double height,
+	ObjectTree& objTree,
+	Mat<>& R, Mat<>& G, Mat<>& B,
+	int sampleSt, int sampleEd
+) {
+	//[1]
+	static Mat<> ScreenXVec, ScreenYVec(3);
+	normalize(ScreenYVec = { -direct[1], direct[0], 0 });			//屏幕Y向轴始终与Z轴垂直,无z分量, 且与direct正交(内积为零)
+	normalize(cross_(ScreenXVec, direct, ScreenYVec));				//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+
+	//[2]
+	std::thread threads[4];
+	int kk = R.size() / 4;
+
+	clock_t start = clock();
+
+	for (int sample = sampleSt; sample < sampleEd; sample++) {
+		double rate = 1.0 / (sample + 1);
+
+		for (int i = 0; i < 4; i++) {
+			threads[i] = std::thread(
+				traceRay_func, &ScreenXVec, &ScreenYVec, &center, &direct, &objTree, rate, &R, &G, &B, i * kk, (i + 1) * kk
+			);
+		}
+
+		for (auto& thread : threads)
+			thread.join();
+
+		if (sample % 100 == 0) {
+			printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
+			start = clock();
+		}
+	}
+}
+
+
 void RayTracing::traceRay(
 	Mat<>& center, Mat<>& direct, double width, double height,
 	ObjectTree& objTree,
@@ -162,8 +225,8 @@ Mat<>& RayTracing::traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>
 	}
 
 	//雾
-	//if(haze) 
-		//Haze(color, color, haze_A, dis, haze_beta);
+	if(haze) 
+		Haze(color, color, haze_A = 1, dis, haze_beta);
 
 	return color;
 }

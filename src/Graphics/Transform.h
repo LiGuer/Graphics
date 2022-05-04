@@ -9,12 +9,12 @@
 namespace Graphics {
 	extern Mat<> TransformMat;
 
-	/*---------------- 几何变换 Transformation ----------------*/
-	Mat<>& translate(Mat<>& delta);						//平移
-	Mat<>& rotate	(Mat<>& theta, Mat<>& center);		//旋转
-	Mat<>& rotate	(Mat<>& rotateAxis, double theta, Mat<>& center);	//旋转 3D
-	Mat<>& scale	(Mat<>& ratio,Mat<>& center);		//缩放
-	Mat<>& reflect	(Mat<>& e, Mat<>& center);			//镜像
+	/*---------------- 鍑犱綍鍙樻崲 Transformation ----------------*/
+	Mat<>& translate(Mat<>& delta);						//骞崇Щ
+	Mat<>& rotate	(Mat<>& theta, Mat<>& center);		//鏃嬭浆
+	Mat<>& rotate	(Mat<>& rotateAxis, double theta, Mat<>& center);	//鏃嬭浆 3D
+	Mat<>& scale	(Mat<>& ratio,Mat<>& center);		//缂╂斁
+	Mat<>& reflect	(Mat<>& e, Mat<>& center);			//闀滃儚
 }
 
 #endif

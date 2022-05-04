@@ -8,7 +8,7 @@ Mat<> Graphics::TransformMat(4);
 
 ##############################################################################*/
 
-// Æ½ÒÆ
+// å¹³ç§»
 Mat<>& Graphics::translate(Mat<>& delta) {
 	static Mat<> translateMat;
 	Matrix::E(translateMat.alloc(TransformMat.rows, TransformMat.cols));
@@ -20,7 +20,7 @@ Mat<>& Graphics::translate(Mat<>& delta) {
 	return TransformMat;
 }
 
-// Ğı×ª
+// æ—‹è½¬
 Mat<>& Graphics::rotate(Mat<>& theta, Mat<>& center) {
 	static Mat<> tmp, rotateMat;
 	translate(Matrix::negative(tmp, center));
@@ -34,7 +34,7 @@ Mat<>& Graphics::rotate(Mat<>& theta, Mat<>& center) {
 	return TransformMat;
 }
 
-// 3D¡¤ËÄÔªÊı
+// 3DÂ·å››å…ƒæ•°
 Mat<>& Graphics::rotate(Mat<>& rotateAxis, double theta, Mat<>& center) {
 	if (TransformMat.rows != 4 || TransformMat.cols != 4)
 		exit(-1);
@@ -49,7 +49,7 @@ Mat<>& Graphics::rotate(Mat<>& rotateAxis, double theta, Mat<>& center) {
 	return TransformMat;
 }
 
-// Ëõ·Å
+// ç¼©æ”¾
 Mat<>& Graphics::scale(Mat<>& ratio, Mat<>& center) {
 	static Mat<> tmp, scaleMat;
 	translate(Matrix::negative(tmp, center));
@@ -63,7 +63,7 @@ Mat<>& Graphics::scale(Mat<>& ratio, Mat<>& center) {
 	return TransformMat;
 }
 
-// ¾µÏñ
+// é•œåƒ
 Mat<>& Graphics::reflect(Mat<>& e, Mat<>& center) {
 	Mat<> tmp, reflectMat;
 	translate(Matrix::negative(tmp, center));
@@ -77,7 +77,7 @@ Mat<>& Graphics::reflect(Mat<>& e, Mat<>& center) {
 	return TransformMat;
 }
 
-// Í¸ÊÓÍ¶Ó°
+// é€è§†æŠ•å½±
 /*
 Mat<>& Graphics::perspect(Mat<>& e, Mat<>& center) {
 

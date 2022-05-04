@@ -6,19 +6,23 @@
 #include "../../../LiGu_Math/src/Math/Matrix/Matrix.h"
 
 #define PI 3.141592653589
-#define EPS 10e-4
 
 namespace Intersect {
 	
-/*---------------- Çó½»µã ----------------*/
-double RayPlane		(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D);	//Çó½»-ÉäÏßÓëÆ½Ãæ
-double RayCircle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal);	//Çó½»-ÉäÏßÓëÔ²
-double RayTriangle	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//Çó½»-ÉäÏßÓëÈı½ÇÃæ
-double RayPolygon	(Mat<>& RaySt, Mat<>& Ray, Mat<>* p,  int n);					//Çó½»-ÉäÏßÓë¶à±ßÃæ
-double RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double));//Çó½»-ÉäÏßÓëÆ½ÃæÍ¼ĞÎ
-double RaySphere	(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double) = NULL);			//Çó½»-ÉäÏßÓëÇò
-double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);	//Çó½»-ÉäÏßÓë³¤·½Ìå
-double RayCuboid	(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax);			//Çó½»-ÉäÏßÓë³¤·½Ìå (Öá¶ÔÆë)
+extern double eps;
+
+/*---------------- æ±‚äº¤ç‚¹ ----------------*/
+double RayPlane		(Mat<>& raySt, Mat<>& ray, Mat<>& a, double& b);						//æ±‚äº¤-å°„çº¿ä¸å¹³é¢
+double RayPlane		(Mat<>& raySt, Mat<>& ray, double& A, double& B, double& C, double& D);	//æ±‚äº¤-å°„çº¿ä¸å¹³é¢(3D)
+double RayCircle	(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R, Mat<>& normal);	//æ±‚äº¤-å°„çº¿ä¸åœ†
+double RayTriangle	(Mat<>& raySt, Mat<>& ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);			//æ±‚äº¤-å°„çº¿ä¸ä¸‰è§’é¢
+double RayPolygon	(Mat<>& raySt, Mat<>& ray, Mat<>* p,  int n);							//æ±‚äº¤-å°„çº¿ä¸å¤šè¾¹é¢
+double RayPlaneShape(Mat<>& raySt, Mat<>& ray, Mat<>& center, Mat<>& normal, Mat<>& one, bool(*f)(double, double));//æ±‚äº¤-å°„çº¿ä¸å¹³é¢å›¾æ¡ˆ
+
+double RaySphere	(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R);			//æ±‚äº¤-å°„çº¿ä¸çƒé¢
+double RaySphere	(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R, bool(*f)(double, double));			//æ±‚äº¤-å°„çº¿ä¸çƒé¢å›¾æ¡ˆ
+double RayCuboid	(Mat<>& raySt, Mat<>& ray, Mat<>& p1, Mat<>& p2, Mat<>& p3);			//æ±‚äº¤-å°„çº¿ä¸çŸ©ä½“
+double RayCuboid	(Mat<>& raySt, Mat<>& ray, Mat<>& pmin, Mat<>& pmax);					//æ±‚äº¤-å°„çº¿ä¸çŸ©ä½“ (è½´å¯¹é½)
 
 }
 

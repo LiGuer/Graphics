@@ -3,66 +3,77 @@
 using namespace Matrix;
 /*#############################################################################
 * 
-*						«ÛΩªµ„
+*						Ê±Ç‰∫§ÁÇπ
 * 
 ##############################################################################*/
 
-/* …‰œﬂ°¢∆Ω√ÊΩªµ„
- * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
+double Intersect::eps = 1e-5;
+
+/* Â∞ÑÁ∫ø„ÄÅÂπ≥Èù¢‰∫§ÁÇπ
  */
-double Intersect::RayPlane(Mat<>& RaySt, Mat<>& Ray, double& A, double& B, double& C, double& D) {
-	double t = A * Ray[0] + B * Ray[1] + C * Ray[2];
-	if (t == 0) 
+double Intersect::RayPlane(Mat<>& raySt, Mat<>& ray, Mat<>& a, double& b) {
+	double t = dot(a, ray);
+	if (t < eps) 
 		return DBL_MAX;
-	double d = -(A * RaySt[0] + B * RaySt[1] + C * RaySt[2] + D) / t;
+	double d = (dot(a, raySt) - b) / t;
 	return d > 0 ? d : DBL_MAX;
 }
 
-double Intersect::RayPlaneShape(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
+//3D
+double Intersect::RayPlane(Mat<>& raySt, Mat<>& ray, double& A, double& B, double& C, double& D) {
+	double t = A * ray[0] + B * ray[1] + C * ray[2];
+	if (t < eps) 
+		return DBL_MAX;
+	double d = -(A * raySt[0] + B * raySt[1] + C * raySt[2] + D) / t;
+	return d > 0 ? d : DBL_MAX;
+}
+
+/* Â∞ÑÁ∫ø„ÄÅÂπ≥Èù¢ÂõæÊ°à
+ */
+double Intersect::RayPlaneShape(Mat<>& raySt, Mat<>& ray, Mat<>& center, Mat<>& normal, Mat<>& one, bool(*f)(double, double)) {
 	double
-		D = -dot(normal, Center),
-		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+		d = rayPlane(raySt, ray, normal, dot(normal, center));
 	if (d == DBL_MAX) 
 		return DBL_MAX;
 
 	static Mat<> delta, tmp;
-	sub(delta, add(delta, RaySt, mul(delta, d, Ray)), Center);
+	sub(delta, add(delta, raySt, mul(delta, d, ray)), center);
 	cross_(tmp, delta, one);
 	return f(dot(delta, one), (dot(tmp, normal) > 0 ? 1 : -1) * norm(tmp)) ? d : DBL_MAX;
 }
 
-/* …‰œﬂ°¢‘≤Ωªµ„
+/* Â∞ÑÁ∫ø„ÄÅÂúÜ‰∫§ÁÇπ
  */
-double Intersect::RayCircle(Mat<>& RaySt, Mat<>& Ray, Mat<>& Center, double& R, Mat<>& normal) {
-	double D = -(normal[0] * Center[0] + normal[1] * Center[1] + normal[2] * Center[2]),
-		d = RayPlane(RaySt, Ray, normal[0], normal[1], normal[2], D);
+double Intersect::RayCircle(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R, Mat<>& normal) {
+	double
+		d = rayPlane(raySt, ray, normal, dot(normal, center));
 	if (d == DBL_MAX) 
 		return DBL_MAX;
 
 	static Mat<> tmp;
-	add(tmp, RaySt, mul(tmp, d, Ray));
+	add(tmp, raySt, mul(tmp, d, ray));
 	sub(tmp, tmp, Center);
 	return norm(tmp) <= R ? d : DBL_MAX;
 }
 
-/* …‰œﬂ°¢»˝Ω«–ŒΩªµ„
+/* Â∞ÑÁ∫ø„ÄÅ‰∏âËßíÂΩ¢‰∫§ÁÇπ
  */
-double Intersect::RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+double Intersect::RayTriangle(Mat<>& raySt, Mat<>& ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	static Mat<> edge[2], tmp, p, q;
 	sub(edge[0], p2, p1);
 	sub(edge[1], p3, p1);
 
 	// p & a & tmp
 	static double a, u, v;
-	a = dot(cross_(p, Ray, edge[1]), edge[0]);
+	a = dot(cross_(p, ray, edge[1]), edge[0]);
 
 	if (a > 0)
-		sub(tmp, RaySt, p1);
+		sub(tmp, raySt, p1);
 	else
-		sub(tmp, p1, RaySt), a = -a;
+		sub(tmp, p1, raySt), a = -a;
 
 	if (a < 1e-4)
-		return DBL_MAX;								//…‰œﬂ”Î»˝Ω«√Ê∆Ω––
+		return DBL_MAX;								//Â∞ÑÁ∫ø‰∏é‰∏âËßíÈù¢Âπ≥Ë°å
 
 	// u & q & v
 	u = dot(p, tmp) / a;
@@ -70,41 +81,66 @@ double Intersect::RayTriangle(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Ma
 	if (u < 0 || u > 1)
 		return DBL_MAX;
 
-	v = dot(cross_(q, tmp, edge[0]), Ray) / a;
+	v = dot(cross_(q, tmp, edge[0]), ray) / a;
 	return (v < 0 || u + v > 1) ? DBL_MAX : dot(q, edge[1]) / a;
 }
 
-/* …‰œﬂ°¢«Ú√ÊΩªµ„
- * K = ( -b °¿ sqrt(¶§) ) / 2 a
-   ¶§ = b^2 - 4ac = 4(Al ¶§X + Bl ¶§Y + Cl ¶§Z)^2 - 4(Al^2 + Bl^2 + Cl^2)(¶§X^2 + ¶§Y^2 + ¶§Z^2 - R^2)
-   »Ù¶§°›0 ”–Ωªµ„.
+/* Â∞ÑÁ∫ø„ÄÅÁêÉÈù¢‰∫§ÁÇπ
  */
-double Intersect::RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, bool(*f)(double, double)) {
-	static Mat<> RayStCenter;
-	sub(RayStCenter, RaySt, center);
+double Intersect::RaySphere(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R) {
+	static Mat<> rayStCenter;
+	sub(rayStCenter, raySt, center);
 
 	double
-		A = dot(Ray, Ray),
-		B = 2 * dot(Ray, RayStCenter),
-		Delta = B * B - 4 * A * (dot(RayStCenter, RayStCenter) - R * R);
+		A = dot(ray, ray),
+		B = 2 * dot(ray, rayStCenter),
+		C = dot(rayStCenter, rayStCenter) - R * R,
+		Delta = B * B - 4 * A * C;
 
 	if (Delta < 0)
-		return DBL_MAX;									//”–ŒﬁΩªµ„
+		return DBL_MAX;									//ÊúâÊó†‰∫§ÁÇπ
+
+	Delta = sqrt(Delta);
+	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
+}
+
+/* Â∞ÑÁ∫ø„ÄÅÁêÉÈù¢ÂõæÊ°à
+ */
+double Intersect::RaySphere(Mat<>& raySt, Mat<>& ray, Mat<>& center, double& R, bool(*f)(double, double)) {
+	static Mat<> rayStCenter;
+	sub(rayStCenter, raySt, center);
+
+	double
+		A = dot(ray, ray),
+		B = 2 * dot(ray, rayStCenter),
+		C = dot(rayStCenter, rayStCenter) - R * R,
+		Delta = B * B - 4 * A * C;
+
+	if (Delta < 0)
+		return DBL_MAX;									//ÊúâÊó†‰∫§ÁÇπ
 
 	Delta = sqrt(Delta);
 
 	if (f != NULL) {
-		static double d; static Mat<> delta;
+		static double d; 
+		static Mat<> delta;
+
 		if ((d = (-B - Delta) / (2 * A)) > 1e-4) {
-			sub(delta, add(delta, RaySt, mul(delta, d, Ray)), center);
+			sub(delta, add(delta, raySt, mul(delta, d, ray)), center);
 			normalize(delta);
-			if (f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)))
+			if (f(
+				acos(delta[2]), 
+				atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)
+			))
 				return d;
 		}
 		if ((d = (-B + Delta) / (2 * A)) > 1e-4) {
-			sub(delta, add(delta, RaySt, mul(delta, d, Ray)), center);
+			sub(delta, add(delta, raySt, mul(delta, d, ray)), center);
 			normalize(delta);
-			if (f(acos(delta[2]), atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)))
+			if (f(
+				acos(delta[2]), 
+				atan(delta[1] / delta[0]) + (delta[1] >= 0 ? PI / 2 : PI / 2 * 3)
+			))
 				return d;
 		}
 		return DBL_MAX;
@@ -112,22 +148,22 @@ double Intersect::RaySphere(Mat<>& RaySt, Mat<>& Ray, Mat<>& center, double& R, 
 	return (-B + (-B - Delta > 0 ? -Delta : Delta)) / (2 * A);
 }
 
-/* …‰œﬂ°¢æÿÃÂΩªµ„
- * d = - (A x_0 + B y_0 + C z_0 + D) / (A a + B b + C c)
+/* Â∞ÑÁ∫ø„ÄÅÁü©‰Ωì‰∫§ÁÇπ
  */
-double Intersect::RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
+double Intersect::RayCuboid(Mat<>& raySt, Mat<>& ray, Mat<>& p1, Mat<>& p2, Mat<>& p3) {
 	return DBL_MAX;
 }
 
-double Intersect::RayCuboid(Mat<>& RaySt, Mat<>& Ray, Mat<>& pmin, Mat<>& pmax) {
+double Intersect::RayCuboid(Mat<>& raySt, Mat<>& ray, Mat<>& pmin, Mat<>& pmax) {
 	double t0 = -DBL_MAX, t1 = DBL_MAX;
+
 	for (int dim = 0; dim < 3; dim++) {
-		if (fabs(Ray[dim]) < EPS && (RaySt[dim] < pmin[dim] || RaySt[dim] > pmax[dim])) {
+		if (fabs(ray[dim]) < eps && (raySt[dim] < pmin[dim] || raySt[dim] > pmax[dim])) {
 			return DBL_MAX;
 		}
 		double
-			t0t = (pmin[dim] - RaySt[dim]) / Ray[dim],
-			t1t = (pmax[dim] - RaySt[dim]) / Ray[dim];
+			t0t = (pmin[dim] - raySt[dim]) / ray[dim],
+			t1t = (pmax[dim] - raySt[dim]) / ray[dim];
 		if (t0t > t1t)
 			std::swap(t0t, t1t);
 

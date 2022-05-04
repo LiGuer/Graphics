@@ -16,23 +16,23 @@ namespace Graphics {
 	extern int  PaintSize, FontSize;
 
 	/*-------------------------------- DRAW --------------------------------*/
-	void drawPoint		(Mat<ARGB>& image, int x0, int y0);								//»­µã
-	void drawLine		(Mat<ARGB>& image, int x1, int y1, int x2, int y2);				//»­Ïß
-	void drawCircle		(Mat<ARGB>& image, int x0, int y0, int r);						//»­Ô²
-	void drawEllipse	(Mat<ARGB>& image, int x0, int y0, int rx, int ry);				//»­ÍÖÔ²
-	void drawRectangle	(Mat<ARGB>& image, int x1, int y1, int x2, int y2);				//»­¾ØĞÎ
-	void drawPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//»­¶à±ßĞÎ
-	void drawWave		(Mat<ARGB>& image, int* x, int* y, int n);						//»­ÇúÏß
-	void drawBezier		(Mat<ARGB>& image, int* x, int* y, int n);						//»­±´Èû¶ûÇúÏß
-	void drawGrid		(Mat<ARGB>& image, int sx, int sy, int ex, int ey, int dx, int dy);	//»­Íø¸ñ
+	void drawPoint		(Mat<ARGB>& image, int x0, int y0);								//ç”»ç‚¹
+	void drawLine		(Mat<ARGB>& image, int x1, int y1, int x2, int y2);				//ç”»çº¿
+	void drawCircle		(Mat<ARGB>& image, int x0, int y0, int r);						//ç”»åœ†
+	void drawEllipse	(Mat<ARGB>& image, int x0, int y0, int rx, int ry);				//ç”»æ¤­åœ†
+	void drawRectangle	(Mat<ARGB>& image, int x1, int y1, int x2, int y2);				//ç”»çŸ©å½¢
+	void drawPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//ç”»å¤šè¾¹å½¢
+	void drawWave		(Mat<ARGB>& image, int* x, int* y, int n);						//ç”»æ›²çº¿
+	void drawBezier		(Mat<ARGB>& image, int* x, int* y, int n);						//ç”»è´å¡å°”æ›²çº¿
+	void drawGrid		(Mat<ARGB>& image, int sx, int sy, int ex, int ey, int dx, int dy);	//ç”»ç½‘æ ¼
 
-	void fillRectangle	(Mat<ARGB>& image, int sx, int sy, int ex, int ey, ARGB color);	//Ìî³äµ¥É«
-	void fillFlood		(Mat<ARGB>& image, int x0, int y0, ARGB color);					//·ºÀÄÌî³ä
-	void fillPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//¶à±ßĞÎÌî³ä
+	void fillRectangle	(Mat<ARGB>& image, int sx, int sy, int ex, int ey, ARGB color);	//å¡«å……å•è‰²
+	void fillFlood		(Mat<ARGB>& image, int x0, int y0, ARGB color);					//æ³›æ»¥å¡«å……
+	void fillPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//å¤šè¾¹å½¢å¡«å……
 
-	void drawChar		(Mat<ARGB>& image, int x0, int y0, char charac);				//ÏÔÊ¾×Ö·û
-	void drawString		(Mat<ARGB>& image, int x0, int y0, const char* str);			//ÏÔÊ¾×Ö·û´®
-	void drawNum		(Mat<ARGB>& image, int x0, int y0, fp64 num);					//ÏÔÊ¾Êı×Ö
+	void drawChar		(Mat<ARGB>& image, int x0, int y0, char charac);				//æ˜¾ç¤ºå­—ç¬¦
+	void drawString		(Mat<ARGB>& image, int x0, int y0, const char* str);			//æ˜¾ç¤ºå­—ç¬¦ä¸²
+	void drawNum		(Mat<ARGB>& image, int x0, int y0, fp64 num);					//æ˜¾ç¤ºæ•°å­—
 }
 
 #endif
