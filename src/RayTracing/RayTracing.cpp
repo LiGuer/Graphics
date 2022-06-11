@@ -25,7 +25,10 @@ double RayTracing::haze_beta = 1e-3;
 			[5] 基于结果绘制该像素色彩
 -------------------------------------------------------------------------*/
 
-static void RayTracing::traceRay_func(Mat<>* ScreenXVec, Mat<>* ScreenYVec, Mat<>* center, Mat<>* direct, ObjectTree* objTree, double rate, Mat<>* R, Mat<>* G, Mat<>* B, int st, int ed) {
+static void RayTracing::traceRay_func(Mat<>* ScreenXVec, Mat<>* ScreenYVec, Mat<>* center, Mat<>* direct, 
+	ObjectTree* objTree, double rate, 
+	Mat<>* R, Mat<>* G, Mat<>* B, int st, int ed
+) {
 	Mat<> SampleVec, SampleXVec, SampleYVec, Ray, RaySt, color(3);
 
 	for (int i = st; i < ed; i++) {
@@ -83,7 +86,7 @@ void RayTracing::traceRay_(
 
 
 void RayTracing::traceRay(
-	Mat<>& center, Mat<>& direct, double width, double height,
+	Mat<>& center, Mat<>& direct, double preSize,
 	ObjectTree& objTree,
 	Mat<>& R, Mat<>& G, Mat<>& B,
 	int sampleSt, int sampleEd
@@ -91,7 +94,7 @@ void RayTracing::traceRay(
 	//[1]
 	static Mat<> ScreenXVec, ScreenYVec(3);
 	normalize(ScreenYVec = { -direct[1], direct[0], 0 });			//屏幕Y向轴始终与Z轴垂直,无z分量, 且与direct正交(内积为零)
-	normalize(cross_(ScreenXVec, direct, ScreenYVec));						//屏幕X向轴与屏幕轴、屏幕Y向轴正交
+	normalize(cross_(ScreenXVec, direct, ScreenYVec));				//屏幕X向轴与屏幕轴、屏幕Y向轴正交
 
 	//[2]
 	static Mat<> SampleYVec, SampleXVec, SampleVec, Ray, RaySt, color(3);
@@ -105,8 +108,8 @@ void RayTracing::traceRay(
 		for (int x = 0; x < R.rows; x++) {
 			for (int y = 0; y < R.cols; y++) {
 				add(SampleVec,														//[3]
-					mul(SampleXVec, x + randX - R.rows / 2.0 - 0.5, ScreenXVec),
-					mul(SampleYVec, y + randY - R.cols / 2.0 - 0.5, ScreenYVec)
+					mul(SampleXVec, (x + randX - R.rows / 2.0 - 0.5) * preSize, ScreenXVec),
+					mul(SampleYVec, (y + randY - R.cols / 2.0 - 0.5) * preSize, ScreenYVec)
 				); 
 				add(RaySt, center, SampleVec);
 				add(Ray,   direct, SampleVec);
@@ -120,7 +123,7 @@ void RayTracing::traceRay(
 			} 
 		}
 
-		if (sample % 100 == 0) {
+		if (sample % 10 == 0) {
 			printf("%d\ttime:%f sec\n", sample, (clock() - start) / double(CLK_TCK));
 			start = clock();
 		}
@@ -225,8 +228,8 @@ Mat<>& RayTracing::traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>
 	}
 
 	//雾
-	if(haze) 
-		Haze(color, color, haze_A = 1, dis, haze_beta);
+	//if(haze) 
+		//Haze(color, color, haze_A = 1, dis, haze_beta);
 
 	return color;
 }

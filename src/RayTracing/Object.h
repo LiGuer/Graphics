@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include "Material.h"
-#include "Intersect.h"
+#include "../../../LiGu_Math/src/Math/Geometry/Intersect.h"
 #include "../GraphicsIO.h"
 
 #define EPS 10e-4
@@ -13,10 +13,10 @@ using namespace Matrix;
 
 namespace ObjectLib {
 
-/*---------------- ∂‘œÛ/∂‘œÛ ˜ ----------------*/
-enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID };
+/*---------------- ÂØπË±°/ÂØπË±°Ê†ë ----------------*/
+enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID, ELLIPSOID };
 
-struct Object { 		//ŒÔÃÂ
+struct Object { 		//Áâ©‰Ωì
 	int type; 
 	void** v; 
 	Material* material = NULL; 
@@ -35,15 +35,23 @@ inline Mat<>& FaceVector(Object& obj, Mat<>& intersect, Mat<>& ans) {
 		)); break;
 	case PLANESHAPE:ans = *(Mat<>*)obj.v[1]; break;
 	case SPHERE:	normalize(sub(ans, intersect, *(Mat<>*)obj.v[0])); break;
+	case ELLIPSOID:
+		ans = {
+			intersect(0) * pow((*(Mat<>*)obj.v[1])(0, 0), 2),
+			intersect(1) * pow((*(Mat<>*)obj.v[1])(1, 1), 2),
+			intersect(2) * pow((*(Mat<>*)obj.v[1])(2, 2), 2)
+		};
+		normalize(ans);
+		break;
 	case CUBOID:
 		if (fabs(intersect[0] - (*(Mat<>*)obj.v[0])[0]) < EPS 
-			|| fabs(intersect[0] - (*(Mat<>*)obj.v[1])[0]) < EPS) 
+		||  fabs(intersect[0] - (*(Mat<>*)obj.v[1])[0]) < EPS) 
 			ans = { 1, 0, 0 };
 		else if (fabs(intersect[1] - (*(Mat<>*)obj.v[0])[1]) < EPS 
-				|| fabs(intersect[1] - (*(Mat<>*)obj.v[1])[1]) < EPS) 
+			 ||  fabs(intersect[1] - (*(Mat<>*)obj.v[1])[1]) < EPS) 
 			ans = { 0, 1, 0 };
 		else if (fabs(intersect[2] - (*(Mat<>*)obj.v[0])[2]) < EPS 
-				|| fabs(intersect[2] - (*(Mat<>*)obj.v[1])[2]) < EPS) 
+			 ||  fabs(intersect[2] - (*(Mat<>*)obj.v[1])[2]) < EPS) 
 			ans = { 0, 0, 1 };
 		break;
 	}
@@ -59,7 +67,7 @@ class  ObjectTree {
 public:
 	ObjectNode* root = NULL;
 	ObjectNode* ObNodeList;
-	std::vector<Object> ObjectSet;											//»˝Ω«–ŒºØ
+	std::vector<Object> ObjectSet;											//‰∏âËßíÂΩ¢ÈõÜ
 	int planeNum = 0;
 
 	void build(std::vector<Object>& obSet);
@@ -71,12 +79,13 @@ public:
 	double seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob);
 
 	//add
-	void addPlane		(Mat<>& n, Mat<>& p0, Material* material = NULL);	//+∆Ω√Ê
-	void addCircle		(Mat<>& center, double R, Mat<>& n, Material* material = NULL);	//+‘≤
-	void addTriangle	(Mat<>& p1,Mat<>& p2, Mat<>& p3, Material* material = NULL);	//+»˝Ω«–Œ
-	void addPlaneShape	(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material = NULL);	//+∆Ω√ÊÕº–Œ
-	void addSphere		(Mat<>& center, double r, Material* material = NULL, bool(*f)(double, double) = NULL);	//+«Ú
-	void addCuboid		(Mat<>& pmin, Mat<>& pmax, Material* material = NULL);	//+≥§∑ΩÃÂ
+	void addPlane		(Mat<>& n, Mat<>& p0, Material* material = NULL);	//+Âπ≥Èù¢
+	void addCircle		(Mat<>& center, double R, Mat<>& n, Material* material = NULL);	//+ÂúÜ
+	void addTriangle	(Mat<>& p1,Mat<>& p2, Mat<>& p3, Material* material = NULL);	//+‰∏âËßíÂΩ¢
+	void addPlaneShape	(Mat<>& n, Mat<>& p0, bool(*f)(double, double), Material* material = NULL);	//+Âπ≥Èù¢ÂõæÂΩ¢
+	void addSphere		(Mat<>& center, double r, Material* material = NULL, bool(*f)(double, double) = NULL);	//+ÁêÉ
+	void addEllipsoid	(Mat<>& center, Mat<>& PInv, Material* material = NULL, bool(*f)(double, double) = NULL);
+	void addCuboid		(Mat<>& pmin, Mat<>& pmax, Material* material = NULL);	//+ÈïøÊñπ‰Ωì
 	void addStl			(const char* file, Mat<>& center, double size, Material** material);
 
 	void addPlane		(std::initializer_list<double> n, std::initializer_list<double> p0, Material* material);

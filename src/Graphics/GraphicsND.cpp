@@ -1,6 +1,8 @@
 #include "GraphicsND.h"
 
-// 画线
+/*
+ * 画点
+ */ 
 void Graphics::drawPoint(Mat<ARGB>& image, Mat<>& p0) {
 	static Mat<> point;
 
@@ -11,7 +13,10 @@ void Graphics::drawPoint(Mat<ARGB>& image, Mat<>& p0) {
 
 	Matrix::mul(point, TransformMat, point);
 
-	drawPoint(image, (int)point(1), (int)point(2));
+	drawPoint(image,
+		image.rows / 2 + point(1),
+		image.cols / 2 + point(2)
+	);
 }
 
 void Graphics::drawPoint(Mat<ARGB>& image, double x, double y, double z) {
@@ -25,7 +30,36 @@ void Graphics::drawPoint(Mat<ARGB>& image, double x, double y, double z) {
 
 	Matrix::mul(point, TransformMat, point);
 
-	drawPoint(image, (int)point(1), (int)point(2));
+	drawPoint(image, 
+		image.rows / 2 + point(1),
+		image.cols / 2 + point(2)
+	);
+}
+
+/*
+ * 画线
+ */
+void Graphics::drawLine(Mat<ARGB>& image, Mat<>& st, Mat<>& ed) {
+	static Mat<> p1, p2;
+
+	p1.zero(TransformMat.rows);
+	p2.zero(TransformMat.rows);
+
+	p1[0] = 1;
+	for (int i = 0; i < st.rows; i++)
+		p1[i + 1] = st[i];
+
+	p2[0] = 1;
+	for (int i = 0; i < ed.rows; i++)
+		p2[i + 1] = ed[i];
+
+	Matrix::mul(p1, TransformMat, p1);
+	Matrix::mul(p2, TransformMat, p2);
+
+	drawLine(image, 
+		image.rows / 2 + p1(1), image.rows / 2 + p1(2),
+		image.cols / 2 + p2(1), image.cols / 2 + p2(2)
+	);
 }
 
 /*----------------------------------------------------------------
@@ -39,10 +73,8 @@ void Graphics::drawPoint(Mat<ARGB>& image, double x, double y, double z) {
 			[2] 连接该点和所有比该点编码多1的点
 ----------------------------------------------------------------*/
 void Graphics::drawSuperCuboid(Mat<ARGB>& image, Mat<>& pMin, Mat<>& pMax) {
-	unsigned int Dim = pMin.rows, maxCode = 0;
+	unsigned int Dim = pMin.rows, maxCode = (1 << Dim) - 1;
 	Mat<> st, ed;
-	for (int i = 0; i < Dim; i++) 
-		maxCode += 1 << i;
 
 	for (unsigned int code = 0; code < maxCode; code++) {
 		st = pMin;
@@ -54,12 +86,13 @@ void Graphics::drawSuperCuboid(Mat<ARGB>& image, Mat<>& pMin, Mat<>& pMax) {
 		for (int i = 0; i < Dim; i++) {
 			if (ed[i] == pMin[i]) {
 				ed[i] = pMax[i];
-				//drawLine(image, st, ed);
+				drawLine(image, st, ed);
 				ed[i] = pMin[i];
 			}
 		}
 	}
 }
+
 
 /*--------------------------------[ 画网格 ]--------------------------------
 *	[过程]:
@@ -91,7 +124,7 @@ void Graphics::drawGrid(Mat<ARGB>& image, Mat<>& delta, Mat<>& max, Mat<>& min) 
 			for (int dim = 0; dim < min.rows; dim++) {
 				st[dim] = min[dim];
 				ed[dim] = max[dim];
-				//drawLine(image, st, ed);
+				drawLine(image, st, ed);
 				st[dim] = point[dim];
 				ed[dim] = point[dim];
 			}

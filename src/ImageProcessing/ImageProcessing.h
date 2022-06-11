@@ -1,7 +1,7 @@
 ﻿#ifndef IMAGE_PROCESSING_H
 #define IMAGE_PROCESSING_H
 
-#include "../../LiGu_AlgorithmLib/Mat.h"
+#include "../../LiGu_Math/src/Matrix/Mat.h"
 #include "../../LiGu_AlgorithmLib/BasicMachineLearning.h"
 
 #define PI 3.141592653589

@@ -1,6 +1,6 @@
 #include "Transform.h"
 
-Mat<> Graphics::TransformMat(4);
+Mat<> Graphics::TransformMat(4, 4);
 
 /*#############################################################################
 
@@ -22,7 +22,7 @@ Mat<>& Graphics::translate(Mat<>& delta) {
 
 // 旋转
 Mat<>& Graphics::rotate(Mat<>& theta, Mat<>& center) {
-	static Mat<> tmp, rotateMat;
+	static Mat<> tmp, rotateMat(TransformMat.rows - 1, TransformMat.cols - 1);
 	translate(Matrix::negative(tmp, center));
 
 	Matrix::rotate(theta, rotateMat);

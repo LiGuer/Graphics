@@ -5,11 +5,11 @@ using namespace Intersect;
 using namespace ObjectLib;
 /*#############################################################################
 * 
-*					¶ÔÏó/¶ÔÏóÊ÷
+*					å¯¹è±¡/å¯¹è±¡æ ‘
 *
 ##############################################################################*/
 
-/*--------------------------------[ ½¨Ê÷ ]--------------------------------*/
+/*--------------------------------[ å»ºæ ‘ ]--------------------------------*/
 void ObjectTree::build(std::vector<Object>& obSet) {
 	ObNodeList = (ObjectNode*)malloc(obSet.size() * sizeof(ObjectNode));
 	Mat<> p(3);
@@ -35,6 +35,12 @@ void ObjectTree::build(std::vector<Object>& obSet) {
 			break;
 		case SPHERE:
 			p = *(double*)ob->v[1];
+			sub((*(Mat<>*)bound->v[0]), *(Mat<>*)ob->v[0], p);
+			add((*(Mat<>*)bound->v[1]), *(Mat<>*)ob->v[0], p);
+			break;
+		case ELLIPSOID: 
+			p = std::max(1.0 / (*(Mat<>*)bound->v[1])(0, 0), 1.0 / (*(Mat<>*)bound->v[1])(1, 1));
+			p = std::max(p(0), 1.0 / (*(Mat<>*)bound->v[1])(2, 2));
 			sub((*(Mat<>*)bound->v[0]), *(Mat<>*)ob->v[0], p);
 			add((*(Mat<>*)bound->v[1]), *(Mat<>*)ob->v[0], p);
 			break;
@@ -80,12 +86,15 @@ void ObjectTree::build(ObjectNode* obSet, int l, int r, ObjectNode*& node) {
 	build(obSet, (l + r) / 2 + 1, r, node->kid[1]);
 }
 
-/*--------------------------------[ Çó½» ]--------------------------------*/
+/*--------------------------------[ æ±‚äº¤ ]--------------------------------*/
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object*& ob) {
 	double disMin = seekIntersection(RaySt, Ray, root, ob), dis_t;
 	for (int i = 0; i < planeNum; i++) {
 		dis_t = seekIntersection(RaySt, Ray, *ObNodeList[i].ob);
-		if (dis_t > EPS && disMin > dis_t) { ob = ObNodeList[i].ob; disMin = dis_t; }
+		if (dis_t > EPS && disMin > dis_t) { 
+			ob = ObNodeList[i].ob; 
+			disMin = dis_t;
+		}
 	}
 	return disMin;
 }
@@ -112,7 +121,7 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, ObjectNode* node, 
 double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob) {
 	switch (ob.type) {
 	case PLANE:
-		return RayPlane(RaySt, Ray, (*(Mat<>*)ob.v[0])[0], (*(Mat<>*)ob.v[0])[1], (*(Mat<>*)ob.v[0])[2], *(double*)ob.v[1]);
+		return RayPlane(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1]);
 	case CIRCLE:
 		return RayCircle(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[2], *(Mat<>*)ob.v[1]);
 	case TRIANGLE:
@@ -121,6 +130,8 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob) {
 		return RayPlaneShape(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1], *(Mat<>*)ob.v[2], (bool(*)(double, double))ob.v[3]);
 	case SPHERE:
 		return RaySphere(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], (bool(*)(double, double))ob.v[2]);
+	case ELLIPSOID:
+		return RayEllipsoid(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1]);
 	case CUBOID:
 		return RayCuboid(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1]);
 	}
@@ -131,7 +142,7 @@ void ObjectTree::addPlane(Mat<>& n, Mat<>& p0, Material* material) {
 	Object ob; ob.type = PLANE;
 	ob.v = (void**)calloc(2, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = n; normalize((*(Mat<>*)ob.v[0]));
-	ob.v[1] = new double;	*(double*)ob.v[1] = -((*(Mat<>*)ob.v[0])[0] * p0[0] + (*(Mat<>*)ob.v[0])[1] * p0[1] + (*(Mat<>*)ob.v[0])[2] * p0[2]);
+	ob.v[1] = new double;	*(double*)ob.v[1] = dot(*(Mat<>*)ob.v[0], p0);
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
@@ -144,7 +155,7 @@ void ObjectTree::addPlane(std::initializer_list<double> nt, std::initializer_lis
 	Object ob; ob.type = PLANE;
 	ob.v = (void**)calloc(2, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = n; normalize(*(Mat<>*)ob.v[0]);
-	ob.v[1] = new double;	*(double*)ob.v[1] = -((*(Mat<>*)ob.v[0])[0] * p0[0] + (*(Mat<>*)ob.v[0])[1] * p0[1] + (*(Mat<>*)ob.v[0])[2] * p0[2]);
+	ob.v[1] = new double;	*(double*)ob.v[1] = dot(*(Mat<>*)ob.v[0], p0);
 	ob.material = material;
 	ObjectSet.push_back(ob);
 }
@@ -258,6 +269,16 @@ void ObjectTree::addSphere(std::initializer_list<double> centert, double r, Mate
 	ob.v = (void**)calloc(3, sizeof(void*));
 	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
 	ob.v[1] = new double;	*(double*)ob.v[1] = r;
+	ob.v[2] = (void*)f;
+	ob.material = material;
+	ObjectSet.push_back(ob);
+}
+
+void ObjectTree::addEllipsoid(Mat<>& center, Mat<>& PInv, Material* material, bool(*f)(double, double)) {
+	Object ob; ob.type = ELLIPSOID;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new Mat<>;	*(Mat<>*) ob.v[1] = PInv;
 	ob.v[2] = (void*)f;
 	ob.material = material;
 	ObjectSet.push_back(ob);

@@ -7,7 +7,7 @@
 #include <thread>
 #include "../RGB.h"
 #include "../GraphicsIO.h"
-#include "GeometricalOptics.h"
+#include "../../../LiGu_Math/src/Math/Geometry/GeometricalOptics.h"
 #include "Object.h"
 
 using namespace GeometricalOptics;
@@ -33,7 +33,7 @@ namespace RayTracing {
 	extern int maxRayLevel;
 
 	void traceRay(
-		Mat<>& center, Mat<>& direct, double width, double height,
+		Mat<>& center, Mat<>& direct, double preSize,
 		ObjectTree& objTree,
 		Mat<>& R, Mat<>& G, Mat<>& B,
 		int sampleSt = 0, int sampleEd = 0x7FFFFFFF
@@ -48,7 +48,9 @@ namespace RayTracing {
 
 	void traceRay_func(
 		Mat<>* ScreenXVec, Mat<>* ScreenYVec, Mat<>* center, Mat<>* direct, 
-		ObjectTree* objTree, double rate, Mat<>* R, Mat<>* G, Mat<>* B, int st, int ed
+		ObjectTree* objTree, double rate, 
+		Mat<>* R, Mat<>* G, Mat<>* B, 
+		int st, int ed
 	);
 
 	Mat<>& traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>& color, int level);				//追踪光线

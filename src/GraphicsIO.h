@@ -31,6 +31,17 @@ static void ppmWrite(const char* fileName, Mat<RGB>& image) {
 	fclose(fo);
 }
 
+static void ppmWrite(const char* fileName, Mat<ARGB>& image) {
+	Mat<RGB> imgT(image.rows, image.cols);
+	for (int i = 0; i < image.size(); i++) {
+		imgT(i).R =  image(i) % 0x100;
+		imgT(i).G = (image(i) / 0x10000) % 0x100;
+		imgT(i).B = (image(i) / 0x1000000) % 0x10000;
+	}
+
+	ppmWrite(fileName, imgT);
+}
+
 static void ppmWrite(const char* fileName, Mat<unsigned char>& image) {
 	FILE* fo = fopen(fileName, "wb");
 	fprintf(fo, "P5\n%d %d\n255\n", image.cols, image.rows);			// 写图片格式、宽高、最大像素值

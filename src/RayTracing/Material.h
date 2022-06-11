@@ -10,7 +10,7 @@ struct Material {															//²ÄÖÊ
 		quickReflect = 0,
 		diffuseReflect = 0;
 	double
-		reflect = 1, reflectLossRate = 1,
+		reflect = 0, reflectLossRate = 1,
 		refract = 0, refractLossRate = 1;
 };
 
