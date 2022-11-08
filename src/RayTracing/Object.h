@@ -6,6 +6,7 @@
 #include "Material.h"
 #include "../../../LiGu_Math/src/Math/Geometry/Intersect.h"
 #include "../GraphicsIO.h"
+#include "C:\CppLiGu\QtLiGu\a.h"
 
 #define EPS 10e-4
 
@@ -14,7 +15,7 @@ using namespace Matrix;
 namespace ObjectLib {
 
 /*---------------- 对象/对象树 ----------------*/
-enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID, ELLIPSOID };
+enum { PLANE = 0, CIRCLE, TRIANGLE, POLTGON, PLANESHAPE, SPHERE, CUBOID, ELLIPSOID, RING };
 
 struct Object { 		//物体
 	int type; 
@@ -54,6 +55,18 @@ inline Mat<>& FaceVector(Object& obj, Mat<>& intersect, Mat<>& ans) {
 			 ||  fabs(intersect[2] - (*(Mat<>*)obj.v[1])[2]) < EPS) 
 			ans = { 0, 0, 1 };
 		break;
+	case RING:
+		double 
+			a = ((*(double*)obj.v[2]) * (*(double*)obj.v[2]) - (*(double*)obj.v[1]) * (*(double*)obj.v[1]))
+			  + intersect[0] * intersect[0] + intersect[1] * intersect[1] + intersect[2] * intersect[2],
+			b = 4 * (*(double*)obj.v[1]) * (*(double*)obj.v[1]);
+		ans = {
+			4 * intersect[0] * a - 2 * b * intersect[0],
+			4 * intersect[1] * a - 2 * b * intersect[1],
+			4 * intersect[2] * a,
+		};
+		normalize(ans);
+		break;
 	}
 	return ans;
 }
@@ -87,6 +100,7 @@ public:
 	void addEllipsoid	(Mat<>& center, Mat<>& PInv, Material* material = NULL, bool(*f)(double, double) = NULL);
 	void addCuboid		(Mat<>& pmin, Mat<>& pmax, Material* material = NULL);	//+长方体
 	void addStl			(const char* file, Mat<>& center, double size, Material** material);
+	void addRing		(Mat<>& center, double R, double r, Material* material = NULL);
 
 	void addPlane		(std::initializer_list<double> n, std::initializer_list<double> p0, Material* material);
 	void addCircle		(std::initializer_list<double> center, double R, std::initializer_list<double> n, Material* material);

@@ -5,9 +5,9 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-#include "../RGB.h"
-#include "../GraphicsIO.h"
-#include "../../../LiGu_Math/src/Math/Geometry/GeometricalOptics.h"
+#include "../Graphics/RGB.h"
+#include "../Graphics/GraphicsIO.h"
+#include "../../../../Math/src/Math/Geometry/GeometricalOptics.h"
 #include "Object.h"
 
 using namespace GeometricalOptics;

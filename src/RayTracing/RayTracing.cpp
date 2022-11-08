@@ -183,7 +183,8 @@ Mat<>& RayTracing::traceRay(ObjectTree& objTree, Mat<>& RaySt, Mat<>& Ray, Mat<>
 
 			for (int i = 0; i < PointLight.size(); i++) {
 				normalize(sub(tmp, PointLight[i], RaySt));
-				t = dot(faceVec, tmp);
+				//t = dot(faceVec, tmp);
+				t = (dot(faceVec, tmp) + 1) / 2;
 				lightCos = t > lightCos ? t : lightCos;
 			} 
 			mul(color, lightCos, color = 1);

@@ -40,11 +40,16 @@ void ObjectTree::build(std::vector<Object>& obSet) {
 			break;
 		case ELLIPSOID: 
 			p = std::max(1.0 / (*(Mat<>*)bound->v[1])(0, 0), 1.0 / (*(Mat<>*)bound->v[1])(1, 1));
-			p = std::max(p(0), 1.0 / (*(Mat<>*)bound->v[1])(2, 2));
+			p = sqrt(std::max(p(0), 1.0 / (*(Mat<>*)bound->v[1])(2, 2)));
 			sub((*(Mat<>*)bound->v[0]), *(Mat<>*)ob->v[0], p);
 			add((*(Mat<>*)bound->v[1]), *(Mat<>*)ob->v[0], p);
 			break;
 		case CUBOID: delete bound; bound = ob; break;
+		case RING:
+			p = *(double*)ob->v[1];
+			sub((*(Mat<>*)bound->v[0]), *(Mat<>*)ob->v[0], p);
+			add((*(Mat<>*)bound->v[1]), *(Mat<>*)ob->v[0], p);
+			break;
 		}
 		ObNodeList[i].ob = &obSet[i];
 		ObNodeList[i].bound = bound;
@@ -131,9 +136,11 @@ double ObjectTree::seekIntersection(Mat<>& RaySt, Mat<>& Ray, Object& ob) {
 	case SPHERE:
 		return RaySphere(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], (bool(*)(double, double))ob.v[2]);
 	case ELLIPSOID:
-		return RayEllipsoid(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1]);
+		return RayQuadric(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1]);
 	case CUBOID:
 		return RayCuboid(RaySt, Ray, *(Mat<>*)ob.v[0], *(Mat<>*)ob.v[1]);
+	case RING:
+		return inter(RaySt, Ray, *(Mat<>*)ob.v[0], *(double*)ob.v[1], *(double*)ob.v[2]);
 	}
 }
 
@@ -333,4 +340,14 @@ void ObjectTree::addStl(const char* file, std::initializer_list<double> centert,
 			material[a[i]]
 		);
 	}
+}
+
+void ObjectTree::addRing(Mat<>& center, double R, double r, Material* material) {
+	Object ob; ob.type = RING;
+	ob.v = (void**)calloc(3, sizeof(void*));
+	ob.v[0] = new Mat<>;	*(Mat<>*) ob.v[0] = center;
+	ob.v[1] = new double;	*(double*)ob.v[1] = R;
+	ob.v[2] = new double;	*(double*)ob.v[2] = r;
+	ob.material = material;
+	ObjectSet.push_back(ob);
 }

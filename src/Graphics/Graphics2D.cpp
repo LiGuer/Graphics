@@ -1,10 +1,10 @@
 #include "Graphics2D.h"
 
-/******************************************************************************
+/********************************************************************
 *
 *                    2维 图形学
 *
-******************************************************************************/
+********************************************************************/
 
 ARGB Graphics::PaintColor = 0xFFFFFFFF;
 int  Graphics::PaintSize = 0, Graphics::FontSize = 16;
@@ -48,37 +48,57 @@ void Graphics::drawPoint(Mat<ARGB>& image, int x0, int y0)
 /*---------------- 画线 : Bresenham 算法 ----------------*/
 void Graphics::drawLine(Mat<ARGB>& image, int x1, int y1, int x2, int y2)
 {
-	int err[2] = { 0 },
-		inc[2] = { 0 },
+	int inc[2] = { 0 },
 		delta[2] = { x2 - x1, y2 - y1 },
-		index[2] = { x1, y1 };										//计算坐标增量
+		p[2] = { x1, y1 };
 
-	//设置x单步方向	
-	for (int dim = 0; dim < 2; dim++) {
-		inc[dim] = delta[dim] == 0 ? 0 : (delta[dim] > 0 ? 1 : -1);		//符号函数(向右,垂直,向左)
-		delta[dim] *= inc[dim] == -1 ? -1 : 1;							//向左
+	for (int d = 0; d < 2; d++) {
+		inc[d] = delta[d] == 0 ? 0 : (delta[d] > 0 ? 1 : -1);
+		delta[d] *= inc[d];    // |Δ| 
 	}
-	int distance = delta[0] > delta[1] ? delta[0] : delta[1];		//总步数
 
-	//画线
-	for (int i = 0; i <= distance + 1; i++) {
-		drawPoint(image, index[0], index[1]);									//唯一输出：画点
+	int a = 0, d1, d2;
 
-		for (int dim = 0; dim < 2; dim++) {
-			err[dim] += delta[dim];
-			if (err[dim] > distance) {
-				err[dim] -= distance;
-				index[dim] += inc[dim];
-			}
+	if (delta[0] >= delta[1]) {
+		d1 = 0;
+		d2 = 1;
+	}
+	else {
+		d1 = 1;
+		d2 = 0;
+	}
+
+	for (int i = 0; i <= delta[d1]; i++) {
+		drawPoint(image, p[0], p[1]);
+
+		p[d1] += inc[d1];
+
+		a += delta[d2];
+		if (a >= delta[d1]) {
+			a -= delta[d1];
+			p[d2] += inc[d2];
 		}
 	}
 }
 
+/*---------------- 画折线 ----------------*/
+void Graphics::drawLine(Mat<ARGB>& image, int* x, int* y, int n) {
+	int xt, yt;
+	for (int i = 0; i < n; i++) {
+		if (i != 0)
+			drawLine(image, xt, yt, x[i], y[i]);
+		xt = x[i];
+		yt = y[i];
+	}
+}
+
 /*---------------- 画三角 ----------------*/
-void Graphics::drawPolygon(Mat<ARGB>& image, int* x, int* y, int n)
+void Graphics::drawTriangle(Mat<ARGB>& image, 
+							int x1, int y1, int x2, int y2, int x3, int y3)
 {
-	for (int i = 0; i < n; i++)
-		drawLine(image, x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
+	drawLine(image, x1, y1, x2, y2);
+	drawLine(image, x2, y2, x3, y3);
+	drawLine(image, x3, y3, x1, y1);
 }
 
 /*---------------- 画矩形 ----------------*/
@@ -90,22 +110,49 @@ void Graphics::drawRectangle(Mat<ARGB>& image, int x1, int y1, int x2, int y2)
 	drawLine(image, x2, y1, x2, y2);
 }
 
+void Graphics::drawRegularPolygon (Mat<ARGB>& image, int  x, int  y, int l, int n, double a0) {
+    double a = 2 * PI / n;
+
+    for (int i = 1; i < n; i++) 
+		drawLine(image, 
+			x + l * cos(a0 + a * (i-1)), y + l * sin(a0 + a * (i-1)),
+			x + l * cos(a0 + a * i),	 y + l * sin(a0 + a * i));
+
+	drawLine(image, 
+		x + l * cos(a0 + a * (n-1)), y + l * sin(a0 + a * (n-1)),
+		x + l * cos(a0), y + l * sin(a0));
+}
+
+void Graphics::drawPolygon(Mat<ARGB>& image, int* x, int* y, int n)
+{
+	for (int i = 0; i < n; i++)
+		drawLine(image, x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
+}
+
+
+
 /*---------------- 画圆 : Bresenham 算法 ---------------*/
 void Graphics::drawCircle(Mat<ARGB>& image, int x0, int y0, int r)
 {
-	int x = 0, y = r, p = 3 - (r << 1);		//初始点:天顶(0,r)//p:决策参数(r右移即乘2)
-	int x_step[] = { 1,1,-1,-1 }, y_step[] = { 1,-1,1,-1 };		//上下左右对称四个点
+	int x = 0, y = r, p = 3 - (r << 1);  //初始点:天顶(0,r)
+	int x_step[] = { 1, 1,-1,-1 }, 
+		y_step[] = { 1,-1, 1,-1 };		//上下左右对称四个点
 
-	// 绘制圆 (x=0始,y=x终)
 	while (x <= y) {
-		for (int i = 0; i < 4; i++) {								//八分圆对称绘制
+		for (int i = 0; i < 4; i++) {  //八分圆对称绘制
 			drawPoint(image, x0 + x * x_step[i], y0 + y * y_step[i]);
-			drawPoint(image, x0 + y * x_step[i], y0 + x * y_step[i]);
+			drawPoint(image, x0 + y * y_step[i], y0 + x * x_step[i]);
 		}
+
 		x++;
 		int dp = 4 * x + 6;
-		if (p < 0)p += dp;
-		else { p += dp - 4 * y + 4; y--; } //p过临界值，y加一
+
+		if (p < 0)
+			p += dp;
+		else { 
+			p += dp - 4 * y + 4; 
+			y--; 
+		} 
 	}
 }
 
@@ -165,17 +212,6 @@ void Graphics::drawGrid(Mat<ARGB>& image, int sx, int sy, int ex, int ey, int dx
 			if (image.isOut(0, y)) continue;
 			drawLine(image, sx, y, ex, y);
 		}
-	}
-}
-
-/*----------------[ DRAW WAVE ]----------------*/
-void Graphics::drawWave(Mat<ARGB>& image, int* x, int* y, int n) {
-	int xt, yt;
-	for (int i = 0; i < n; i++) {
-		if (i != 0)
-			drawLine(image, xt, yt, x[i], y[i]);
-		xt = x[i];
-		yt = y[i];
 	}
 }
 
@@ -270,8 +306,11 @@ void Graphics::fillPolygon(Mat<ARGB>& image, int* x, int* y, int n)
 	for (int i = 0; i < n; i++) {
 		int x1 = x[i], x2 = x[(i + 1) % n],
 			y1 = y[i], y2 = y[(i + 1) % n];
-		if (y1 == y2)continue;							//水平线舍弃
+
+		if (y1 == y2) continue;							//水平线舍弃
+
 		int ymin = y1 < y2 ? y1 : y2;
+
 		fillPolygon_Edge* tE = new fillPolygon_Edge;	//创建新边表节点
 		tE->ymax = y1 > y2 ? y1 : y2; 					//下端点ymin,上端点ymax,下端点x,斜率倒数
 		tE->x = y1 < y2 ? x1 : x2;

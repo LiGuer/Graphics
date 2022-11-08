@@ -12,13 +12,39 @@ public:
 #define ARGB  unsigned int
 	/*---------------- 基础参数 ----------------*/
 	INT8U R = 0, G = 0, B = 0;
+
 	/*---------------- 基础函数 ----------------*/
 	RGB() { ; }
-	RGB(ARGB a) { *this = a; }														//构造函数
-	RGB& operator=(const RGB& a) { R = a.R; G = a.G; B = a.B; return *this; }
-	RGB& operator=(ARGB& a) { R = a >> 16; G = a >> 8; B = a; return *this; }
-	RGB& operator*=(double a) { R *= a; G *= a; B *= a; return *this; }
-	RGB& operator+=(RGB a) { R += a.R; G += a.G; B += a.B; return *this; }
+	RGB(ARGB a) { *this = a; }			//构造函数
+
+	RGB& operator=(const RGB& a) { 
+		R = a.R; 
+		G = a.G; 
+		B = a.B; 
+		return *this; 
+	}
+
+	RGB& operator=(ARGB& a) { 
+		R = a >> 16; 
+		G = a >> 8; 
+		B = a; 
+		return *this; 
+	}
+
+	RGB& operator*=(double a) { 
+		R *= a; 
+		G *= a; 
+		B *= a; 
+		return *this; 
+	}
+
+	RGB& operator+=(RGB a) { 
+		R += a.R; 
+		G += a.G; 
+		B += a.B; 
+		return *this; 
+	}
+	
 	INT8U& operator[](int index) {
 		switch (index) {
 		case 0: return R;
@@ -26,6 +52,7 @@ public:
 		case 2: return B;
 		}
 	}
+
 	/*---------------- 颜色混合 ----------------*/
 #define ChannelBlend_Normal(A,B)     ((INT8U)(A))
 #define ChannelBlend_Lighten(A,B)    ((INT8U)((B > A) ? B:A))
@@ -55,8 +82,8 @@ public:
 #define ChannelBlend_Alpha(A,B,O)    ((INT8U)(O * A + (1 - O) * B))
 #define ChannelBlend_AlphaF(A,B,F,O) (ChannelBlend_Alpha(F(A,B),A,O))
 #define ColorBlend_Buffer(T,A,B,M)   (T)[0] = ChannelBlend_##M((A)[0], (B)[0]),\
-									 (T)[1] = ChannelBlend_##M((A)[1], (B)[1]),\
-									 (T)[2] = ChannelBlend_##M((A)[2], (B)[2])
+                                     (T)[1] = ChannelBlend_##M((A)[1], (B)[1]),\
+                                     (T)[2] = ChannelBlend_##M((A)[2], (B)[2])
 #define ColorBlend_Normal(T,A,B)        (ColorBlend_Buffer(T,A,B,Normal))
 #define ColorBlend_Lighten(T,A,B)       (ColorBlend_Buffer(T,A,B,Lighten))
 #define ColorBlend_Darken(T,A,B)        (ColorBlend_Buffer(T,A,B,Darken))

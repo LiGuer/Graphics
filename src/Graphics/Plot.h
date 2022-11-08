@@ -1,15 +1,17 @@
 #ifndef GRAPHICS_PLOT_H
 #define GRAPHICS_PLOT_H
 
-#include "../../../LiGu_Math/src/Math/Matrix/Mat.h"
-#include "../RGB.h"
+#include "../../../../Math/src/Matrix/Mat.h"
+#include "RGB.h"
 
 namespace Graphics {
 
-	/*--------------------------------[ 画等高线 ]--------------------------------*/
+	/* 
+	 * 画等高线
+	 */
 	void contour(Mat<ARGB>& image, Mat<>& map, const int N) {
-		int x_step[] = { 1,0,1 },
-			y_step[] = { 0,1,1 };
+		int x_step[] = { 1, 0, 1 },
+			y_step[] = { 0, 1, 1 };
 		double 
 			max = map.max(),
 			min = map.min(),								//get the max & min of the map
@@ -43,8 +45,10 @@ namespace Graphics {
 	}
 
 	void contour(Mat<ARGB>& image, Mat<>& map) {
-		double min = map.min(),
+		double 
+			min   = map.min(),
 			delta = map.max() - min;
+
 		for (int i = 0; i < map.size(); i++)
 			image(map.i2x(i), map.i2y(i)) = colorlist((map[i] - min) / delta, 1);
 	}
@@ -54,6 +58,7 @@ namespace Graphics {
 			minX = mapX.min(), maxX = mapX.max(),
 			minY = mapY.min(), maxY = mapY.max(),
 			minZ = mapZ.min(), maxZ = mapZ.max();
+
 		for (int i = 0; i < mapX.size(); i++) {
 			ARGB color = 0;
 			color += (ARGB)((mapX[i] - minX) / (maxX - minX) * 0xFF) * 0x10000;

@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_IO_H
 #define GRAPHICS_IO_H
 
-#include "../../LiGu_Math/src/Math/Matrix/Mat.h"
+#include "../../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 
 namespace GraphicsIO {
@@ -34,9 +34,9 @@ static void ppmWrite(const char* fileName, Mat<RGB>& image) {
 static void ppmWrite(const char* fileName, Mat<ARGB>& image) {
 	Mat<RGB> imgT(image.rows, image.cols);
 	for (int i = 0; i < image.size(); i++) {
-		imgT(i).R =  image(i) % 0x100;
-		imgT(i).G = (image(i) / 0x10000) % 0x100;
-		imgT(i).B = (image(i) / 0x1000000) % 0x10000;
+		imgT(i).B = (unsigned char) image(i);
+		imgT(i).G = (unsigned char)(image(i) >> 8);
+		imgT(i).R = (unsigned char)(image(i) >>16);
 	}
 
 	ppmWrite(fileName, imgT);
