@@ -59,7 +59,7 @@ $$Img \in R^{H \times W \times C}, pix = \left(\begin{matrix}A \\ R \\ G \\ B\en
       $$\begin{align*}
         x^2 + y^2 &= r^2  \tag{Circle, 2D}  \\
         x^2 + y^2 + z^2 &= r^2  \tag{Sphere, 3D} \\
-        \|\boldsymbol p\|_2^2 = \sum_{i=1:\dim} p^{(i)} &= r^2    \tag{any dimonsion}
+        \|\boldsymbol p\|_2^2 = \sum_{i=1:\dim} p^{(i)2} &= r^2    \tag{any dimonsion}
       \end{align*}$$
 
       The target is minimize the error $\epsilon \ge 0$. $x, y, r \in \mathbb Z$.
@@ -117,7 +117,21 @@ $$Img \in R^{H \times W \times C}, pix = \left(\begin{matrix}A \\ R \\ G \\ B\en
 
       $$p^{(1)} \le p^{(2)} \le ... \le p^{(\dim)}$$
 
-      Then, we search all feasible points that $\epsilon^2 < r$ by ```queue``` and breadth-first search.
+      Then, we search all feasible points satisfying $\epsilon \le r$ by ```queue``` and breadth-first search.
+
+      $$\begin{align*}
+      \Delta d &= \sqrt{\|p\|_2^2} - r\\
+      &\in \left[-\frac{\sqrt{\dim}}{2}, \frac{\sqrt{\dim}}{2}\right] \\
+      \Rightarrow\quad \epsilon &= \left|\|p\|_2^2 - r^2 \right|  \\
+      &= \left|(\Delta d + r)^2 - r^2\right|  \\
+      &= \left|\Delta d^2 + 2 r \Delta d + r^2 - r^2\right|\\
+      &= \left|\Delta d^2 + 2 r \Delta d\right|  \\
+      &\in [0,r \sqrt{\dim}  +\frac{\dim}{4}] \\
+      \end{align*}$$
+
+  * Draw Analytic Geometry of Arbitrary form
+
+    We search all feasible points satisfying $f(\boldsymbol p) \le 0$ from a initial feasible point $\boldsymbol p_0$ by ```queue``` and breadth-first search.
 
   * Draw Triangle
     - Algorithm

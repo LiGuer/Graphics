@@ -236,7 +236,7 @@ void Graphics::drawSphere(Mat<ARGB>& image, Mat<int>& Z_buf, int x0, int y0, int
 
             e[i] = abs(x * x + y * y + z * z - r * r);
 
-            if (e[i] < r) {
+            if (e[i] <= r) {
                 Q.push({ x, y, z });
                 M[{x, y, z}] = 1;
             }
@@ -244,4 +244,58 @@ void Graphics::drawSphere(Mat<ARGB>& image, Mat<int>& Z_buf, int x0, int y0, int
 
     }
 
+}
+
+
+void Graphics::drawFunction(Mat<ARGB>& image, Mat<int>& Z_buf, int xs, int ys, int zs, 
+    function<double(double, double, double)> f, 
+    function<void(double, double, double, double&, double&, double&)> df)
+{
+
+    int d[26][3];
+    double e, fx, fy, fz;
+    queue<vector<int>> Q;
+    map<vector<int>, int> M;
+
+    for (int i = 1; i < 27; i++) {
+        d[i - 1][0] = (i % 3) - 1;
+        d[i - 1][1] =((i % 9) / 3) - 1;
+        d[i - 1][2] = (i / 9) - 1;
+    }
+
+    Q.push({ xs, ys, zs });
+    M[{ xs, ys, zs }] = 1;
+
+    while (!Q.empty()) {
+        vector<int> p = Q.front();
+        Q.pop();
+
+        {
+            df(p[0], p[1], p[2], fx, fy, fz);
+            drawPoint(image, Z_buf,
+                p[0], p[1], p[2], fx, fy, fz
+            );
+        }
+
+        for (int i = 0; i < 26; i++) {
+            int x = p[0] + d[i][0],
+                y = p[1] + d[i][1],
+                z = p[2] + d[i][2];
+
+            if (x < 0 || x >= image.rows ||
+                y < 0 || y >= image.cols ||
+                M.find({ x, y, z }) != M.end()) {
+                e = DBL_MAX;
+                continue;
+            }
+            M[{x, y, z}] = 1;
+
+            e= f(x, y, z);
+
+            if (e <= 0) {
+                Q.push({ x, y, z });
+            }
+        }
+
+    }
 }

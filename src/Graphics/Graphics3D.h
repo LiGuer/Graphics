@@ -3,6 +3,7 @@
 
 #include <queue>
 #include <map>
+#include <functional>
 #include "../../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 #include "font.h"
@@ -24,7 +25,11 @@ void drawTriangle
 void drawTriangleSet
                 (Mat<ARGB>& image, Mat<int>& Z_buf, vector<vector<vector<int>>>& p);
 void drawSphere (Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z, int r);
-// Text
+void drawFunction
+                (Mat<ARGB>& image, Mat<int>& Z_buf, int xs, int ys, int zs, 
+                                                    function<double(double, double, double)> f,
+                                                    function<void(double, double, double, double&, double&, double&)> df);
+
 
 }
 
