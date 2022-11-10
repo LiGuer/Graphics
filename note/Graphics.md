@@ -10,7 +10,7 @@ $$Img \in R^{H \times W \times C}, pix = \left(\begin{matrix}A \\ R \\ G \\ B\en
 
       $$(x_2 - x_1)(y - y_1) = (y_2 - y_1)(x - x_1)$$
 
-      we need find all $\boldsymbol p \in \mathbb Z^2$ **almost** in the line formed by $p_1$ and $p_2$, and minimize the error $\epsilon \ge 0$,
+      we need find all pixels $\boldsymbol p \in \mathbb Z^2$ that the line formed by $p_1$ and $p_2$ pass through, and minimize the error $\epsilon \ge 0$,
 
       $$(x_2 - x_1)(y - y_1) = (y_2 - y_1)(x - x_1) \pm \epsilon$$
 
@@ -62,7 +62,7 @@ $$Img \in R^{H \times W \times C}, pix = \left(\begin{matrix}A \\ R \\ G \\ B\en
         \|\boldsymbol p\|_2^2 = \sum_{i=1:\dim} p^{(i)2} &= r^2    \tag{any dimonsion}
       \end{align*}$$
 
-      The target is minimize the error $\epsilon \ge 0$. $x, y, r \in \mathbb Z$.
+      The target is to find all pixels $\boldsymbol p \in \mathbb Z^{\dim}$ that the boundary of Circle, Sphere or Hyper-Sphere pass through, and minimize the error $\epsilon \ge 0$. $x, y, r \in \mathbb Z$.
       $$\begin{align*}
         \min \quad& \epsilon = |x^2 + y^2 - r^2|  \\
         \min \quad& \epsilon = \left|\|\boldsymbol p\|_2^2 - r^2 \right|

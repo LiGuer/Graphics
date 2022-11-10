@@ -35,3 +35,8 @@
   * Science plot
     * <[plot.h](plot.h)>
     * contour
+  * Illumination
+    * <[Illumination.h](Illumination.h)>
+* Modeling
+  * <[Modeling.h](Modeling.h)> <[Modeling.cpp](Modeling.cpp)> 
+* Ray Tracing

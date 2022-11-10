@@ -3,15 +3,14 @@
 
 #include <queue>
 #include <map>
+#include <algorithm>
 #include <functional>
-#include "../../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 #include "font.h"
 #include "Graphics2D.h"
+#include "Illumination.h"
 
 namespace Graphics {
-
-extern vector<double> lightVector;
 
 // Basic Geometry
 bool drawPoint  (Mat<ARGB>& image, Mat<int>& Z_buf, int x = 0, int y = 0, int z = 0);

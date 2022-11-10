@@ -1,7 +1,5 @@
 #include "Graphics3D.h"
 
-extern vector<double> Graphics::lightVector = { -1 / sqrt(3), -1 / sqrt(3), 1 / sqrt(3) };
-
 bool Graphics::drawPoint (Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z) 
 {
     if (image.isOut(x, y) || z <= Z_buf(x, y))
@@ -13,15 +11,12 @@ bool Graphics::drawPoint (Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z
     return true;
 }
 
-bool Graphics::drawPoint(Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z, double fx, double fy, double fz)
+bool Graphics::drawPoint(Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z, double nx, double ny, double nz)
 {
     if (image.isOut(x, y) || z <= Z_buf(x, y))
         return false;
 
-    double a = (fx * lightVector[0] + fy * lightVector[1] + fz * lightVector[2]) / sqrt(fx * fx + fy * fy + fz * fz);
-
-    if (a < 0)
-        a = 0;
+    double a = Illumination::Phong(x, y, z, nx, ny, nz);
 
     image(x, y) = ((ARGB)(a * (unsigned char) PaintColor)) +
                   ((ARGB)(a * (unsigned char)(PaintColor >> 8 )) << 8 ) +

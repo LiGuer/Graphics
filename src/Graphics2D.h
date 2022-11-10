@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <queue>
-#include "../../../../Math/src/Matrix/Mat.h"
+#include "../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 #include "font.h"
 

@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_IO_H
 #define GRAPHICS_IO_H
 
-#include "../../../../Math/src/Matrix/Mat.h"
+#include "../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 
 namespace GraphicsIO {
