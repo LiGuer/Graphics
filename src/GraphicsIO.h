@@ -1,6 +1,7 @@
 #ifndef GRAPHICS_IO_H
 #define GRAPHICS_IO_H
 
+#include <vector>
 #include "../../../Math/src/Matrix/Mat.h"
 #include "RGB.h"
 
@@ -103,7 +104,15 @@ static void stlRead(const char* fileName, Mat<>& faceVec, Mat<>& p1, Mat<>& p2, 
 	fclose(fi);
 }
 
-static void stlWrite(const char* fileName, const char* head, Mat<float>& faceVec, Mat<float>& p1, Mat<float>& p2, Mat<float>& p3, Mat<short>& attribute) {
+static void stlWrite(
+	const char* fileName, 
+	const char* head,
+	Mat<float>& faceVec, 
+	Mat<float>& p1, 
+	Mat<float>& p2, 
+	Mat<float>& p3, 
+	Mat<short>& attribute
+) {
 	FILE* fo = fopen(fileName, "wb");
 	unsigned int  N = p1.cols;
 	fwrite(head, 80, 1, fo);

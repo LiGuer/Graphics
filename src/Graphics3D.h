@@ -9,6 +9,7 @@
 #include "font.h"
 #include "Graphics2D.h"
 #include "Illumination.h"
+#include "Transform.h"
 
 namespace Graphics {
 

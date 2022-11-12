@@ -1,9 +1,9 @@
 #ifndef GRAPHICS_TRANSFORM_H
 #define GRAPHICS_TRANSFORM_H
 
-#include "../../../LiGu_Math/src/Math/Matrix/Transform.h"
-#include "../../../LiGu_Math/src/Math/Matrix/Submatrix.h"
-#include "../RGB.h"
+#include "../../../Math/src/Matrix/Transform.h"
+#include "../../../Math/src/Matrix/Submatrix.h"
+#include "RGB.h"
 #include "Graphics2D.h"
 
 namespace Graphics {
