@@ -138,5 +138,34 @@ static void stlWrite(
 	fclose(fo);
 }
 
+static void stlWrite(
+	const char* fileName,
+	vector<vector<double>>& triangleSet
+) {
+	int n = triangleSet.size();
+	char head[80];
+	Mat<float>
+		faceVec(3, n),
+		p1(3, n),
+		p2(3, n),
+		p3(3, n);
+	Mat<short>
+		attribute(n);
+
+	for (int i = 0; i < n; i++) {
+		p1(0, i) = triangleSet[i][0];
+		p1(1, i) = triangleSet[i][1];
+		p1(2, i) = triangleSet[i][2];
+		p2(0, i) = triangleSet[i][3];
+		p2(1, i) = triangleSet[i][4];
+		p2(2, i) = triangleSet[i][5];
+		p3(0, i) = triangleSet[i][6];
+		p3(1, i) = triangleSet[i][7];
+		p3(2, i) = triangleSet[i][8];
+	}
+
+	stlWrite(fileName, head, faceVec, p1, p2, p3, attribute);
+}
+
 }
 #endif

@@ -3,45 +3,47 @@
 /*
  * 旋转体
  */
-void Modeling::Rotator(Mat<>& center, Mat<>& axis, Mat<>& f, int pointNum, double st, double ed) {
-	//Rotate f
-	Mat<> p1(3), p2(3), p3(3), p4(3),
-		RotateMat, preRotateMat, RotateMat0, RotateMatTmp,
-		rotateAxis, fAxis(3), tmp;
-	fAxis = { 0, 1, 0 };
-
-	if (axis[0] != 0 || axis[2] != 0) {
-		rotate(
-			cross(rotateAxis, axis, fAxis),
-			-acos(dot(axis, fAxis) / norm(axis)),
-			E(RotateMatTmp.alloc(4, 4))
-		);
-		block(RotateMat0, RotateMatTmp, 1, 3, 1, 3);
-	}
-	else E(RotateMat0.alloc(3, 3));
-
-	//main
+void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNum, double st, double ed) {
 	double dAngle = (ed - st) / pointNum;
+	Point p1, p2, p3, p4;
+	Mat<double> rotateMat(3, 3), preRotateMat(3, 3);
+	vector<double> direction(3), delta(3);
 
 	for (int i = 0; i <= pointNum; i++) {
-		// 计算 Rotate Matrix
-		rotate(
-			axis, st + i * dAngle,
-			E(RotateMatTmp.alloc(4, 4))
-		);
-		block(RotateMat, RotateMatTmp, 1, 3, 1, 3);
-		mul(RotateMat, RotateMat, RotateMat0);
+		// calculate rotate matrix
+		double angle = st + dAngle * i;
 
-		// 画旋转体
+		delta = { cos(angle), sin(angle), 0 };
+		cross(direction, axis, delta),
+		normalize(direction);
+
+		double
+			x = direction[0],
+			y = direction[1],
+			z = direction[2],
+			sign = x * y > 0 ? -1 : 1,
+			e = sqrt(1 - z * z),
+			b = -x * z / e,
+			d = -y * z / e,
+			a = sign * abs(y / e),
+			c = abs(x / e);
+
+		rotateMat = {
+			a, b, x,
+			c, d, y,
+			0, e, z
+		};
+
+		// generate
 		if (i != 0) {
-			for (int i = 1; i < f.cols; i++) {
-				p1 = { f(0, i - 1), f(1, i - 1), 0 };
-				p2 = { f(0, i), f(1, i), 0 };
+			for (int i = 1; i < f.size(); i++) {
+				p1 = { f[i - 1][0], f[i - 1][1], 0};
+				p2 = { f[i][0], f[i][1], 0};
 				p3 = p1;
 				p4 = p2;
 
-				mul(p1, RotateMat, p1);
-				mul(p2, RotateMat, p2);
+				mul(p1, rotateMat, p1);
+				mul(p2, rotateMat, p2);
 				mul(p3, preRotateMat, p3);
 				mul(p4, preRotateMat, p4);
 
@@ -54,7 +56,7 @@ void Modeling::Rotator(Mat<>& center, Mat<>& axis, Mat<>& f, int pointNum, doubl
 				Triangle(p4, p3, p2);
 			}
 		}
-		preRotateMat = RotateMat;
+		preRotateMat = rotateMat;
 	}
 }
 
@@ -62,43 +64,46 @@ void Modeling::Rotator(Mat<>& center, Mat<>& axis, Mat<>& f, int pointNum, doubl
 /*
  * 平移体
  */
-void Modeling::Translator(Mat<>& st, Mat<>& ed, Mat<>& f) {
-	// 计算 Rotate Matrix
-	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp;
-	zAxis = { 0, 0, 1 };
-	tmp.alloc(3);
+void Modeling::Translator(Point& st, Point& ed, vector<Point>& f) {
+	// calculate rotate matrix
+	Mat<double> rotateMat(3, 3);
+	vector<double> direction(3);
+
 	sub(direction, ed, st);
+	normalize(direction);
 
-	if (direction[0] != 0 || direction[1] != 0) {
-		rotate(
-			cross(rotateAxis, direction, zAxis),
-			-acos(dot(direction, zAxis) / norm(direction)),
-			E(rotateMat.alloc(4, 4))
-		);
-		block(rotateMat, rotateMat, 1, 3, 1, 3);
-	}
-	else E(rotateMat.alloc(3, 3));
+	double
+		x = direction[0],
+		y = direction[1],
+		z = direction[2],
+		sign = x * y > 0 ? -1 : 1,
+		e = sqrt(1 - z * z),
+		b = -x * z / e,
+		d = -y * z / e,
+		a = sign * abs(y / e),
+		c = abs(x / e);
 
+	rotateMat = { 
+		a, b, x,
+		c, d, y,
+		0, e, z
+	};
 
-	Mat<> rotateMat2, tmp2(3);
-	mul(tmp, rotateMat, tmp2 = { 1, 0, 0 });
-	normalize(tmp);
-	normalize(tmp2 = { tmp(0), tmp(1), 0 });
-	rotate(
-		direction, ((tmp[1] < 0) ? 1 : -1) * -acos(dot(tmp2, tmp)), E(rotateMat2.alloc(4, 4))
-	);
-	block(rotateMat2, rotateMat2, 1, 3, 1, 3);
-	mul(rotateMat, rotateMat2, rotateMat);
+	// generate
+	Point stPoint(3), edPoint(3), preStPoint(3), preEdPoint(3);
 
-	// 
-	Mat<> stPoint, edPoint, preStPoint, preEdPoint;
+	int fn = f.size();
+	Point pt(3);
 
-	for (int i = 0; i < f.cols; i++) {
-		mul(tmp, rotateMat, tmp = { f(0, i), f(1, i), 0 });
-		add(stPoint, st, tmp);
-		add(edPoint, ed, tmp);
+	for (int i = 0; i < fn; i++) {
+		pt = { f[i][0], f[i][1], 0 };
+
+		mul(pt, rotateMat, pt);
+		add(stPoint, st, pt);
+		add(edPoint, ed, pt);
+
 		if (i != 0) {
-			Triangle(stPoint, preStPoint, edPoint);
+			Triangle(stPoint,    preStPoint, edPoint);
 			Triangle(preStPoint, preEdPoint, edPoint);
 		}
 		preStPoint = stPoint;
@@ -106,13 +111,12 @@ void Modeling::Translator(Mat<>& st, Mat<>& ed, Mat<>& f) {
 	}
 }
 
-void Modeling::Translator(Mat<>& path, Mat<>& f) {
-	Mat<> p1, p2;
-	block(p1, path, 0, path.rows, 0, 0);
-	p2 = p1;
+void Modeling::Translator(vector<Point>& path, vector<Point>& f) {
+	int n = path.size();
+	Point p1 = path[0], p2;
 
-	for (int i = 0; i < path.cols; i++) {
-		block(p2, path, 0, path.rows, i, i);
+	for (int i = 1; i < n; i++) {
+		p2 = path[i];
 		Translator(p1, p2, f);
 		p1 = p2;
 	}
@@ -123,67 +127,77 @@ void Modeling::Translator(Mat<>& path, Mat<>& f) {
  *		平面图形
  * -------------------------------- */
 
-/* 
- * 画矩形
+/*
+ * Triangle
  */
-void Modeling::Rectangle(Mat<>& c, double X, double Y) {
-	Mat<> p1(3), p2(3), p3(3);
+void Modeling::Triangle(Point& p1, Point& p2, Point& p3) {
+	triangle tri(9);
+
+	for (int i = 0; i < 3; i++) {
+		tri[i] = p1[i];
+		tri[i + 3] = p2[i];
+		tri[i + 6] = p3[i];
+	}
+
+	Object.push_back(tri);
+}
+
+/* 
+ * Rectangle
+ */
+void Modeling::Rectangle(Point& c, double X, double Y) {
+	Point p1(3), p2(3), p3(3);
 	Triangle(
-		p1 = { c(0) + X / 2, c(1) + Y / 2, c(2) },
-		p2 = { c(0) + X / 2, c(1) - Y / 2, c(2) },
-		p3 = { c(0) - X / 2, c(1) + Y / 2, c(2) }
+		p1 = { c[0] + X / 2, c[1] + Y / 2, c[2] },
+		p2 = { c[0] + X / 2, c[1] - Y / 2, c[2] },
+		p3 = { c[0] - X / 2, c[1] + Y / 2, c[2] }
 	);
 	Triangle(
-		p1 = { c(0) - X / 2, c(1) - Y / 2, c(2) },
-		p2 = { c(0) + X / 2, c(1) - Y / 2, c(2) },
-		p3 = { c(0) - X / 2, c(1) + Y / 2, c(2) }
+		p1 = { c[0] - X / 2, c[1] - Y / 2, c[2] },
+		p2 = { c[0] + X / 2, c[1] - Y / 2, c[2] },
+		p3 = { c[0] - X / 2, c[1] + Y / 2, c[2] }
 	);
 }
 
 /*
- * 画四边形
+ * Quadrangle
  */
-void Modeling::Quadrangle(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
+void Modeling::Quadrangle(Point& p1, Point& p2, Point& p3, Point& p4) {
 	Triangle(p1, p2, p3);
 	Triangle(p1, p3, p4);
 }
 
 /* 
- * 画多边形 
+ * Polygon 
  */
-// 凸多边形 
-void Modeling::ConvexPolygon(Mat<>* p, int n) {
+// Convex Polygon 
+void Modeling::ConvexPolygon(vector<Point>& p) {
+	int n = p.size();
+
 	for (int k = 1; k <= (n + 2) / 3; k++)
 		for (int i = 0; i <= n - 2 * k; i += 2 * k)
 			Triangle(p[i], p[i + k], p[(i + 2 * k) % n]);
 }
 
-// 任意多边形 
-void Modeling::Polygon(Mat<>* p, int n) {
-	for (int k = 1; k <= (n + 2) / 3; k++)
-		for (int i = 0; i <= n - 2 * k; i += 2 * k)
-			Triangle(p[i], p[i + k], p[(i + 2 * k) % n]);
-}
-
-void Modeling::Polygon(Mat<>& p) {
-	int n = p.cols;
-	Mat<> p1(3), p2(3), p3(3);
+void Modeling::Polygon(vector<Point>& p) {
+	int n = p.size();
+	Point p1(3), p2(3), p3(3);
 
 	for (int k = 1; k <= (n + 2) / 3; k++)
 		for (int i = 0; i <= n - 2 * k; i += 2 * k)
 			Triangle(
-				p1 = { p(0, i), p(1, i), 0 },
-				p2 = { p(0, i + k), p(1, i + k), 0 },
-				p3 = { p(0, (i + 2 * k) % n), p(1, (i + 2 * k) % n), 0 }
+				p1 = { p[i][0], p[i][1], 0},
+				p2 = { p[i + k][0], p[i + k][1], 0},
+				p3 = { p[(i + 2 * k) % n][0], p[(i + 2 * k) % n][1], 0}
 			);
 }
 
 /* 
  * 画圆 
  */
-void Modeling::Circle(Mat<>& center, double r, int pointNum, double angleSt, double angleEd) {
+void Modeling::Circle(Point& center, double r, int pointNum, double angleSt, double angleEd) {
 	double dAngle = (angleEd - angleSt) / pointNum;
-	Mat<> ps(3), pe(3);
+	Point ps(3), pe(3);
 
 	for (int i = 0; i < pointNum; i++) {
 		double theta = i * dAngle;
@@ -208,9 +222,8 @@ void Modeling::Circle(Mat<>& center, double r, int pointNum, double angleSt, dou
 /* 
  * 画曲面 
  */
-void Modeling::Surface(Mat<>& z, double xs, double xe, double ys, double ye, Mat<>* direct) {
-	Mat<> p(3), pl(3), pu(3), plu(3), FaceVec, tmp, light(3); 
-	light = 1 / sqrt(3);
+void Modeling::Surface(Mat<double>& z, double xs, double xe, double ys, double ye, Point* direct) {
+	Point p(3), pl(3), pu(3), plu(3); 
 
 	double 
 		dx = (xe - xs) / z.rows,
@@ -227,12 +240,10 @@ void Modeling::Surface(Mat<>& z, double xs, double xe, double ys, double ye, Mat
 				z(x, y)
 			};
 
-			if (x == 0 || y == 0) 
-				continue;
-
-			if (z(x - 1, y) == HUGE_VAL
-			||  z(x, y - 1) == HUGE_VAL
-			||  z(x - 1, y - 1) == HUGE_VAL
+			if (x == 0 || y == 0 ||
+				z(x - 1, y) == HUGE_VAL ||  
+				z(x, y - 1) == HUGE_VAL ||  
+				z(x - 1, y - 1) == HUGE_VAL
 			) 
 				continue;
 
@@ -266,7 +277,7 @@ void Modeling::Surface(Mat<>& z, double xs, double xe, double ys, double ye, Mat
 /* 
  * 画四面体 
  */
-void Modeling::Tetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
+void Modeling::Tetrahedron(Point& p1, Point& p2, Point& p3, Point& p4) {
 	Triangle(p1, p2, p3);
 	Triangle(p2, p3, p4);
 	Triangle(p3, p4, p1);
@@ -276,8 +287,8 @@ void Modeling::Tetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4) {
 /* 
  * 画矩体 
  */
-void Modeling::Cuboid(Mat<>& pMin, Mat<>& pMax) {
-	Mat<> pMinTmp[3], pMaxTmp[3];
+void Modeling::Cuboid(Point& pMin, Point& pMax) {
+	Point pMinTmp[3], pMaxTmp[3];
 	for (int i = 0; i < 3; i++) {
 		pMinTmp[i] = pMin; pMinTmp[i][i] = pMax[i];
 		pMaxTmp[i] = pMax; pMaxTmp[i][i] = pMin[i];
@@ -289,8 +300,8 @@ void Modeling::Cuboid(Mat<>& pMin, Mat<>& pMax) {
 	}
 }
 
-void Modeling::Cuboid(Mat<>& center, double X, double Y, double Z) {
-	Mat<> delta(3), pMax(3), pMin(3);
+void Modeling::Cuboid(Point& center, double X, double Y, double Z) {
+	Point delta(3), pMax(3), pMin(3);
 	delta = { X / 2, Y / 2, Z / 2 };
 
 	add(pMax, center, delta);
@@ -299,10 +310,10 @@ void Modeling::Cuboid(Mat<>& center, double X, double Y, double Z) {
 	Cuboid(pMin, pMax);
 }
 
-/* 画圆台 */
-void Modeling::Frustum(Mat<>& st, Mat<>& ed, double Rst, double Red, int pointNum) {
+/* 画圆台 * /
+void Modeling::Frustum(Point& st, Point& ed, double Rst, double Red, int pointNum) {
 	// 计算 Rotate Matrix
-	Mat<> direction, rotateAxis, rotateMat, zAxis(3), tmp;
+	Point direction, rotateAxis, rotateMat, zAxis(3), tmp;
 	zAxis = { 0, 0, 1 };
 	sub(direction, ed, st);
 
@@ -317,7 +328,7 @@ void Modeling::Frustum(Mat<>& st, Mat<>& ed, double Rst, double Red, int pointNu
 	else E(rotateMat.alloc(3, 3));
 
 	// 画圆台
-	Mat<> stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
+	Point stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
 	double dAngle = 2.0 * PI / pointNum;
 
 	for (int i = 0; i <= pointNum; i++) {
@@ -340,14 +351,14 @@ void Modeling::Frustum(Mat<>& st, Mat<>& ed, double Rst, double Red, int pointNu
 		preStPoint = stPoint;
 		preEdPoint = edPoint;
 	}
-}
+}*/
 
 /* 画球 */
-void Modeling::Sphere(Mat<>& center, double r, int ThetaNum, int PhiNum, 
+void Modeling::Sphere(Point& center, double r, int ThetaNum, int PhiNum, 
 	double thetaSt, double thetaEd, 
 	double phiSt, double phiEd
 ) {
-	Mat<> point(3), pointU(3), pointL(3), pointUL(3);
+	Point point(3), pointU(3), pointL(3), pointUL(3);
 	double
 		dTheta = (thetaEd - thetaSt) / ThetaNum,
 		dPhi   = (phiEd - phiSt)     / PhiNum;
@@ -390,20 +401,20 @@ void Modeling::Sphere(Mat<>& center, double r, int ThetaNum, int PhiNum,
  * -------------------------------- */
 
 void Modeling::Array(int count, double dx, double dy, double dz) {
-	int n = size();
-	Mat<> p1(3), p2(3), p3(3), delta(3);
+	int n = Object.size();
+	Point p1(3), p2(3), p3(3), delta(3);
 	delta = { dx, dy, dz };
 
 	for (int k = 1; k < count; k++) {
-		for (int i = 0; i < n; i++) {
+		for (int tri = 0; tri < n; tri++) {
 			for (int dim = 0; dim < 3; dim++) {
-				p1(dim) = Object[i * 9 + dim];
-				p2(dim) = Object[i * 9 + 3 + dim];
-				p3(dim) = Object[i * 9 + 6 + dim];
+				p1[dim] = Object[tri][dim];
+				p2[dim] = Object[tri][3 + dim];
+				p3[dim] = Object[tri][6 + dim];
 
-				p1(dim) += k * delta(dim);
-				p2(dim) += k * delta(dim);
-				p3(dim) += k * delta(dim);
+				p1[dim] += k * delta[dim];
+				p2[dim] += k * delta[dim];
+				p3[dim] += k * delta[dim];
 			}
 			Triangle(p1, p2, p3);
 		}

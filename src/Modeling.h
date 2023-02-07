@@ -2,22 +2,22 @@
 #define MODELING_H
 
 #include <vector>
-#include "../../../../../Math/src/Math/Matrix/Matrix.h"
-#include "../../../../../Math/src/Math/Geometry/ComputationalGeometry.h"
-#include "../GraphicsIO.h"
+#include "../../../Math/src/Matrix/Matrix.h"
+#include "GraphicsIO.h"
+#include "MarchingCubes.h"
 
 #define PI 3.141592653589
 
+using namespace std;
 using namespace Matrix;
 
 class Modeling {
 public:
 
-	std::vector<double> Object;
+	typedef vector<double> Point;   // x, y, z
+	typedef vector<double> triangle;  // p1, p2, p3
 
-	inline int size() {
-		return Object.size() / 9;
-	}
+	vector<triangle> Object;
 
 	inline Modeling& operator= (Modeling& a){
 		Object = a.Object;
@@ -25,66 +25,54 @@ public:
 	}
 
 /*
- * 三角形
- */
-void Triangle(Mat<>& p1, Mat<>& p2, Mat<>& p3) {
-	for(int i = 0; i < 3; i++)
-		Object.push_back(p1(i));
-
-	for(int i = 0; i < 3; i++)
-		Object.push_back(p2(i));
-
-	for(int i = 0; i < 3; i++)
-		Object.push_back(p3(i));
-}
-
-/*
  * 存储文件
  */
-void writeModel(const char* fileName) {
+inline void writeModel(const char* fileName) {
 	char head[80] = { 0 };
 	Mat<float> p[3], fv;
-	Mat<> t;
+	Mat<double> t;
 
-	p[0].alloc(3, size());
-	p[1].alloc(3, size());
-	p[2].alloc(3, size());
+	p[0].alloc(3, Object.size());
+	p[1].alloc(3, Object.size());
+	p[2].alloc(3, Object.size());
 
-	t.alloc(3, size()).fill(1);
+	t.alloc(3, Object.size()).fill(1);
 	normalize(t);
 
-	fv.alloc(3, size());
+	fv.alloc(3, Object.size());
 	for (int i = 0; i < t.size(); i++)
 		fv(i) = t(i);
 
-	Mat<short> attr(size());
+	Mat<short> attr(Object.size());
 
-	for (int i = 0; i < Object.size(); i++)
-		p[(i % 9) / 3](i % 3, i / 9) = Object[i];
+	for (int tri = 0; tri < Object.size(); tri++)
+		for (int poi = 0; poi < 3; poi++)
+			for (int dim = 0; dim < 3; dim++)
+				p[poi](dim, tri) = Object[tri][poi * 3 + dim];
 
 	GraphicsIO::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
 }
 
 /* 图形 */
-void Rotator	(Mat<>& center, Mat<>& axis, Mat<>& f, int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
-void Translator	(Mat<>& st, Mat<>& ed, Mat<>& f);						// 平移体 
-void Translator	(Mat<>& path, Mat<>& f);
+void Rotator	(Point& center, Point& axis, vector<Point>& f, int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
+void Translator	(Point& st, Point& ed, vector<Point>& f);						// 平移体 
+void Translator	(vector<Point>& path, vector<Point>& f);
 
-/* 平面图形 */
-void Rectangle	(Mat<>& c, double X, double Y);							// 画矩形
-void Quadrangle	(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);			// 画四边形 
-void ConvexPolygon(Mat<>* p, int n);									// 画凸多边形
-void Polygon	(Mat<>* p, int n);										// 画多边形
-void Polygon(Mat<>& p);
-void Circle		(Mat<>& center, double r, int pointNum, double angleSt = 0, double angleEd = 2 * PI);	// 画圆 
-void Surface	(Mat<>& z, double xs, double xe, double ys, double ye, Mat<>* direct);					// 画曲面
+/* 2D Graph */
+void Triangle   (Point& p1, Point& p2, Point& p3);
+void Rectangle	(Point& c, double X, double Y);	
+void Quadrangle	(Point& p1, Point& p2, Point& p3, Point& p4);
+void ConvexPolygon(vector<Point>& p);
+void Polygon    (vector<Point>& p);
+void Circle		(Point& center, double r, int pointNum, double angleSt = 0, double angleEd = 2 * PI);
+void Surface	(Mat<double>& z, double xs, double xe, double ys, double ye, Point* direct);
 
-/* 三维图形 */
-void Tetrahedron(Mat<>& p1, Mat<>& p2, Mat<>& p3, Mat<>& p4);											// 画四面体
-void Cuboid		(Mat<>& pMin, Mat<>& pMax);																// 画矩体 
-void Cuboid		(Mat<>& center, double X, double Y, double Z);
-void Frustum	(Mat<>& st, Mat<>& ed, double Rst, double Red, int pointNum);							// 画圆台
-void Sphere		(Mat<>& center, double r, int ThetaNum, int PhiNum, 									// 画球
+/* 3D Graph */
+void Tetrahedron(Point& p1, Point& p2, Point& p3, Point& p4);
+void Cuboid		(Point& pMin, Point& pMax);
+void Cuboid		(Point& center, double X, double Y, double Z);
+void Frustum	(Point& st, Point& ed, double Rst, double Red, int pointNum);							// 画圆台
+void Sphere		(Point& center, double r, int ThetaNum, int PhiNum, 									// 画球
 	double thetaSt = 0, double thetaEd = 2 * PI, double phiSt = -PI / 2, double phiEd = PI / 2);
 
 /* Modifier */

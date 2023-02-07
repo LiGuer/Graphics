@@ -10,7 +10,7 @@ namespace Graphics {
 /*
  *    Marching Cubes 三维等高面绘制
  */
-int MarchingCubes_TriTable[256][16] = {
+static int MarchingCubes_TriTable[256][16] = {
 	{-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
 	{0, 8, 3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
 	{0, 1, 9,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
@@ -269,8 +269,8 @@ int MarchingCubes_TriTable[256][16] = {
 	{-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
 };
 
-vector<vector<double>>& MarchingCubes(
-	function<double(double, double, double)> f, 
+inline vector<vector<double>>& MarchingCubes(
+	std::function<double(double, double, double)> f, 
 	vector<double>& st, 
 	vector<double>& ed, 
 	vector<int>& N, 
@@ -307,9 +307,9 @@ vector<vector<double>>& MarchingCubes(
 				y = vec[1] + delta[1] * ((vertex[j] & 0b10) >> 1),
 				z = vec[2] + delta[2] * ((vertex[j] & 0b100)>> 2);
 
-			if (x < st[0] || x >= ed[0] ||
-				y < st[1] || y >= ed[1] ||
-				z < st[2] || z >= ed[2]) 
+			if (x < st[0] || x > ed[0] ||
+				y < st[1] || y > ed[1] ||
+				z < st[2] || z > ed[2]) 
 				continue;
 
 			if ((val[j] = f(x, y, z)) < 0) 
@@ -342,7 +342,7 @@ vector<vector<double>>& MarchingCubes(
 	return triangleSet;
 }
 
-void MarchingCubes(
+inline void MarchingCubes(
 	vector<vector<vector<double>>>& X, 
 	vector<double>& zero, 
 	vector<double>& delta, 

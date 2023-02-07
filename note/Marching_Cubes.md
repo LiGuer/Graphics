@@ -1,4 +1,4 @@
-* Matching Cubes
+* Marching Cubes
   - Purpose  
     Constructing an isosurface $f(x, y, z) = a$ of a 3D scalar field $f: \mathbb R^3 \to \mathbb R$ with triangle surface set.
     $$S = \{(x, y, z)\ |\ f(x, y, z) = a\}$$
