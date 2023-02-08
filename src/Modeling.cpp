@@ -5,42 +5,51 @@
  */
 void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNum, double st, double ed) {
 	double dAngle = (ed - st) / pointNum;
-	Point p1, p2, p3, p4;
-	Mat<double> rotateMat(3, 3), preRotateMat(3, 3);
-	vector<double> direction(3), delta(3);
+	Point p1(3), p2(3), p3(3), p4(3);
+	Mat<double> rotateMat_0(3, 3), rotateMat(3, 3), preRotateMat(3, 3);
+	vector<double> direction(3), delta(3), direction_2(3);
 
-	for (int i = 0; i <= pointNum; i++) {
-		// calculate rotate matrix
-		double angle = st + dAngle * i;
+	normalize(axis);
 
-		delta = { cos(angle), sin(angle), 0 };
-		cross(direction, axis, delta),
-		normalize(direction);
+	// calculate the first rotate matrix
+	double
+		x = axis[0],
+		y = axis[1],
+		z = axis[2],
+		sign = x * y > 0 ? -1 : 1,
+		e = sqrt(1 - z * z),
+		b = -x * z / e,
+		d = -y * z / e,
+		a = sign * abs(y / e),
+		c = abs(x / e);
 
-		double
-			x = direction[0],
-			y = direction[1],
-			z = direction[2],
-			sign = x * y > 0 ? -1 : 1,
-			e = sqrt(1 - z * z),
-			b = -x * z / e,
-			d = -y * z / e,
-			a = sign * abs(y / e),
-			c = abs(x / e);
-
-		rotateMat = {
+	if (e < 1e-4)
+		E(rotateMat_0);
+	else 
+		rotateMat_0 = {
 			a, b, x,
 			c, d, y,
 			0, e, z
 		};
 
+	for (int i = 0; i <= pointNum; i++) {
+		double angle = st + dAngle * i;
+		delta = { cos(angle), sin(angle), 0 };
+		normalize(mul(direction, rotateMat_0, delta));
+		normalize(cross(direction_2, axis, direction));
+
+		// calculate rotate matrix
+		rotateMat = {
+			direction[0], axis[0], direction_2[0],
+			direction[1], axis[1], direction_2[1],
+			direction[2], axis[2], direction_2[2]
+		};
+
 		// generate
 		if (i != 0) {
-			for (int i = 1; i < f.size(); i++) {
-				p1 = { f[i - 1][0], f[i - 1][1], 0};
-				p2 = { f[i][0], f[i][1], 0};
-				p3 = p1;
-				p4 = p2;
+			for (int j = 1; j < f.size(); j++) {
+				p3 = p1 = { f[j - 1][0], f[j - 1][1], 0 };
+				p4 = p2 = { f[j][0],     f[j][1],     0 };
 
 				mul(p1, rotateMat, p1);
 				mul(p2, rotateMat, p2);
@@ -83,10 +92,13 @@ void Modeling::Translator(Point& st, Point& ed, vector<Point>& f) {
 		a = sign * abs(y / e),
 		c = abs(x / e);
 
-	rotateMat = { 
-		a, b, x,
-		c, d, y,
-		0, e, z
+	if (e < 1e-4)
+		E(rotateMat);
+	else
+		rotateMat = {
+			a, b, x,
+			c, d, y,
+			0, e, z
 	};
 
 	// generate
