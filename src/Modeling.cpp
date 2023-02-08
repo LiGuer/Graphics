@@ -1,6 +1,35 @@
 #include "Modeling.h"
 
 /*
+ * 存储文件
+ */
+void Modeling::writeModel(const char* fileName) {
+	char head[80] = { 0 };
+	Mat<float> p[3], fv;
+	Mat<double> t;
+
+	p[0].alloc(3, Object.size());
+	p[1].alloc(3, Object.size());
+	p[2].alloc(3, Object.size());
+
+	t.alloc(3, Object.size()).fill(1);
+	normalize(t);
+
+	fv.alloc(3, Object.size());
+	for (int i = 0; i < t.size(); i++)
+		fv(i) = t(i);
+
+	Mat<short> attr(Object.size());
+
+	for (int tri = 0; tri < Object.size(); tri++)
+		for (int poi = 0; poi < 3; poi++)
+			for (int dim = 0; dim < 3; dim++)
+				p[poi](dim, tri) = Object[tri][poi * 3 + dim];
+
+	GraphicsIO::stlWrite(fileName, head, fv, p[0], p[1], p[2], attr);
+}
+
+/*
  * 旋转体
  */
 void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNum, double st, double ed) {
@@ -192,16 +221,11 @@ void Modeling::ConvexPolygon(vector<Point>& p) {
 }
 
 void Modeling::Polygon(vector<Point>& p) {
-	int n = p.size();
-	Point p1(3), p2(3), p3(3);
+	Point t(3);
+	vector<vector<double>> tris;
 
-	for (int k = 1; k <= (n + 2) / 3; k++)
-		for (int i = 0; i <= n - 2 * k; i += 2 * k)
-			Triangle(
-				p1 = { p[i][0], p[i][1], 0},
-				p2 = { p[i + k][0], p[i + k][1], 0},
-				p3 = { p[(i + 2 * k) % n][0], p[(i + 2 * k) % n][1], 0}
-			);
+	Graphics::earClippingTriangulation(p, tris);
+	addTriangleSet(t = { 0, 0, 0 }, tris);
 }
 
 /* 
@@ -322,50 +346,30 @@ void Modeling::Cuboid(Point& center, double X, double Y, double Z) {
 	Cuboid(pMin, pMax);
 }
 
-/* 画圆台 * /
+/* 画圆台 */
 void Modeling::Frustum(Point& st, Point& ed, double Rst, double Red, int pointNum) {
-	// 计算 Rotate Matrix
-	Point direction, rotateAxis, rotateMat, zAxis(3), tmp;
-	zAxis = { 0, 0, 1 };
-	sub(direction, ed, st);
-
-	if (direction[0] != 0 || direction[1] != 0) {
-		rotate(
-			cross(rotateAxis, direction, zAxis),
-			-acos(dot(direction, zAxis) / norm(direction)),
-			E(rotateMat.alloc(4, 4))
-		);
-		block(rotateMat, rotateMat, 1, 3, 1, 3);
-	}
-	else E(rotateMat.alloc(3, 3));
-
-	// 画圆台
-	Point stPoint, edPoint, preStPoint, preEdPoint, deltaVector(3);
-	double dAngle = 2.0 * PI / pointNum;
-
-	for (int i = 0; i <= pointNum; i++) {
-		deltaVector = {
-			cos(i * dAngle),
-			sin(i * dAngle),
-			0
-		};
-
-		mul(deltaVector, rotateMat, deltaVector);
-		add(stPoint, st, mul(stPoint, Rst, deltaVector));
-		add(edPoint, ed, mul(edPoint, Red, deltaVector));
-
-		if (i != 0) {
-			Triangle(stPoint, preStPoint, edPoint);
-			Triangle(preStPoint, preEdPoint, edPoint);
-			Triangle(st, stPoint, preStPoint);
-			Triangle(ed, edPoint, preEdPoint);
-		}
-		preStPoint = stPoint;
-		preEdPoint = edPoint;
-	}
-}*/
+	;
+}
 
 /* 画球 */
+void Modeling::Sphere(Point& center, double r, int pointNum) {
+	vector<double> st(3), ed(3);
+	vector<int> N;
+	vector<vector<double>> triangleSet;
+	double more = r / pointNum * 3;
+
+	Graphics::MarchingCubes([&](double x, double y, double z) {
+		return r * r - (x * x + y * y + z * z); 
+		},
+		st = {-r - more,-r - more,-r - more },
+		ed = { r + more, r + more, r + more },
+		N  = { pointNum, pointNum, pointNum },
+		triangleSet
+	);
+
+	addTriangleSet(center, triangleSet);
+}
+
 void Modeling::Sphere(Point& center, double r, int ThetaNum, int PhiNum, 
 	double thetaSt, double thetaEd, 
 	double phiSt, double phiEd
@@ -411,6 +415,17 @@ void Modeling::Sphere(Point& center, double r, int ThetaNum, int PhiNum,
 /* --------------------------------
  *		Modifier
  * -------------------------------- */
+void Modeling::addTriangleSet(Point& center, vector<triangle>& tris) {
+	int n = tris.size();
+
+	for (int i = 0; i < n; i++) {
+		Object.push_back({
+			tris[i][0] + center[0], tris[i][1] + center[1], tris[i][2] + center[2],
+			tris[i][3] + center[0], tris[i][4] + center[1], tris[i][5] + center[2],
+			tris[i][6] + center[0], tris[i][7] + center[1], tris[i][8] + center[2],
+			});
+	}
+}
 
 void Modeling::Array(int count, double dx, double dy, double dz) {
 	int n = Object.size();

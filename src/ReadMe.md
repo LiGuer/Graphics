@@ -56,5 +56,9 @@
     <[PerlinNoise.h](PerlinNoise.h)>
   * Marching Cubes  
     <[MarchingCubes.h](MarchingCubes.h)>
+    - Generation of arbitrary 3D isosurface
+  * Ear Cliping
+    <[Ear_Cliping.h](Ear_Cliping.h)>
+    - solve the triangulation of ordinary polygon
 * Ray Tracing
   * Metropolis Light Transport
