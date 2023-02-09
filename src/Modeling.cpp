@@ -102,7 +102,7 @@ void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNu
 /*
  * 平移体
  */
-void Modeling::Translator(Point& st, Point& ed, vector<Point>& f) {
+void Modeling::Translator(Point& st, Point& ed, vector<Point>& f, int isClosed) {
 	// calculate rotate matrix
 	Mat<double> rotateMat(3, 3);
 	vector<double> direction(3);
@@ -150,15 +150,47 @@ void Modeling::Translator(Point& st, Point& ed, vector<Point>& f) {
 		preStPoint = stPoint;
 		preEdPoint = edPoint;
 	}
+
+	// closed
+	if (isClosed) {
+		Point p1, p2, p3;
+		vector<vector<double>> tris;
+
+		Graphics::earClippingTriangulation(f, tris);
+
+		int n = tris.size();
+
+		for (int i = 0; i < n; i++) {
+			mul(p1, rotateMat, p1 = { tris[i][0], tris[i][1], tris[i][2] });
+			mul(p2, rotateMat, p2 = { tris[i][3], tris[i][4], tris[i][5] });
+			mul(p3, rotateMat, p3 = { tris[i][6], tris[i][7], tris[i][8] });
+
+			Object.push_back({
+				p1[0] + st[0], p1[1] + st[1], p1[2] + st[2],
+				p2[0] + st[0], p2[1] + st[1], p2[2] + st[2],
+				p3[0] + st[0], p3[1] + st[1], p3[2] + st[2]
+			});
+			Object.push_back({
+				p1[0] + ed[0], p1[1] + ed[1], p1[2] + ed[2],
+				p2[0] + ed[0], p2[1] + ed[1], p2[2] + ed[2],
+				p3[0] + ed[0], p3[1] + ed[1], p3[2] + ed[2]
+			});
+		}
+	}
 }
 
-void Modeling::Translator(vector<Point>& path, vector<Point>& f) {
+void Modeling::Translator(vector<Point>& path, vector<Point>& f, int isClosed) {
 	int n = path.size();
 	Point p1 = path[0], p2;
 
 	for (int i = 1; i < n; i++) {
 		p2 = path[i];
-		Translator(p1, p2, f);
+
+		if (isClosed && (i == 1 || i == n - 1))
+			Translator(p1, p2, f, true);
+		else 
+			Translator(p1, p2, f, false);
+
 		p1 = p2;
 	}
 }
@@ -220,12 +252,11 @@ void Modeling::ConvexPolygon(vector<Point>& p) {
 			Triangle(p[i], p[i + k], p[(i + 2 * k) % n]);
 }
 
-void Modeling::Polygon(vector<Point>& p) {
-	Point t(3);
+void Modeling::Polygon(Point& c, vector<Point>& p) {
 	vector<vector<double>> tris;
 
 	Graphics::earClippingTriangulation(p, tris);
-	addTriangleSet(t = { 0, 0, 0 }, tris);
+	addTriangleSet(c, tris);
 }
 
 /* 

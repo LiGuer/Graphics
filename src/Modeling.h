@@ -30,15 +30,15 @@ void writeModel(const char* fileName);
 
 /* 图形 */
 void Rotator	(Point& center, Point& axis, vector<Point>& f, int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
-void Translator	(Point& st, Point& ed, vector<Point>& f);						// 平移体 
-void Translator	(vector<Point>& path, vector<Point>& f);
+void Translator	(Point& st, Point& ed, vector<Point>& f, int isClosed = true);			// 平移体 
+void Translator	(vector<Point>& path, vector<Point>& f, int isClosed = true);
 
 /* 2D Graph */
 void Triangle   (Point& p1, Point& p2, Point& p3);
 void Rectangle	(Point& c, double X, double Y);	
 void Quadrangle	(Point& p1, Point& p2, Point& p3, Point& p4);
 void ConvexPolygon(vector<Point>& p);
-void Polygon    (vector<Point>& p);
+void Polygon    (Point& c, vector<Point>& p);
 void Circle		(Point& center, double r, int pointNum, double angleSt = 0, double angleEd = 2 * PI);
 void Surface	(Mat<double>& z, double xs, double xe, double ys, double ye, Point* direct);
 
