@@ -188,13 +188,88 @@ void Modeling::Translator(vector<Point>& path, vector<Point>& f, int isClosed) {
 
 		if (isClosed && (i == 1 || i == n - 1))
 			Translator(p1, p2, f, true);
-		else 
+		else
 			Translator(p1, p2, f, false);
 
 		p1 = p2;
 	}
 }
 
+/* Rotator + Translator */
+void Modeling::Rotator_Translator(
+	Point& center, Point& axis, vector<Point>& f,
+	vector<double>& direction_, double length,
+	int pointNum, double st, double ed
+) {
+	double dAngle = (ed - st) / pointNum;
+	Point p(3), p1(3), p2(3), p3(3), p4(3);
+	Mat<double> rotateMat_0(3, 3), rotateMat(3, 3), preRotateMat(3, 3);
+	vector<double> direction(3), delta(3), direction_2(3);
+
+	normalize(axis);
+
+	// calculate the first rotate matrix
+	double
+		x = axis[0],
+		y = axis[1],
+		z = axis[2],
+		sign = x * y > 0 ? -1 : 1,
+		e = sqrt(1 - z * z),
+		b = -x * z / e,
+		d = -y * z / e,
+		a = sign * abs(y / e),
+		c = abs(x / e);
+
+	if (e < 1e-4)
+		E(rotateMat_0);
+	else
+		rotateMat_0 = {
+			a, b, x,
+			c, d, y,
+			0, e, z
+	};
+
+	for (int i = 0; i <= pointNum; i++) {
+		double angle = st + dAngle * i;
+		delta = { cos(angle), sin(angle), 0 };
+		normalize(mul(direction, rotateMat_0, delta));
+		normalize(cross(direction_2, axis, direction));
+
+		// calculate rotate matrix
+		rotateMat = {
+			direction[0], axis[0], direction_2[0],
+			direction[1], axis[1], direction_2[1],
+			direction[2], axis[2], direction_2[2]
+		};
+
+		// generate
+		if (i != 0) {
+			for (int j = 1; j < f.size(); j++) {
+				p3 = p1 = { f[j - 1][0], f[j - 1][1], 0 };
+				p4 = p2 = { f[j][0],     f[j][1],     0 };
+
+				mul(p1, rotateMat, p1);
+				mul(p2, rotateMat, p2);
+				mul(p3, preRotateMat, p3);
+				mul(p4, preRotateMat, p4);
+
+				add(p1, p1, center);
+				add(p2, p2, center);
+				add(p3, p3, center);
+				add(p4, p4, center);
+
+				add(p1, p1, mul(p, i / (double)pointNum * length, direction_));
+				add(p2, p2, mul(p, i / (double)pointNum * length, direction_));
+				add(p3, p3, mul(p, (i - 1) / (double)pointNum * length, direction_));
+				add(p4, p4, mul(p, (i - 1) / (double)pointNum * length, direction_));
+
+				Triangle(p1, p2, p3);
+				Triangle(p4, p3, p2);
+			}
+		}
+		preRotateMat = rotateMat;
+	}
+}
 
 /* --------------------------------
  *		平面图形
@@ -375,6 +450,24 @@ void Modeling::Cuboid(Point& center, double X, double Y, double Z) {
 	sub(pMin, center, delta);
 
 	Cuboid(pMin, pMax);
+}
+
+void Modeling::Cuboid(Point& center, vector<double>& direction, double L, double W, double H) {
+	vector<Point> f;
+	vector<double> p(3), st(3), ed(3);
+	f = {
+		{-W / 2,-H / 2},
+		{+W / 2,-H / 2},
+		{+W / 2,+H / 2},
+		{-W / 2,+H / 2},
+		{-W / 2,-H / 2},
+	};
+
+	normalize(direction);
+
+	add(ed, center, mul(p, +L / 2.0, direction));
+	add(st, center, mul(p, -L / 2.0, direction));
+	Translator(st, ed, f);
 }
 
 /* 画圆台 */

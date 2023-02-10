@@ -29,10 +29,14 @@ public:
 void writeModel(const char* fileName);
 
 /* 图形 */
-void Rotator	(Point& center, Point& axis, vector<Point>& f, int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
+void Rotator	(Point& center, Point& axis, vector<Point>& f, 
+				 int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
 void Translator	(Point& st, Point& ed, vector<Point>& f, int isClosed = true);			// 平移体 
 void Translator	(vector<Point>& path, vector<Point>& f, int isClosed = true);
-
+void Rotator_Translator
+                (Point& center, Point& axis, vector<Point>& f,
+	             vector<double>& direction, double length,
+				 int pointNum, double st = 0, double ed = 2 * PI);
 /* 2D Graph */
 void Triangle   (Point& p1, Point& p2, Point& p3);
 void Rectangle	(Point& c, double X, double Y);	
@@ -46,6 +50,7 @@ void Surface	(Mat<double>& z, double xs, double xe, double ys, double ye, Point*
 void Tetrahedron(Point& p1, Point& p2, Point& p3, Point& p4);
 void Cuboid		(Point& pMin, Point& pMax);
 void Cuboid		(Point& center, double X, double Y, double Z);
+void Cuboid		(Point& center, vector<double>& direction, double L, double W, double H);
 void Frustum	(Point& st, Point& ed, double Rst, double Red, int pointNum);							// 画圆台
 void Sphere		(Point& center, double r, int pointNum);
 void Sphere		(Point& center, double r, int ThetaNum, int PhiNum, 
