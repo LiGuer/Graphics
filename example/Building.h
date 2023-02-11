@@ -1,6 +1,7 @@
 #include "C:/UserFiles/Library/Engineering/Graphics/src/Modeling.h"
+#include "Stair.h"
 
-void FourLevelInterchange(Modeling& md, Modeling::Point& c, double roadL = 3, double roadH = 0.25, double tatalL = 200, double layerH = 8) {
+inline void FourLevelInterchange(Modeling& md, Modeling::Point& c, double roadL = 3, double roadH = 0.25, double tatalL = 200, double layerH = 8) {
 	Modeling::Point p1(3), p2(3), p3(3);
 	double
 		x_step[] = { 1, 1,-1,-1 },

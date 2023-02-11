@@ -32,10 +32,10 @@ void Modeling::writeModel(const char* fileName) {
 /*
  * 旋转体
  */
-void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNum, double st, double ed) {
+void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNum, double st, double ed, int isClosed) {
 	double dAngle = (ed - st) / pointNum;
 	Point p1(3), p2(3), p3(3), p4(3);
-	Mat<double> rotateMat_0(3, 3), rotateMat(3, 3), preRotateMat(3, 3);
+	Mat<double> rotateMat_0(3, 3), rotateMat(3, 3), preRotateMat(3, 3), firstRotateMat(3, 3);
 	vector<double> direction(3), delta(3), direction_2(3);
 
 	normalize(axis);
@@ -95,6 +95,40 @@ void Modeling::Rotator(Point& center, Point& axis, vector<Point>& f, int pointNu
 			}
 		}
 		preRotateMat = rotateMat;
+		if (i == 0)
+			firstRotateMat = rotateMat;
+	}
+
+	// closed
+	if (isClosed) {
+		Point p1, p2, p3;
+		vector<vector<double>> tris;
+
+		Graphics::earClippingTriangulation(f, tris);
+
+		int n = tris.size();
+		
+		for (int i = 0; i < n; i++) {
+			mul(p1, rotateMat, p1 = { tris[i][0], tris[i][1], tris[i][2] });
+			mul(p2, rotateMat, p2 = { tris[i][3], tris[i][4], tris[i][5] });
+			mul(p3, rotateMat, p3 = { tris[i][6], tris[i][7], tris[i][8] });
+
+			Object.push_back({
+				p1[0] + center[0], p1[1] + center[1], p1[2] + center[2],
+				p2[0] + center[0], p2[1] + center[1], p2[2] + center[2],
+				p3[0] + center[0], p3[1] + center[1], p3[2] + center[2]
+			});
+
+			mul(p1, firstRotateMat, p1 = { tris[i][0], tris[i][1], tris[i][2] });
+			mul(p2, firstRotateMat, p2 = { tris[i][3], tris[i][4], tris[i][5] });
+			mul(p3, firstRotateMat, p3 = { tris[i][6], tris[i][7], tris[i][8] });
+
+			Object.push_back({
+				p1[0] + center[0], p1[1] + center[1], p1[2] + center[2],
+				p2[0] + center[0], p2[1] + center[1], p2[2] + center[2],
+				p3[0] + center[0], p3[1] + center[1], p3[2] + center[2]
+			});
+		}
 	}
 }
 

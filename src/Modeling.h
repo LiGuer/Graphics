@@ -5,7 +5,7 @@
 #include "../../../Math/src/Matrix/Matrix.h"
 #include "GraphicsIO.h"
 #include "MarchingCubes.h"
-#include "Ear_Cliping.h"
+#include "Ear_Clipping.h"
 
 #define PI 3.141592653589
 
@@ -30,7 +30,7 @@ void writeModel(const char* fileName);
 
 /* 图形 */
 void Rotator	(Point& center, Point& axis, vector<Point>& f, 
-				 int pointNum, double st = 0, double ed = 2 * PI);		// 旋转体 
+				 int pointNum, double st = 0, double ed = 2 * PI, int isClosed = false);		// 旋转体 
 void Translator	(Point& st, Point& ed, vector<Point>& f, int isClosed = true);			// 平移体 
 void Translator	(vector<Point>& path, vector<Point>& f, int isClosed = true);
 void Rotator_Translator

@@ -1,6 +1,6 @@
-* Ear Cliping 
+* Ear Clipping 
   - Purpose
-    The ear cliping algorithm is a simple and efficient method for triangulating simple polygon. THe algorithm takes as input an $n$-sided polygon and produces a list of $n-2$ triangular faces that form the triangulated polygon.
+    The ear clipping algorithm is a simple and efficient method for triangulating simple polygon. THe algorithm takes as input an $n$-sided polygon and produces a list of $n-2$ triangular faces that form the triangulated polygon.
 
   - Idea
     Identify and remove "ears" from the polygon. An ears is a triangle form by three consecutive vertices of the polygon, such that the triangle is entirely contained whitin the polygon and no other vertices of the polygon are inside the triangle.
