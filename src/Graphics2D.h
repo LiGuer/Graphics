@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <queue>
+#include <vector>
 #include "../../../Math/src/Matrix/Mat.h"
+#include "./Geometry/bezier_curve.h"
 #include "RGB.h"
 #include "font.h"
 
@@ -34,7 +36,7 @@ namespace Graphics {
 						(Mat<ARGB>& image, int  x, int  y, int l, int n, double a0 = 0);//画正多边形
 	void drawPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//画多边形
 	void fillPolygon	(Mat<ARGB>& image, int* x, int* y, int n);						//填充多边形
-	void drawBezier		(Mat<ARGB>& image, int* x, int* y, int n);						//画贝塞尔曲线
+	void drawBezier		(Mat<ARGB>& image, vector<vector<double>>& points, int n);
 
 	// Tessellation
 	void drawGrid		(Mat<ARGB>& image, int sx, int sy, int ex, int ey, int dx, int dy);	//画网格

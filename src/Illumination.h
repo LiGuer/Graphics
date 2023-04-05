@@ -17,15 +17,13 @@ struct {
         light = { -1 / sqrt(3), -1 / sqrt(3), 1 / sqrt(3) },
         view = { 0, 0, 1 };
     double 
-        ka = 0.1, 
+        ka = 0.2, 
         kd = 0.9, 
         ks = 0.2, 
         alpha = 10;
 } Phong_Parameter;
 
-inline double Phong (
-    int x, int y, int z, double nx, double ny, double nz
-) {
+inline double Phong (double nx, double ny, double nz) {
     double a = sqrt(nx * nx + ny * ny + nz * nz);
     nx /= a;
     ny /= a;

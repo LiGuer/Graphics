@@ -216,29 +216,14 @@ void Graphics::drawGrid(Mat<ARGB>& image, int sx, int sy, int ex, int ey, int dx
 }
 
 /*----------------[ DRAW BEZIER CURVE ]----------------*/
-void Graphics::drawBezier(Mat<ARGB>& image, int xCtrl[], int yCtrl[], int n)
+void Graphics::drawBezier(Mat<ARGB>& image, vector<vector<double>>& points, int n)
 {
-	int N = image.rows + image.cols;					//#待优化
-	fp64 C[50];
+	vector<double> p;
 
-	for (int i = 0; i < n; i++)
-		image(xCtrl[i], yCtrl[i]) = 0xFFFFFF;
-
-	for (int i = 0; i < n; i++) {
-		C[i] = 1;
-		for (int j = n - 1; j >= i + 1; j--) C[i] *= j;
-		for (int j = n - 1 - i; j >= 2; j--) C[i] /= j;
-	}
-
-	for (int k = 0; k < N; k++) {
-		fp64 u = (fp64)k / N;
-		int x = 0, y = 0;
-		for (int i = 0; i < n; i++) {
-			fp64 bezBlendFcn = C[i] * pow(u, i) * pow(1 - u, n - 1 - i);
-			x += xCtrl[i] * bezBlendFcn;
-			y += yCtrl[i] * bezBlendFcn;
-		}
-		drawPoint(image, x, y);
+	for (int i = 0; i <= n; i++) {
+		double t = i / (double)n;
+		BezierCurve(points, n, p);
+		drawPoint(image, (int)p[0], (int)p[1]);
 	}
 }
 
@@ -337,7 +322,8 @@ void Graphics::fillPolygon(Mat<ARGB>& image, int* x, int* y, int n)
 		p = AET;
 		while (p->next && p->next->next) {				//链表遍历
 			for (int x = p->next->x; x <= p->next->next->x; x++)
-				image(x, y) = PaintColor;
+				if(!image.isOut(x, y))
+					image(x, y) = PaintColor;
 			p = p->next->next;
 		}
 		// 删除AET中不再相交的边

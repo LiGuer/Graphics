@@ -4,8 +4,8 @@
 #include <vector>
 #include "../../../Math/src/Matrix/Matrix.h"
 #include "GraphicsIO.h"
-#include "MarchingCubes.h"
-#include "Ear_Clipping.h"
+#include "./Geometry/MarchingCubes.h"
+#include "./Geometry/Ear_Clipping.h"
 
 #define PI 3.141592653589
 
@@ -37,6 +37,15 @@ void Rotator_Translator
                 (Point& center, Point& axis, vector<Point>& f,
 	             vector<double>& direction, double length,
 				 int pointNum, double st = 0, double ed = 2 * PI);
+/* 2D Points */
+static vector<Point>& Circle(vector<Point>& points, double R, int N, int clockwise = -1) {
+	for (int i = 0; i <= N; i++) {
+		double angle = clockwise * i / (double) N * 2 * PI;
+		points.push_back({ R * sin(angle), R * cos(angle) });
+	}
+	return points;
+}
+
 /* 2D Graph */
 void Triangle   (Point& p1, Point& p2, Point& p3);
 void Rectangle	(Point& c, double X, double Y);	

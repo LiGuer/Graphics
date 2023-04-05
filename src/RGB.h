@@ -53,6 +53,26 @@ public:
 		}
 	}
 
+	ARGB to_ARGB() {
+		return ARGB(B) << 0 | 
+			   ARGB(G) << 8 |
+			   ARGB(R) << 16;
+	}
+
+	static ARGB mul(ARGB a, double r) {
+		return
+			((ARGB)((a & 0x0000FF) * r) & 0x0000FF) |
+			((ARGB)((a & 0x00FF00) * r) & 0x00FF00) |
+			((ARGB)((a & 0xFF0000) * r) & 0xFF0000);
+	}
+
+	static ARGB Alpha(ARGB a, ARGB b, double r) {
+		return 
+			((ARGB)((a & 0x0000FF) * r + (b & 0x0000FF) * (1 - r)) & 0x0000FF) |
+			((ARGB)((a & 0x00FF00) * r + (b & 0x00FF00) * (1 - r)) & 0x00FF00) |
+			((ARGB)((a & 0xFF0000) * r + (b & 0xFF0000) * (1 - r)) & 0xFF0000);
+	}
+
 	/*---------------- 颜色混合 ----------------*/
 #define ChannelBlend_Normal(A,B)     ((INT8U)(A))
 #define ChannelBlend_Lighten(A,B)    ((INT8U)((B > A) ? B:A))

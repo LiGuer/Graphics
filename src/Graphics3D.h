@@ -22,6 +22,8 @@ void drawLine   (Mat<ARGB>& image, Mat<int>& Z_buf, int sx = 0, int ex = 0,
 void drawLine   (Mat<ARGB>& image, Mat<int>& Z_buf, vector<vector<int>>& p, bool close = false);
 void drawTriangle 
                 (Mat<ARGB>& image, Mat<int>& Z_buf, vector<int>& p1, vector<int>& p2, vector<int>& p3);
+void drawTriangle
+                (Mat<ARGB>& image, Mat<int>& Z_buf, vector<double>& p1, vector<double>& p2, vector<double>& p3);
 void drawTriangleSet
                 (Mat<ARGB>& image, Mat<int>& Z_buf, vector<vector<vector<int>>>& p);
 void drawSphere (Mat<ARGB>& image, Mat<int>& Z_buf, int x, int y, int z, int r);
